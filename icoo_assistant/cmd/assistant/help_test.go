@@ -46,4 +46,14 @@ func TestPrintUsage(t *testing.T) {
 			t.Fatalf("expected usage to contain %q, got %q", snippet, output)
 		}
 	}
+	for _, snippet := range []string{
+		"assistant doctor",
+		"Recommended first-run path:",
+		"1. assistant check",
+		"In fake mode, steps 2-4 still work as a dry run",
+	} {
+		if !strings.Contains(output, snippet) {
+			t.Fatalf("expected usage to contain %q, got %q", snippet, output)
+		}
+	}
 }

@@ -50,8 +50,10 @@ func TestBuildSelfCheckReportCreatesRuntimeDirs(t *testing.T) {
 		"dotenv: missing",
 		"skills_dir: missing",
 		"fake_client_active:",
+		"first_run_status: completed step=1 command=assistant check",
 		"minimal_happy_path:",
-		`1. assistant "先用 tool_catalog 总结当前可用工具，再说明 project_task、task_audit 和 agent_hook_audit 的边界"`,
+		"1. assistant check",
+		`2. assistant "先用 tool_catalog 总结当前可用工具，再说明 project_task、task_audit 和 agent_hook_audit 的边界"`,
 		"transcript_dir: ready",
 		"task_dir: ready",
 		"background_dir: ready",
@@ -101,6 +103,12 @@ func TestBuildSelfCheckReportSupportsAnthropicAndSkillsDir(t *testing.T) {
 	if !strings.Contains(report, "minimal_happy_path:") || strings.Contains(report, "0. optional: set ANTHROPIC_API_KEY") {
 		t.Fatalf("expected anthropic happy path without fake-mode preface, got %q", report)
 	}
+	if !strings.Contains(report, "1. assistant check") {
+		t.Fatalf("expected full first-run path to include assistant check, got %q", report)
+	}
+	if !strings.Contains(report, "next_step: continue with minimal_happy_path step=2") {
+		t.Fatalf("expected next step to continue from step 2, got %q", report)
+	}
 	if strings.Contains(report, "fake_client_active:") {
 		t.Fatalf("did not expect fake client advisory, got %q", report)
 	}
@@ -122,5 +130,8 @@ func TestRunSelfCheckWritesReport(t *testing.T) {
 	}
 	if !strings.Contains(out.String(), "minimal_happy_path:") {
 		t.Fatalf("expected minimal happy path guidance, got %q", out.String())
+	}
+	if !strings.Contains(out.String(), "first_run_status: completed step=1 command=assistant check") {
+		t.Fatalf("expected first-run status guidance, got %q", out.String())
 	}
 }
