@@ -75,6 +75,14 @@ func DefaultToolCatalogEntries(includeTask bool) []ToolCatalogEntry {
 			Description: "This is the main durable task management entry point.",
 		},
 		{
+			Name:        "team_registry",
+			Summary:     "Manage persistent team config and teammate registry data.",
+			UseWhen:     "Use to inspect or update .team config, register teammates, or review the current teammate roster before message-bus work exists.",
+			AvoidWhen:   "Avoid for task history, subagent delegation, or teammate-to-teammate messaging; use task_audit, task, or future team message tools instead.",
+			Example:     `{"action":"create","id":"alice","role":"reviewer"}`,
+			Description: "This is the initial Team-stage storage entry point and persists data under .team.",
+		},
+		{
 			Name:        "read_file",
 			Summary:     "Read file contents from the workspace.",
 			UseWhen:     "Use to inspect source files, docs, or generated artifacts before making changes.",

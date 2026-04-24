@@ -11,6 +11,7 @@ import (
 	"icoo_assistant/internal/background"
 	"icoo_assistant/internal/config"
 	"icoo_assistant/internal/task"
+	"icoo_assistant/internal/team"
 )
 
 func TestIsCheckRequest(t *testing.T) {
@@ -58,6 +59,9 @@ func TestBuildSelfCheckReportCreatesRuntimeDirs(t *testing.T) {
 		`2. go run ./cmd/assistant "先用 tool_catalog 总结当前可用工具，再说明 project_task、task_audit 和 agent_hook_audit 的边界"`,
 		"transcript_dir: ready",
 		"task_dir: ready",
+		"team_dir: ready",
+		"teammate_registry_dir: ready",
+		"team_config: ready lead_id=lead teammate_count=0",
 		"background_dir: ready",
 		"agent_hook_dir: ready",
 	} {
@@ -68,6 +72,8 @@ func TestBuildSelfCheckReportCreatesRuntimeDirs(t *testing.T) {
 	for _, dir := range []string{
 		resolveConfigPath(root, cfg.TranscriptDir),
 		task.DefaultDir(root),
+		team.DefaultDir(root),
+		filepath.Join(team.DefaultDir(root), "teammates"),
 		background.DefaultDir(root),
 		agent.DefaultHookDir(root),
 	} {

@@ -22,6 +22,9 @@ func TestToolCatalogList(t *testing.T) {
 	if !strings.Contains(result, "- project_task:") {
 		t.Fatalf("expected project_task in list, got %q", result)
 	}
+	if !strings.Contains(result, "- team_registry:") {
+		t.Fatalf("expected team_registry in list, got %q", result)
+	}
 	if !strings.Contains(result, "- task:") {
 		t.Fatalf("expected task in list, got %q", result)
 	}

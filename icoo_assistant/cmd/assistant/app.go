@@ -15,6 +15,7 @@ import (
 	"icoo_assistant/internal/skill"
 	"icoo_assistant/internal/subagent"
 	"icoo_assistant/internal/task"
+	"icoo_assistant/internal/team"
 	"icoo_assistant/internal/todo"
 	"icoo_assistant/internal/tools"
 	"icoo_assistant/internal/workspace"
@@ -68,6 +69,10 @@ func newApp(cfg config.Config) (*app, error) {
 	if err != nil {
 		return nil, err
 	}
+	teamManager, err := team.NewManager(team.DefaultDir(cfg.Workdir))
+	if err != nil {
+		return nil, err
+	}
 	backgroundManager.SetLifecycleHooks(task.NewBackgroundLifecycleLink(taskManager))
 	hookWriter, err := agent.NewJSONLHook(agent.DefaultHookDir(cfg.Workdir))
 	if err != nil {
@@ -89,6 +94,7 @@ func newApp(cfg config.Config) (*app, error) {
 		tools.NewBackgroundTool(backgroundManager),
 		tools.NewAgentHookAuditTool(eventReader),
 		tools.NewProjectTaskTool(taskManager, backgroundManager),
+		tools.NewTeamRegistryTool(teamManager),
 		tools.NewTaskAuditTool(taskManager),
 		tools.NewToolCatalogTool(baseCatalog),
 		tools.NewTodoTool(todoManager),
@@ -119,6 +125,7 @@ func newApp(cfg config.Config) (*app, error) {
 		tools.NewBackgroundTool(backgroundManager),
 		tools.NewAgentHookAuditTool(eventReader),
 		tools.NewProjectTaskTool(taskManager, backgroundManager),
+		tools.NewTeamRegistryTool(teamManager),
 		tools.NewTaskAuditTool(taskManager),
 		tools.NewToolCatalogTool(tools.DefaultToolCatalogEntries(true)),
 		tools.NewTodoTool(todoManager),
