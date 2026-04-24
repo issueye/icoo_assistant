@@ -117,6 +117,9 @@ func renderTaskAuditHistory(item task.Task, limit int, statusFilter, reasonFilte
 	if latestSample := renderTaskAuditLatestSampleHint(recent, statusFilter, reasonFilter); latestSample != "" {
 		lines = append(lines, fmt.Sprintf("latest_sample: %s", latestSample))
 	}
+	if latestCommand := renderTaskAuditLatestFailureCommandHint(recent, statusFilter, reasonFilter); latestCommand != "" {
+		lines = append(lines, fmt.Sprintf("latest_failure_command: %s", latestCommand))
+	}
 	if pairSummary := renderTaskAuditHistoryPairSummary(recent, statusFilter, reasonFilter); pairSummary != "" {
 		lines = append(lines, fmt.Sprintf("pair_summary: %s", pairSummary))
 	}
@@ -156,6 +159,24 @@ func renderTaskAuditLatestSampleHint(history []task.BackgroundContext, statusFil
 		line = fmt.Sprintf("%s reason=%s", line, classifyBackgroundFailureReason(latest))
 	}
 	return line
+}
+
+func renderTaskAuditLatestFailureCommandHint(history []task.BackgroundContext, statusFilter, reasonFilter string) string {
+	if len(history) == 0 {
+		return ""
+	}
+	if reasonFilter == "" && statusFilter != "failed" {
+		return ""
+	}
+	latest := history[len(history)-1]
+	if !strings.EqualFold(strings.TrimSpace(latest.Status), "failed") {
+		return ""
+	}
+	command := strings.TrimSpace(latest.Command)
+	if command == "" {
+		return ""
+	}
+	return fmt.Sprintf("job_id=%s command=%s", latest.JobID, command)
 }
 
 func renderTaskAuditHistoryPairSummary(history []task.BackgroundContext, statusFilter, reasonFilter string) string {
