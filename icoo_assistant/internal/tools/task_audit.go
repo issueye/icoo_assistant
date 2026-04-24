@@ -114,6 +114,9 @@ func renderTaskAuditHistory(item task.Task, limit int, statusFilter, reasonFilte
 		lines = append(lines, `runtime_view_hint: use agent_hook_audit action=recent or action=summary for runtime-side investigation`)
 		return strings.Join(lines, "\n")
 	}
+	if latestSample := renderTaskAuditLatestSampleHint(recent, statusFilter, reasonFilter); latestSample != "" {
+		lines = append(lines, fmt.Sprintf("latest_sample: %s", latestSample))
+	}
 	if pairSummary := renderTaskAuditHistoryPairSummary(recent, statusFilter, reasonFilter); pairSummary != "" {
 		lines = append(lines, fmt.Sprintf("pair_summary: %s", pairSummary))
 	}
@@ -137,6 +140,22 @@ func renderTaskAuditHistory(item task.Task, limit int, statusFilter, reasonFilte
 	lines = append(lines, fmt.Sprintf("latest_task_view: project_task action=get id=%s", item.ID))
 	lines = append(lines, `runtime_view_hint: use agent_hook_audit action=summary or action=recent name=agent.tool.completed to inspect runtime-side execution context`)
 	return strings.Join(lines, "\n")
+}
+
+func renderTaskAuditLatestSampleHint(history []task.BackgroundContext, statusFilter, reasonFilter string) string {
+	if len(history) == 0 {
+		return ""
+	}
+	if reasonFilter == "" && statusFilter != "failed" {
+		return ""
+	}
+	latestIndex := len(history)
+	latest := history[len(history)-1]
+	line := fmt.Sprintf("entry=%d job_id=%s status=%s updated_at=%s", latestIndex, latest.JobID, latest.Status, latest.UpdatedAt.UTC().Format("2006-01-02T15:04:05Z"))
+	if strings.EqualFold(strings.TrimSpace(latest.Status), "failed") {
+		line = fmt.Sprintf("%s reason=%s", line, classifyBackgroundFailureReason(latest))
+	}
+	return line
 }
 
 func renderTaskAuditHistoryPairSummary(history []task.BackgroundContext, statusFilter, reasonFilter string) string {

@@ -87,6 +87,9 @@ func TestToolCatalogAuditPaths(t *testing.T) {
 	if !strings.Contains(result, "reason labels") {
 		t.Fatalf("expected history reason-label guidance, got %q", result)
 	}
+	if !strings.Contains(result, "latest_sample") {
+		t.Fatalf("expected history latest-sample guidance, got %q", result)
+	}
 	if !strings.Contains(result, "pair_summary") {
 		t.Fatalf("expected history pair summary guidance, got %q", result)
 	}
