@@ -126,6 +126,9 @@ func renderTaskAuditHistory(item task.Task, limit int, statusFilter, reasonFilte
 	if latestUpdatedAt := renderTaskAuditLatestFailureUpdatedAtHint(recent, statusFilter, reasonFilter); latestUpdatedAt != "" {
 		lines = append(lines, fmt.Sprintf("latest_failure_updated_at: %s", latestUpdatedAt))
 	}
+	if latestEntry := renderTaskAuditLatestFailureEntryHint(recent, statusFilter, reasonFilter); latestEntry != "" {
+		lines = append(lines, fmt.Sprintf("latest_failure_entry: %s", latestEntry))
+	}
 	if pairSummary := renderTaskAuditHistoryPairSummary(recent, statusFilter, reasonFilter); pairSummary != "" {
 		lines = append(lines, fmt.Sprintf("pair_summary: %s", pairSummary))
 	}
@@ -211,6 +214,21 @@ func renderTaskAuditLatestFailureUpdatedAtHint(history []task.BackgroundContext,
 		return ""
 	}
 	return fmt.Sprintf("job_id=%s updated_at=%s", latest.JobID, latest.UpdatedAt.UTC().Format("2006-01-02T15:04:05Z"))
+}
+
+func renderTaskAuditLatestFailureEntryHint(history []task.BackgroundContext, statusFilter, reasonFilter string) string {
+	if len(history) == 0 {
+		return ""
+	}
+	if reasonFilter == "" && statusFilter != "failed" {
+		return ""
+	}
+	latestIndex := len(history)
+	latest := history[len(history)-1]
+	if !strings.EqualFold(strings.TrimSpace(latest.Status), "failed") {
+		return ""
+	}
+	return fmt.Sprintf("entry=%d job_id=%s", latestIndex, latest.JobID)
 }
 
 func renderTaskAuditHistoryPairSummary(history []task.BackgroundContext, statusFilter, reasonFilter string) string {
