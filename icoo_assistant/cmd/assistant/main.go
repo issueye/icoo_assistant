@@ -100,4 +100,11 @@ func printUsage(out io.Writer) {
 	_, _ = fmt.Fprintln(out, "Configuration:")
 	_, _ = fmt.Fprintln(out, "  Load environment variables from .env in the current working directory.")
 	_, _ = fmt.Fprintln(out, "  See .env.example for supported settings.")
+	_, _ = fmt.Fprintln(out)
+	_, _ = fmt.Fprintln(out, "First Use:")
+	_, _ = fmt.Fprintln(out, "  Run `assistant check` before the first real task to verify the workspace and view the minimal happy path.")
+	_, _ = fmt.Fprintln(out)
+	_, _ = fmt.Fprintln(out, "Mode Notes:")
+	_, _ = fmt.Fprintln(out, "  Without ANTHROPIC_API_KEY, assistant runs in fake mode for local dry runs and setup validation.")
+	_, _ = fmt.Fprintln(out, "  With ANTHROPIC_API_KEY, assistant uses the real Anthropic client.")
 }
