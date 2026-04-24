@@ -103,6 +103,9 @@ func TestTaskAuditToolSummary(t *testing.T) {
 	if !strings.Contains(result, "priority_failure_reason: timeout count=1") {
 		t.Fatalf("expected priority failure reason, got %q", result)
 	}
+	if !strings.Contains(result, "priority_failure_basis: chosen_by=latest_occurrence count=1 latest_job_id=job-4") {
+		t.Fatalf("expected priority failure basis, got %q", result)
+	}
 	if !strings.Contains(result, "priority_failure_hint: use task_audit action=summary id=task-a reason=timeout, then task_audit action=history id=task-a reason=timeout") {
 		t.Fatalf("expected priority failure hint, got %q", result)
 	}
@@ -237,6 +240,9 @@ func TestTaskAuditToolSummaryCanFilterByStatus(t *testing.T) {
 	if !strings.Contains(result, "priority_failure_reason: timeout count=1") {
 		t.Fatalf("expected filtered priority failure reason, got %q", result)
 	}
+	if !strings.Contains(result, "priority_failure_basis: chosen_by=latest_occurrence count=1 latest_job_id=job-3") {
+		t.Fatalf("expected filtered priority failure basis, got %q", result)
+	}
 	if !strings.Contains(result, "- timeout => job_id=job-3 status=failed") {
 		t.Fatalf("expected filtered latest sample per reason, got %q", result)
 	}
@@ -336,6 +342,9 @@ func TestTaskAuditToolSummaryCanFilterByFailureReason(t *testing.T) {
 	if !strings.Contains(result, "priority_failure_reason: timeout count=2") {
 		t.Fatalf("expected reason-filtered priority failure reason, got %q", result)
 	}
+	if !strings.Contains(result, "priority_failure_basis: chosen_by=highest_count count=2 latest_job_id=job-4") {
+		t.Fatalf("expected reason-filtered priority failure basis, got %q", result)
+	}
 	if !strings.Contains(result, "- timeout => job_id=job-4 status=failed") {
 		t.Fatalf("expected latest timeout sample, got %q", result)
 	}
@@ -380,6 +389,9 @@ func TestTaskAuditToolSummaryPriorityReasonPrefersHigherCount(t *testing.T) {
 	}
 	if !strings.Contains(result, "priority_failure_reason: command_error count=2") {
 		t.Fatalf("expected higher-count reason to be prioritized, got %q", result)
+	}
+	if !strings.Contains(result, "priority_failure_basis: chosen_by=highest_count count=2 latest_job_id=job-3") {
+		t.Fatalf("expected highest-count basis, got %q", result)
 	}
 	if !strings.Contains(result, "priority_failure_hint: use task_audit action=summary id=task-a reason=command_error, then task_audit action=history id=task-a reason=command_error") {
 		t.Fatalf("expected command_error hint, got %q", result)

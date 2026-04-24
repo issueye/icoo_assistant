@@ -13,6 +13,14 @@ type TaskAuditManager interface {
 	Get(id string) (task.Task, error)
 }
 
+type priorityFailureSelection struct {
+	Reason   string
+	Count    int
+	Basis    string
+	Latest   *task.BackgroundContext
+	LatestAt int
+}
+
 func NewTaskAuditTool(manager TaskAuditManager) Definition {
 	return Definition{
 		Tool: llm.Tool{
@@ -126,6 +134,7 @@ func renderTaskAuditSummary(item task.Task, statusFilter, reasonFilter string) s
 		lines = append(lines, "status_counts: none")
 		lines = append(lines, "failure_reason_counts: none")
 		lines = append(lines, "priority_failure_reason: none")
+		lines = append(lines, "priority_failure_basis: none")
 		lines = append(lines, "priority_failure_hint: none")
 		lines = append(lines, "latest_failure_by_reason: none")
 		lines = append(lines, "recent_failure_trend: none")
@@ -143,17 +152,19 @@ func renderTaskAuditSummary(item task.Task, statusFilter, reasonFilter string) s
 	if len(failures) == 0 {
 		lines = append(lines, "failure_reason_counts: none")
 		lines = append(lines, "priority_failure_reason: none")
+		lines = append(lines, "priority_failure_basis: none")
 		lines = append(lines, "priority_failure_hint: none")
 		lines = append(lines, "latest_failure_by_reason: none")
 		lines = append(lines, "recent_failure_trend: none")
 	} else {
-		priorityReason, priorityCount := selectPriorityFailureReason(failures)
+		selection := selectPriorityFailureReason(failures)
 		lines = append(lines, "failure_reason_counts:")
 		for _, line := range sortedCountLines(backgroundFailureReasonCounts(failures)) {
 			lines = append(lines, fmt.Sprintf("- %s", line))
 		}
-		lines = append(lines, fmt.Sprintf("priority_failure_reason: %s count=%d", priorityReason, priorityCount))
-		lines = append(lines, fmt.Sprintf("priority_failure_hint: use task_audit action=summary id=%s reason=%s, then task_audit action=history id=%s reason=%s", item.ID, priorityReason, item.ID, priorityReason))
+		lines = append(lines, fmt.Sprintf("priority_failure_reason: %s count=%d", selection.Reason, selection.Count))
+		lines = append(lines, fmt.Sprintf("priority_failure_basis: %s", selection.Basis))
+		lines = append(lines, fmt.Sprintf("priority_failure_hint: use task_audit action=summary id=%s reason=%s, then task_audit action=history id=%s reason=%s", item.ID, selection.Reason, item.ID, selection.Reason))
 		lines = append(lines, "latest_failure_by_reason:")
 		for _, line := range renderLatestFailureByReasonLines(failures) {
 			lines = append(lines, fmt.Sprintf("- %s", line))
@@ -188,20 +199,45 @@ func renderTaskAuditSummary(item task.Task, statusFilter, reasonFilter string) s
 	return strings.Join(lines, "\n")
 }
 
-func selectPriorityFailureReason(history []task.BackgroundContext) (string, int) {
+func selectPriorityFailureReason(history []task.BackgroundContext) priorityFailureSelection {
 	counts := backgroundFailureReasonCounts(history)
-	bestReason := ""
-	bestCount := 0
-	bestLatestIndex := -1
+	selection := priorityFailureSelection{
+		LatestAt: -1,
+	}
 	for reason, count := range counts {
 		latestIndex := latestBackgroundReasonIndex(history, reason)
-		if count > bestCount || (count == bestCount && latestIndex > bestLatestIndex) || (count == bestCount && latestIndex == bestLatestIndex && (bestReason == "" || reason < bestReason)) {
-			bestReason = reason
-			bestCount = count
-			bestLatestIndex = latestIndex
+		if count > selection.Count || (count == selection.Count && latestIndex > selection.LatestAt) || (count == selection.Count && latestIndex == selection.LatestAt && (selection.Reason == "" || reason < selection.Reason)) {
+			selection.Reason = reason
+			selection.Count = count
+			selection.LatestAt = latestIndex
+			selection.Latest = latestBackgroundByReason(history, reason)
 		}
 	}
-	return bestReason, bestCount
+	selection.Basis = renderPriorityFailureBasis(selection, counts)
+	return selection
+}
+
+func renderPriorityFailureBasis(selection priorityFailureSelection, counts map[string]int) string {
+	if selection.Reason == "" {
+		return "none"
+	}
+	chosenBy := "highest_count"
+	for reason, count := range counts {
+		if reason == selection.Reason {
+			continue
+		}
+		if count == selection.Count {
+			chosenBy = "latest_occurrence"
+			break
+		}
+	}
+	latestJobID := ""
+	latestUpdatedAt := ""
+	if selection.Latest != nil {
+		latestJobID = selection.Latest.JobID
+		latestUpdatedAt = selection.Latest.UpdatedAt.UTC().Format("2006-01-02T15:04:05Z")
+	}
+	return fmt.Sprintf("chosen_by=%s count=%d latest_job_id=%s latest_updated_at=%s", chosenBy, selection.Count, latestJobID, latestUpdatedAt)
 }
 
 func applyTaskAuditFilters(history []task.BackgroundContext, statusFilter, reasonFilter string) []task.BackgroundContext {
