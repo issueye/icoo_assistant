@@ -2,7 +2,7 @@
 
 `icoo_assistant` 是一个基于 Go 的本地编码 Agent 原型，当前代码主体位于 [icoo_assistant](E:\codes\icoo_assistant\icoo_assistant)。
 
-当前仓库已经完成 `0.1.22` 基线，能力范围包括：
+当前仓库已经完成 `0.1.23` 基线，能力范围包括：
 
 - LLM 对话循环
 - 工具注册与调用分发
@@ -56,7 +56,7 @@ go run ./cmd/assistant "先用 task_audit action=summary status=failed 看失败
 go run ./cmd/assistant "先用 task_audit action=summary status=failed 对比各失败原因的最近样本，再决定下一步复盘哪一类失败"
 go run ./cmd/assistant "先用 task_audit action=summary status=failed 看最近失败趋势，再决定是否继续查看详细失败历史"
 go run ./cmd/assistant "先用 task_audit action=summary 看 priority_failure_reason、priority_failure_basis、priority_failure_context、priority_failure_pattern_hint、priority_failure_sample_target、priority_failure_sample_compare、priority_failure_compare_target、priority_failure_change_hint、priority_failure_trend_hint 和 priority_failure_hint，再决定先排查哪类失败"
-go run ./cmd/assistant "先用 task_audit action=history id=task-a reason=timeout limit=2 查看最近两条超时失败，并关注 latest_sample、latest_failure_command、reason=timeout、pair_summary、role=previous 与 role=latest"
+go run ./cmd/assistant "先用 task_audit action=history id=task-a reason=timeout limit=2 查看最近两条超时失败，并关注 latest_sample、latest_failure_command、latest_failure_signature、reason=timeout、pair_summary、role=previous 与 role=latest"
 go run ./cmd/assistant "先用 task_audit action=summary reason=timeout 聚焦超时失败，再决定是否继续查看 task_audit action=history reason=timeout"
 ```
 
@@ -98,7 +98,7 @@ Go 模块目录 [icoo_assistant/.env.example](E:\codes\icoo_assistant\icoo_assis
 
 ## Agent Hook
 
-当前已经为 Agent 主循环补上基础 hook 埋点，默认会把事件写入工作区的 `.agent-hooks/events.jsonl`。`0.1.22` 继续把异常复盘路径往前推了一步，任务侧现在不仅能对比最近两条同类失败样本、判断这类失败最近是稳定重复还是正在变化、看到最近变化点主要落在命令还是错误签名、拿到最新样本与上一条样本的对比入口提示、在进入 `task_audit history` 后直接看到 `role=previous` / `role=latest`、轻量 `pair_summary`、失败条目的 `reason=` 和 `latest_sample`，还能额外用 `latest_failure_command` 更快看到当前最新失败执行了什么命令。当前埋点覆盖了：
+当前已经为 Agent 主循环补上基础 hook 埋点，默认会把事件写入工作区的 `.agent-hooks/events.jsonl`。`0.1.23` 继续把异常复盘路径往前推了一步，任务侧现在不仅能对比最近两条同类失败样本、判断这类失败最近是稳定重复还是正在变化、看到最近变化点主要落在命令还是错误签名、拿到最新样本与上一条样本的对比入口提示、在进入 `task_audit history` 后直接看到 `role=previous` / `role=latest`、轻量 `pair_summary`、失败条目的 `reason=`、`latest_sample` 和 `latest_failure_command`，还能额外用 `latest_failure_signature` 更快看到当前最新失败的错误模式。当前埋点覆盖了：
 
 - run started / completed / failed
 - round started
@@ -120,7 +120,7 @@ Go 模块目录 [icoo_assistant/.env.example](E:\codes\icoo_assistant\icoo_assis
 
 ## Task 持久化
 
-`0.1.22` 继续把任务历史查询和工具边界做了收口。核心代码位于 [internal/task](E:\codes\icoo_assistant\icoo_assistant\internal\task)、[internal/tools/project_task.go](E:\codes\icoo_assistant\icoo_assistant\internal\tools\project_task.go)、[internal/tools/task_audit.go](E:\codes\icoo_assistant\icoo_assistant\internal\tools\task_audit.go)、[internal/tools/tool_catalog.go](E:\codes\icoo_assistant\icoo_assistant\internal\tools\tool_catalog.go)、[internal/tools/agent_hook_audit.go](E:\codes\icoo_assistant\icoo_assistant\internal\tools\agent_hook_audit.go) 和 [internal/background](E:\codes\icoo_assistant\icoo_assistant\internal\background)。当前支持：
+`0.1.23` 继续把任务历史查询和工具边界做了收口。核心代码位于 [internal/task](E:\codes\icoo_assistant\icoo_assistant\internal\task)、[internal/tools/project_task.go](E:\codes\icoo_assistant\icoo_assistant\internal\tools\project_task.go)、[internal/tools/task_audit.go](E:\codes\icoo_assistant\icoo_assistant\internal\tools\task_audit.go)、[internal/tools/tool_catalog.go](E:\codes\icoo_assistant\icoo_assistant\internal\tools\tool_catalog.go)、[internal/tools/agent_hook_audit.go](E:\codes\icoo_assistant\icoo_assistant\internal\tools\agent_hook_audit.go) 和 [internal/background](E:\codes\icoo_assistant\icoo_assistant\internal\background)。当前支持：
 
 - 初始化 `.tasks/` 目录
 - 创建、读取、列出、更新任务
@@ -148,6 +148,7 @@ Go 模块目录 [icoo_assistant/.env.example](E:\codes\icoo_assistant\icoo_assis
 - 在 `task_audit action=summary` 中查看 `priority_failure_trend_hint`
 - 在 `task_audit action=history` 中查看 `latest_sample`
 - 在 `task_audit action=history` 中查看 `latest_failure_command`
+- 在 `task_audit action=history` 中查看 `latest_failure_signature`
 - 在 `task_audit action=history` 的失败条目中直接查看 `reason=<reason>`
 - 在 `task_audit action=history` 的聚焦双样本场景中查看 `role=previous` / `role=latest`
 - 在 `task_audit action=history` 的聚焦双样本场景中查看 `pair_summary`
@@ -164,7 +165,7 @@ Go 模块目录 [icoo_assistant/.env.example](E:\codes\icoo_assistant\icoo_assis
 
 ## Tool 边界
 
-为了让演示和上手路径更顺滑，`0.1.22` 继续把 `tool_catalog` 作为统一工具说明入口，并补上了更适合异常复盘的 latest failure command 提示说明。`docs` 目录现在也增加了 [版本计划写法说明.md](E:\codes\icoo_assistant\docs\版本计划写法说明.md)，后续版本计划改用更紧凑、可检查的写法。当前推荐的职责边界可以简单记成：
+为了让演示和上手路径更顺滑，`0.1.23` 继续把 `tool_catalog` 作为统一工具说明入口，并补上了更适合异常复盘的 latest failure signature 提示说明。`docs` 目录现在也增加了 [版本计划写法说明.md](E:\codes\icoo_assistant\docs\版本计划写法说明.md)，后续版本计划改用更紧凑、可检查的写法。当前推荐的职责边界可以简单记成：
 
 - `todo`：当前会话内的轻量步骤跟踪
 - `project_task`：项目级持久化任务管理
@@ -191,7 +192,7 @@ Go 模块目录 [icoo_assistant/.env.example](E:\codes\icoo_assistant\icoo_assis
 - `task_audit action=summary` 并结合 `priority_failure_compare_target`
 - `task_audit action=summary` 并结合 `priority_failure_change_hint`
 - `task_audit action=summary` 并结合 `priority_failure_trend_hint`
-- `task_audit action=history reason=timeout limit=2` 并结合 `latest_sample`、`latest_failure_command`、`reason=timeout`、`pair_summary`、`role=previous` / `role=latest`
+- `task_audit action=history reason=timeout limit=2` 并结合 `latest_sample`、`latest_failure_command`、`latest_failure_signature`、`reason=timeout`、`pair_summary`、`role=previous` / `role=latest`
 - `task_audit action=summary reason=timeout`
 - `agent_hook_audit action=summary`
 - `project_task action=get` 或 `project_task action=history`
@@ -234,4 +235,5 @@ Go 模块目录 [icoo_assistant/.env.example](E:\codes\icoo_assistant\icoo_assis
 - `0.1.20` 开发计划与完成度评估见 [docs/v0.1.20-开发计划.md](E:\codes\icoo_assistant\docs\v0.1.20-开发计划.md)
 - `0.1.21` 开发计划与完成度评估见 [docs/v0.1.21-开发计划.md](E:\codes\icoo_assistant\docs\v0.1.21-开发计划.md)
 - `0.1.22` 开发计划与完成度评估见 [docs/v0.1.22-开发计划.md](E:\codes\icoo_assistant\docs\v0.1.22-开发计划.md)
-- 下一轮 `v0.1.23` 版本计划见 [docs/v0.1.23-开发计划.md](E:\codes\icoo_assistant\docs\v0.1.23-开发计划.md)
+- `0.1.23` 开发计划与完成度评估见 [docs/v0.1.23-开发计划.md](E:\codes\icoo_assistant\docs\v0.1.23-开发计划.md)
+- 下一轮 `v0.1.24` 版本计划见 [docs/v0.1.24-开发计划.md](E:\codes\icoo_assistant\docs\v0.1.24-开发计划.md)
