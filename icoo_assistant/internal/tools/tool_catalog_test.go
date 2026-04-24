@@ -96,6 +96,9 @@ func TestToolCatalogAuditPaths(t *testing.T) {
 	if !strings.Contains(result, "latest_failure_signature") {
 		t.Fatalf("expected history latest-failure-signature guidance, got %q", result)
 	}
+	if !strings.Contains(result, "latest_failure_updated_at") {
+		t.Fatalf("expected history latest-failure-updated-at guidance, got %q", result)
+	}
 	if !strings.Contains(result, "pair_summary") {
 		t.Fatalf("expected history pair summary guidance, got %q", result)
 	}
