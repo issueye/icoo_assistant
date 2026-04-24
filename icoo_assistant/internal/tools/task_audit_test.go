@@ -224,6 +224,9 @@ func TestTaskAuditToolHistoryCanFilterByStatus(t *testing.T) {
 	if !strings.Contains(result, "latest_failure_command: job_id=job-2 command=cmd-2") {
 		t.Fatalf("expected latest failure command hint on failed history entry, got %q", result)
 	}
+	if !strings.Contains(result, "latest_failure_error: job_id=job-2 error=boom") {
+		t.Fatalf("expected latest failure error hint on failed history entry, got %q", result)
+	}
 	if !strings.Contains(result, "latest_failure_signature: job_id=job-2 signature=boom") {
 		t.Fatalf("expected latest failure signature hint on failed history entry, got %q", result)
 	}
@@ -364,6 +367,9 @@ func TestTaskAuditToolHistoryCanFilterByFailureReason(t *testing.T) {
 	if !strings.Contains(result, "latest_failure_command: job_id=job-3 command=cmd-3") {
 		t.Fatalf("expected latest failure command hint on single timeout failure, got %q", result)
 	}
+	if !strings.Contains(result, "latest_failure_error: job_id=job-3 error=timeout after 5s") {
+		t.Fatalf("expected latest failure error hint on single timeout failure, got %q", result)
+	}
 	if !strings.Contains(result, "latest_failure_signature: job_id=job-3 signature=timeout after <duration>") {
 		t.Fatalf("expected latest failure signature hint on single timeout failure, got %q", result)
 	}
@@ -425,6 +431,9 @@ func TestTaskAuditToolHistoryCanMarkPreviousAndLatestForReasonFilteredPair(t *te
 	}
 	if !strings.Contains(result, "latest_failure_command: job_id=job-3 command=cmd-3") {
 		t.Fatalf("expected latest failure command hint on timeout pair view, got %q", result)
+	}
+	if !strings.Contains(result, "latest_failure_error: job_id=job-3 error=timeout after 8s") {
+		t.Fatalf("expected latest failure error hint on timeout pair view, got %q", result)
 	}
 	if !strings.Contains(result, "latest_failure_signature: job_id=job-3 signature=timeout after <duration>") {
 		t.Fatalf("expected latest failure signature hint on timeout pair view, got %q", result)
@@ -489,6 +498,9 @@ func TestTaskAuditToolHistoryPairSummaryCanHighlightErrorOnlyChange(t *testing.T
 	}
 	if !strings.Contains(result, "latest_failure_command: job_id=job-2 command=cmd-build") {
 		t.Fatalf("expected latest failure command hint on command_error pair view, got %q", result)
+	}
+	if !strings.Contains(result, "latest_failure_error: job_id=job-2 error=boom again") {
+		t.Fatalf("expected latest failure error hint on command_error pair view, got %q", result)
 	}
 	if !strings.Contains(result, "latest_failure_signature: job_id=job-2 signature=boom again") {
 		t.Fatalf("expected latest failure signature hint on command_error pair view, got %q", result)
