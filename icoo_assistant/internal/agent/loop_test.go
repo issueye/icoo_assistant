@@ -1,9 +1,12 @@
 package agent_test
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
 
 	"icoo_assistant/internal/agent"
+	"icoo_assistant/internal/compact"
 	"icoo_assistant/internal/llm"
 	"icoo_assistant/internal/todo"
 	"icoo_assistant/internal/tools"
@@ -72,5 +75,35 @@ func TestRunnerAddsTodoReminderAfterThreeRounds(t *testing.T) {
 	}
 	if !foundReminder {
 		t.Fatal("expected todo reminder after three non-todo rounds")
+	}
+}
+
+func TestRunnerAutoCompactsWhenThresholdExceeded(t *testing.T) {
+	root := t.TempDir()
+	client := &llm.FakeClient{Responses: []llm.Response{{StopReason: "end", Text: "done"}}}
+	registry, err := tools.NewRegistry(tools.Definition{
+		Tool: llm.Tool{Name: "demo", Description: "demo", InputSchema: map[string]interface{}{}},
+		Handler: func(call tools.Call) (string, error) {
+			return "ok", nil
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	manager := &compact.Manager{Threshold: 1, KeepRecent: 3, Dir: root}
+	runner := &agent.Runner{Client: client, Registry: registry, CompactManager: manager, Config: agent.Config{SystemPrompt: "test", MaxRounds: 2}}
+	_, err = runner.Run([]llm.Message{{Role: "user", Content: "this is a very long message that should trigger compaction"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	entries, err := os.ReadDir(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(entries) == 0 {
+		t.Fatal("expected transcript file after auto compact")
+	}
+	if filepath.Ext(entries[0].Name()) != ".jsonl" {
+		t.Fatalf("unexpected transcript file: %s", entries[0].Name())
 	}
 }

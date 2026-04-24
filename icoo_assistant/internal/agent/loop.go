@@ -3,6 +3,7 @@ package agent
 import (
 	"fmt"
 
+	"icoo_assistant/internal/compact"
 	"icoo_assistant/internal/llm"
 	"icoo_assistant/internal/todo"
 	"icoo_assistant/internal/tools"
@@ -14,10 +15,11 @@ type Config struct {
 }
 
 type Runner struct {
-	Client      llm.Client
-	Registry    *tools.Registry
-	TodoManager *todo.Manager
-	Config      Config
+	Client         llm.Client
+	Registry       *tools.Registry
+	TodoManager    *todo.Manager
+	CompactManager *compact.Manager
+	Config         Config
 }
 
 func (r *Runner) Run(messages []llm.Message) ([]llm.Message, error) {
@@ -33,6 +35,17 @@ func (r *Runner) Run(messages []llm.Message) ([]llm.Message, error) {
 	}
 	roundsSinceTodo := 0
 	for i := 0; i < maxRounds; i++ {
+		if r.CompactManager != nil {
+			r.CompactManager.MicroCompact(messages)
+			threshold := r.CompactManager.Threshold
+			if threshold > 0 && r.CompactManager.EstimateTokens(messages) > threshold {
+				compressed, err := r.CompactManager.AutoCompact(messages)
+				if err != nil {
+					return nil, err
+				}
+				messages = compressed
+			}
+		}
 		resp, err := r.Client.CreateMessage(r.Config.SystemPrompt, messages, r.Registry.Tools())
 		if err != nil {
 			return nil, err

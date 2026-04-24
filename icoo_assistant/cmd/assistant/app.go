@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"icoo_assistant/internal/agent"
+	"icoo_assistant/internal/compact"
 	"icoo_assistant/internal/config"
 	"icoo_assistant/internal/llm"
 	"icoo_assistant/internal/todo"
@@ -25,6 +26,11 @@ func newApp(cfg config.Config) (*app, error) {
 		return nil, err
 	}
 	todoManager := todo.NewManager()
+	compactManager := &compact.Manager{
+		Threshold:  cfg.CompactThreshold,
+		KeepRecent: 3,
+		Dir:        cfg.TranscriptDir,
+	}
 	registry, err := tools.NewRegistry(
 		tools.NewBashTool(tools.CommandRunner{Workdir: cfg.Workdir, Timeout: cfg.CommandTimeout}),
 		tools.NewReadFileTool(ws),
@@ -41,9 +47,10 @@ func newApp(cfg config.Config) (*app, error) {
 	}
 	return &app{
 		runner: &agent.Runner{
-			Client:      client,
-			Registry:    registry,
-			TodoManager: todoManager,
+			Client:         client,
+			Registry:       registry,
+			TodoManager:    todoManager,
+			CompactManager: compactManager,
 			Config: agent.Config{
 				SystemPrompt: cfg.SystemPrompt,
 				MaxRounds:    cfg.MaxRounds,

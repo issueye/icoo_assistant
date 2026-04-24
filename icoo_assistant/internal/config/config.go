@@ -19,6 +19,8 @@ type Config struct {
 	AnthropicMaxTokens int64
 	EnablePromptCache  bool
 	EnableThinking     bool
+	CompactThreshold   int
+	TranscriptDir      string
 }
 
 func Load(workdir string) (Config, error) {
@@ -35,12 +37,17 @@ func Load(workdir string) (Config, error) {
 		CommandTimeout:     durationFromEnv("AGENT_COMMAND_TIMEOUT_SECONDS", 120*time.Second),
 		MaxRounds:          intFromEnv("AGENT_MAX_ROUNDS", 20),
 		AnthropicMaxTokens: int64(intFromEnv("ANTHROPIC_MAX_TOKENS", 16000)),
+		CompactThreshold:   intFromEnv("AGENT_COMPACT_THRESHOLD", 50000),
+		TranscriptDir:      strings.TrimSpace(os.Getenv("AGENT_TRANSCRIPT_DIR")),
 	}
 	if cfg.SystemPrompt == "" {
 		cfg.SystemPrompt = fmt.Sprintf("You are a coding agent at %s. Use tools to solve tasks.", workdir)
 	}
 	if cfg.AnthropicModel == "" {
 		cfg.AnthropicModel = "claude-opus-4-7"
+	}
+	if cfg.TranscriptDir == "" {
+		cfg.TranscriptDir = filepath.Join(workdir, ".transcripts")
 	}
 	return cfg, nil
 }
