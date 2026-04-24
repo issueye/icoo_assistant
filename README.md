@@ -2,7 +2,7 @@
 
 `icoo_assistant` 是一个基于 Go 的本地编码 Agent 原型，当前代码主体位于 [icoo_assistant](E:\codes\icoo_assistant\icoo_assistant)。
 
-当前仓库已经完成 `0.1.3` 基线，能力范围包括：
+当前仓库已经完成 `0.1.4` 基线，能力范围包括：
 
 - LLM 对话循环
 - 工具注册与调用分发
@@ -51,6 +51,7 @@ go run ./cmd/assistant "先用 tool_catalog 总结当前可用工具，再说明
 go run ./cmd/assistant "创建一个项目任务，用于验证后台测试"
 go run ./cmd/assistant "使用 tool_catalog action=audit_paths 说明审计入口，再给出 task_audit 和 agent_hook_audit 的查询示例"
 go run ./cmd/assistant "先用 agent_hook_audit action=summary 看最近运行摘要，再用 task_audit action=history status=failed 看失败任务历史"
+go run ./cmd/assistant "先用 task_audit action=summary 看失败概况，再决定是否继续查看 task_audit action=history status=failed"
 ```
 
 ## 配置说明
@@ -91,7 +92,7 @@ Go 模块目录 [icoo_assistant/.env.example](E:\codes\icoo_assistant\icoo_assis
 
 ## Agent Hook
 
-当前已经为 Agent 主循环补上基础 hook 埋点，默认会把事件写入工作区的 `.agent-hooks/events.jsonl`。`0.1.3` 继续补上了更易读的摘要视角，方便先看重点、再下钻细节。当前埋点覆盖了：
+当前已经为 Agent 主循环补上基础 hook 埋点，默认会把事件写入工作区的 `.agent-hooks/events.jsonl`。`0.1.4` 继续把异常排障路径往前推了一步，除了运行时摘要外，还补上了任务侧的失败概况入口。当前埋点覆盖了：
 
 - run started / completed / failed
 - round started
@@ -113,7 +114,7 @@ Go 模块目录 [icoo_assistant/.env.example](E:\codes\icoo_assistant\icoo_assis
 
 ## Task 持久化
 
-`0.1.3` 继续把任务历史查询和工具边界做了收口。核心代码位于 [internal/task](E:\codes\icoo_assistant\icoo_assistant\internal\task)、[internal/tools/project_task.go](E:\codes\icoo_assistant\icoo_assistant\internal\tools\project_task.go)、[internal/tools/task_audit.go](E:\codes\icoo_assistant\icoo_assistant\internal\tools\task_audit.go)、[internal/tools/tool_catalog.go](E:\codes\icoo_assistant\icoo_assistant\internal\tools\tool_catalog.go)、[internal/tools/agent_hook_audit.go](E:\codes\icoo_assistant\icoo_assistant\internal\tools\agent_hook_audit.go) 和 [internal/background](E:\codes\icoo_assistant\icoo_assistant\internal\background)。当前支持：
+`0.1.4` 继续把任务历史查询和工具边界做了收口。核心代码位于 [internal/task](E:\codes\icoo_assistant\icoo_assistant\internal\task)、[internal/tools/project_task.go](E:\codes\icoo_assistant\icoo_assistant\internal\tools\project_task.go)、[internal/tools/task_audit.go](E:\codes\icoo_assistant\icoo_assistant\internal\tools\task_audit.go)、[internal/tools/tool_catalog.go](E:\codes\icoo_assistant\icoo_assistant\internal\tools\tool_catalog.go)、[internal/tools/agent_hook_audit.go](E:\codes\icoo_assistant\icoo_assistant\internal\tools\agent_hook_audit.go) 和 [internal/background](E:\codes\icoo_assistant\icoo_assistant\internal\background)。当前支持：
 
 - 初始化 `.tasks/` 目录
 - 创建、读取、列出、更新任务
@@ -126,6 +127,7 @@ Go 模块目录 [icoo_assistant/.env.example](E:\codes\icoo_assistant\icoo_assis
 - 保留有限条数的后台执行历史摘要
 - 默认 `get` 输出保持紧凑
 - 使用 `project_task action=history` 查看详细历史
+- 使用 `task_audit action=summary` 查看任务执行概况与最近失败
 - 使用 `task_audit action=history` 进行更独立的历史审计查询
 - 使用 `task_audit action=history status=<status>` 聚焦特定执行状态
 - 使用 `tool_catalog action=list|describe` 查看工具职责和推荐场景
@@ -137,7 +139,7 @@ Go 模块目录 [icoo_assistant/.env.example](E:\codes\icoo_assistant\icoo_assis
 
 ## Tool 边界
 
-为了让演示和上手路径更顺滑，`0.1.3` 继续把 `tool_catalog` 作为统一工具说明入口，并补上了更适合排障的摘要/过滤用法。当前推荐的职责边界可以简单记成：
+为了让演示和上手路径更顺滑，`0.1.4` 继续把 `tool_catalog` 作为统一工具说明入口，并补上了更适合异常排障的失败概况用法。当前推荐的职责边界可以简单记成：
 
 - `todo`：当前会话内的轻量步骤跟踪
 - `project_task`：项目级持久化任务管理
@@ -152,6 +154,7 @@ Go 模块目录 [icoo_assistant/.env.example](E:\codes\icoo_assistant\icoo_assis
 如果重点是“回看任务做了什么、Agent 又在运行时经历了什么”，可以优先走这条路径：
 
 - `tool_catalog action=audit_paths`
+- `task_audit action=summary`
 - `agent_hook_audit action=summary`
 - `project_task action=get` 或 `project_task action=history`
 - `task_audit action=history`
@@ -173,4 +176,5 @@ Go 模块目录 [icoo_assistant/.env.example](E:\codes\icoo_assistant\icoo_assis
 - `0.1.1` 开发计划与完成度评估见 [docs/v0.1.1-开发计划.md](E:\codes\icoo_assistant\docs\v0.1.1-开发计划.md)
 - `0.1.2` 开发计划与完成度评估见 [docs/v0.1.2-开发计划.md](E:\codes\icoo_assistant\docs\v0.1.2-开发计划.md)
 - `0.1.3` 开发计划与完成度评估见 [docs/v0.1.3-开发计划.md](E:\codes\icoo_assistant\docs\v0.1.3-开发计划.md)
-- 下一轮 `v0.1.4` 版本计划见 [docs/v0.1.4-开发计划.md](E:\codes\icoo_assistant\docs\v0.1.4-开发计划.md)
+- `0.1.4` 开发计划与完成度评估见 [docs/v0.1.4-开发计划.md](E:\codes\icoo_assistant\docs\v0.1.4-开发计划.md)
+- 下一轮 `v0.1.5` 版本计划见 [docs/v0.1.5-开发计划.md](E:\codes\icoo_assistant\docs\v0.1.5-开发计划.md)

@@ -56,8 +56,8 @@ func TestToolCatalogDescribeTaskAuditMentionsStatusFiltering(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(result, `"status":"failed"`) {
-		t.Fatalf("expected status-filter example, got %q", result)
+	if !strings.Contains(result, `"action":"summary","id":"task-1"`) {
+		t.Fatalf("expected summary example, got %q", result)
 	}
 }
 
@@ -74,6 +74,9 @@ func TestToolCatalogAuditPaths(t *testing.T) {
 	}
 	if !strings.Contains(result, "task_first:") {
 		t.Fatalf("expected task-first audit flow, got %q", result)
+	}
+	if !strings.Contains(result, "task_audit action=summary") {
+		t.Fatalf("expected task audit summary path, got %q", result)
 	}
 	if !strings.Contains(result, "agent_hook_audit action=recent") {
 		t.Fatalf("expected agent hook audit path, got %q", result)
