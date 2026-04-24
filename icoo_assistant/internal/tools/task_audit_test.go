@@ -118,6 +118,9 @@ func TestTaskAuditToolSummary(t *testing.T) {
 	if !strings.Contains(result, "priority_failure_sample_compare: sample_count=1 latest_job_id=job-4 comparison=insufficient_samples") {
 		t.Fatalf("expected priority failure sample compare, got %q", result)
 	}
+	if !strings.Contains(result, "priority_failure_trend_hint: trend=emerging sample_count=1 latest_signature=timeout after <duration>") {
+		t.Fatalf("expected priority failure trend hint, got %q", result)
+	}
 	if !strings.Contains(result, "priority_failure_hint: use task_audit action=summary id=task-a reason=timeout, then task_audit action=history id=task-a reason=timeout limit=1") {
 		t.Fatalf("expected priority failure hint, got %q", result)
 	}
@@ -267,6 +270,9 @@ func TestTaskAuditToolSummaryCanFilterByStatus(t *testing.T) {
 	if !strings.Contains(result, "priority_failure_sample_compare: sample_count=1 latest_job_id=job-3 comparison=insufficient_samples") {
 		t.Fatalf("expected filtered priority failure sample compare, got %q", result)
 	}
+	if !strings.Contains(result, "priority_failure_trend_hint: trend=emerging sample_count=1 latest_signature=timeout after <duration>") {
+		t.Fatalf("expected filtered priority failure trend hint, got %q", result)
+	}
 	if !strings.Contains(result, "- timeout => job_id=job-3 status=failed") {
 		t.Fatalf("expected filtered latest sample per reason, got %q", result)
 	}
@@ -381,6 +387,9 @@ func TestTaskAuditToolSummaryCanFilterByFailureReason(t *testing.T) {
 	if !strings.Contains(result, "priority_failure_sample_compare: latest_job_id=job-4 previous_job_id=job-3 command=changed error_signature=same latest_signature=timeout after <duration> previous_signature=timeout after <duration>") {
 		t.Fatalf("expected reason-filtered priority failure sample compare, got %q", result)
 	}
+	if !strings.Contains(result, "priority_failure_trend_hint: trend=stable sample_count=2 signature=timeout after <duration>") {
+		t.Fatalf("expected reason-filtered priority failure trend hint, got %q", result)
+	}
 	if !strings.Contains(result, "- timeout => job_id=job-4 status=failed") {
 		t.Fatalf("expected latest timeout sample, got %q", result)
 	}
@@ -440,6 +449,9 @@ func TestTaskAuditToolSummaryPriorityReasonPrefersHigherCount(t *testing.T) {
 	}
 	if !strings.Contains(result, "priority_failure_sample_compare: latest_job_id=job-3 previous_job_id=job-1 command=changed error_signature=changed latest_signature=boom again previous_signature=boom") {
 		t.Fatalf("expected highest-count sample compare, got %q", result)
+	}
+	if !strings.Contains(result, "priority_failure_trend_hint: trend=changing sample_count=2 latest_signature=boom again previous_signature=boom") {
+		t.Fatalf("expected highest-count trend hint, got %q", result)
 	}
 	if !strings.Contains(result, "priority_failure_hint: use task_audit action=summary id=task-a reason=command_error, then task_audit action=history id=task-a reason=command_error limit=1") {
 		t.Fatalf("expected command_error hint, got %q", result)
