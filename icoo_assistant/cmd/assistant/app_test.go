@@ -5,7 +5,10 @@ import (
 	"strings"
 	"testing"
 
+	"icoo_assistant/internal/agent"
 	"icoo_assistant/internal/config"
+	"icoo_assistant/internal/llm"
+	"icoo_assistant/internal/tools"
 )
 
 func TestRunREPLExitsImmediately(t *testing.T) {
@@ -83,5 +86,51 @@ func TestRunOnceWithFakeClientProducesGuidance(t *testing.T) {
 		if !strings.Contains(output, snippet) {
 			t.Fatalf("expected runOnce output to contain %q, got %q", snippet, output)
 		}
+	}
+}
+
+func TestRunREPLRetainsConversationHistory(t *testing.T) {
+	client := &llm.FakeClient{Responses: []llm.Response{
+		{StopReason: "end", Text: "记住了，你叫小明。"},
+		{StopReason: "end", Text: "你叫小明。"},
+	}}
+	registry, err := tools.NewRegistry()
+	if err != nil {
+		t.Fatal(err)
+	}
+	app := &app{
+		runner: &agent.Runner{
+			Client:   client,
+			Registry: registry,
+			Config:   agent.Config{SystemPrompt: "test", MaxRounds: 2},
+		},
+		mode: "anthropic",
+	}
+	in := strings.NewReader("我叫小明，请记住。\n我叫什么？\nexit\n")
+	var out bytes.Buffer
+	if err := app.runREPL(in, &out); err != nil {
+		t.Fatal(err)
+	}
+	output := out.String()
+	for _, snippet := range []string{
+		"assistant REPL started (anthropic client)",
+		"记住了，你叫小明。",
+		"你叫小明。",
+	} {
+		if !strings.Contains(output, snippet) {
+			t.Fatalf("expected output to contain %q, got %q", snippet, output)
+		}
+	}
+	if len(client.Snapshots) != 2 {
+		t.Fatalf("expected two client snapshots, got %d", len(client.Snapshots))
+	}
+	if !strings.Contains(client.Snapshots[1], "我叫小明，请记住。") {
+		t.Fatalf("expected second snapshot to contain first user turn, got %q", client.Snapshots[1])
+	}
+	if !strings.Contains(client.Snapshots[1], "记住了，你叫小明。") {
+		t.Fatalf("expected second snapshot to contain first assistant turn, got %q", client.Snapshots[1])
+	}
+	if !strings.Contains(client.Snapshots[1], "我叫什么？") {
+		t.Fatalf("expected second snapshot to contain second user turn, got %q", client.Snapshots[1])
 	}
 }

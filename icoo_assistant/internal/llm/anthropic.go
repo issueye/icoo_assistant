@@ -1,6 +1,7 @@
 package llm
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -8,9 +9,11 @@ import (
 	"icoo_assistant/internal/config"
 
 	anthropic "github.com/anthropics/anthropic-sdk-go"
+	"github.com/anthropics/anthropic-sdk-go/option"
 )
 
 type AnthropicConfig struct {
+	BaseURL           string
 	Model             string
 	MaxTokens         int64
 	EnablePromptCache bool
@@ -23,6 +26,7 @@ type AnthropicClient struct {
 }
 
 func NewAnthropicClient(config AnthropicConfig) *AnthropicClient {
+	baseURL := strings.TrimSpace(config.BaseURL)
 	model := strings.TrimSpace(config.Model)
 	if model == "" {
 		model = "claude-opus-4-7"
@@ -31,10 +35,15 @@ func NewAnthropicClient(config AnthropicConfig) *AnthropicClient {
 	if maxTokens <= 0 {
 		maxTokens = 16000
 	}
+	opts := make([]option.RequestOption, 0, 1)
+	if baseURL != "" {
+		opts = append(opts, option.WithBaseURL(baseURL))
+	}
+	config.BaseURL = baseURL
 	config.Model = model
 	config.MaxTokens = maxTokens
 	return &AnthropicClient{
-		client: anthropic.NewClient(),
+		client: anthropic.NewClient(opts...),
 		config: config,
 	}
 }
@@ -44,6 +53,7 @@ func NewClientFromConfig(cfg config.Config) (Client, string, error) {
 		return &FakeClient{}, "fake", nil
 	}
 	return NewAnthropicClient(AnthropicConfig{
+		BaseURL:           cfg.AnthropicBaseURL,
 		Model:             cfg.AnthropicModel,
 		MaxTokens:         cfg.AnthropicMaxTokens,
 		EnablePromptCache: cfg.EnablePromptCache,
@@ -77,7 +87,7 @@ func (c *AnthropicClient) CreateMessage(system string, messages []Message, tools
 			},
 		}
 	}
-	resp, err := c.client.Messages.New(nil, params)
+	resp, err := c.client.Messages.New(context.Background(), params)
 	if err != nil {
 		return Response{}, err
 	}
@@ -86,23 +96,26 @@ func (c *AnthropicClient) CreateMessage(system string, messages []Message, tools
 		Raw:        resp.ToParam(),
 	}
 	texts := make([]string, 0)
+	thinkingTexts := make([]string, 0)
 	for _, block := range resp.Content {
-		switch variant := block.AsAny().(type) {
-		case anthropic.TextBlock:
-			texts = append(texts, variant.Text)
-		case anthropic.ToolUseBlock:
-			var input map[string]interface{}
-			if err := json.Unmarshal([]byte(variant.JSON.Input.Raw()), &input); err != nil {
-				return Response{}, fmt.Errorf("decode tool input for %s: %w", variant.Name, err)
-			}
-			result.ToolUses = append(result.ToolUses, ToolUse{
-				ID:    variant.ID,
-				Name:  variant.Name,
-				Input: input,
-			})
+		text, thinking, toolUse, err := parseAnthropicBlock(block.AsAny())
+		if err != nil {
+			return Response{}, err
+		}
+		if text != "" {
+			texts = append(texts, text)
+		}
+		if thinking != "" {
+			thinkingTexts = append(thinkingTexts, thinking)
+		}
+		if toolUse != nil {
+			result.ToolUses = append(result.ToolUses, *toolUse)
 		}
 	}
 	result.Text = strings.TrimSpace(strings.Join(texts, "\n"))
+	if result.Text == "" && len(result.ToolUses) == 0 && shouldUseThinkingFallback(c.config) {
+		result.Text = strings.TrimSpace(strings.Join(thinkingTexts, "\n"))
+	}
 	return result, nil
 }
 
@@ -111,10 +124,14 @@ func (c *AnthropicClient) buildMessages(messages []Message) ([]anthropic.Message
 	for _, message := range messages {
 		switch content := message.Content.(type) {
 		case string:
-			if message.Role != "user" {
-				return nil, fmt.Errorf("string content only supported for user messages")
+			switch message.Role {
+			case "user":
+				result = append(result, anthropic.NewUserMessage(anthropic.NewTextBlock(content)))
+			case "assistant":
+				result = append(result, anthropic.NewAssistantMessage(anthropic.NewTextBlock(content)))
+			default:
+				return nil, fmt.Errorf("string content only supported for user/assistant messages")
 			}
-			result = append(result, anthropic.NewUserMessage(anthropic.NewTextBlock(content)))
 		case anthropic.MessageParam:
 			result = append(result, content)
 		case []ToolResultBlock:
@@ -155,4 +172,33 @@ func (c *AnthropicClient) buildTools(tools []Tool) []anthropic.ToolUnionParam {
 		result = append(result, anthropic.ToolUnionParam{OfTool: &param})
 	}
 	return result
+}
+
+func parseAnthropicBlock(block interface{}) (string, string, *ToolUse, error) {
+	switch variant := block.(type) {
+	case anthropic.TextBlock:
+		return variant.Text, "", nil, nil
+	case anthropic.ThinkingBlock:
+		return "", variant.Thinking, nil, nil
+	case anthropic.ToolUseBlock:
+		var input map[string]interface{}
+		if err := json.Unmarshal([]byte(variant.JSON.Input.Raw()), &input); err != nil {
+			return "", "", nil, fmt.Errorf("decode tool input for %s: %w", variant.Name, err)
+		}
+		return "", "", &ToolUse{
+			ID:    variant.ID,
+			Name:  variant.Name,
+			Input: input,
+		}, nil
+	default:
+		return "", "", nil, nil
+	}
+}
+
+func shouldUseThinkingFallback(config AnthropicConfig) bool {
+	baseURL := strings.ToLower(strings.TrimSpace(config.BaseURL))
+	if baseURL == "" {
+		return false
+	}
+	return !strings.Contains(baseURL, "api.anthropic.com")
 }

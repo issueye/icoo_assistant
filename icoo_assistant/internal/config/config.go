@@ -16,6 +16,7 @@ type Config struct {
 	MaxRounds          int
 	CommandTimeout     time.Duration
 	AnthropicAPIKey    string
+	AnthropicBaseURL   string
 	AnthropicModel     string
 	AnthropicMaxTokens int64
 	EnablePromptCache  bool
@@ -33,6 +34,7 @@ func Load(workdir string) (Config, error) {
 		SystemPrompt:       strings.TrimSpace(os.Getenv("AGENT_SYSTEM_PROMPT")),
 		SkillsDir:          strings.TrimSpace(os.Getenv("AGENT_SKILLS_DIR")),
 		AnthropicAPIKey:    strings.TrimSpace(os.Getenv("ANTHROPIC_API_KEY")),
+		AnthropicBaseURL:   strings.TrimSpace(os.Getenv("ANTHROPIC_BASE_URL")),
 		AnthropicModel:     strings.TrimSpace(os.Getenv("ANTHROPIC_MODEL")),
 		EnablePromptCache:  boolFromEnv("ANTHROPIC_ENABLE_PROMPT_CACHE", false),
 		EnableThinking:     boolFromEnv("ANTHROPIC_ENABLE_THINKING", true),

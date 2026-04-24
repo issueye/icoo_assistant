@@ -12,7 +12,6 @@ import (
 	"icoo_assistant/internal/config"
 	"icoo_assistant/internal/llm"
 	"icoo_assistant/internal/task"
-	"icoo_assistant/internal/team"
 )
 
 func runSelfCheck(out io.Writer, cfg config.Config) error {
@@ -81,18 +80,6 @@ func buildSelfCheckReport(cfg config.Config) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	teamManager, err := team.NewManager(team.DefaultDir(workdir))
-	if err != nil {
-		return "", err
-	}
-	teamConfig, err := teamManager.GetConfig()
-	if err != nil {
-		return "", err
-	}
-	teammates, err := teamManager.List()
-	if err != nil {
-		return "", err
-	}
 	backgroundLine, err := describeDirectory("background_dir", background.DefaultDir(workdir), true)
 	if err != nil {
 		return "", err
@@ -105,11 +92,6 @@ func buildSelfCheckReport(cfg config.Config) (string, error) {
 		infoLines,
 		transcriptLine,
 		taskLine,
-		fmt.Sprintf("team_dir: ready path=%s", teamManager.Dir),
-		fmt.Sprintf("teammate_registry_dir: ready path=%s", teamManager.RegistryDir),
-		fmt.Sprintf("team_inbox_dir: ready path=%s", teamManager.InboxDir),
-		fmt.Sprintf("team_request_dir: ready path=%s", teamManager.RequestsDir),
-		fmt.Sprintf("team_config: ready lead_id=%s teammate_count=%d", teamConfig.LeadID, len(teammates)),
 		backgroundLine,
 		hookLine,
 	)

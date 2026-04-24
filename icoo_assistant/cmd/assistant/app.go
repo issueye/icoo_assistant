@@ -15,7 +15,6 @@ import (
 	"icoo_assistant/internal/skill"
 	"icoo_assistant/internal/subagent"
 	"icoo_assistant/internal/task"
-	"icoo_assistant/internal/team"
 	"icoo_assistant/internal/todo"
 	"icoo_assistant/internal/tools"
 	"icoo_assistant/internal/workspace"
@@ -69,10 +68,6 @@ func newApp(cfg config.Config) (*app, error) {
 	if err != nil {
 		return nil, err
 	}
-	teamManager, err := team.NewManager(team.DefaultDir(cfg.Workdir))
-	if err != nil {
-		return nil, err
-	}
 	backgroundManager.SetLifecycleHooks(task.NewBackgroundLifecycleLink(taskManager))
 	hookWriter, err := agent.NewJSONLHook(agent.DefaultHookDir(cfg.Workdir))
 	if err != nil {
@@ -94,9 +89,6 @@ func newApp(cfg config.Config) (*app, error) {
 		tools.NewBackgroundTool(backgroundManager),
 		tools.NewAgentHookAuditTool(eventReader),
 		tools.NewProjectTaskTool(taskManager, backgroundManager),
-		tools.NewTeamRegistryTool(teamManager),
-		tools.NewTeamMessageTool(teamManager),
-		tools.NewTeamProtocolTool(teamManager),
 		tools.NewTaskAuditTool(taskManager),
 		tools.NewToolCatalogTool(baseCatalog),
 		tools.NewTodoTool(todoManager),
@@ -127,9 +119,6 @@ func newApp(cfg config.Config) (*app, error) {
 		tools.NewBackgroundTool(backgroundManager),
 		tools.NewAgentHookAuditTool(eventReader),
 		tools.NewProjectTaskTool(taskManager, backgroundManager),
-		tools.NewTeamRegistryTool(teamManager),
-		tools.NewTeamMessageTool(teamManager),
-		tools.NewTeamProtocolTool(teamManager),
 		tools.NewTaskAuditTool(taskManager),
 		tools.NewToolCatalogTool(tools.DefaultToolCatalogEntries(true)),
 		tools.NewTodoTool(todoManager),
@@ -159,21 +148,42 @@ func newApp(cfg config.Config) (*app, error) {
 }
 
 func (a *app) execute(query string) (string, error) {
-	messages, err := a.runner.Run([]llm.Message{{Role: "user", Content: query}})
+	_, result, err := a.executeMessages(nil, query)
 	if err != nil {
 		return "", err
 	}
+	return result, nil
+}
+
+func (a *app) executeMessages(history []llm.Message, query string) ([]llm.Message, string, error) {
+	messages := make([]llm.Message, len(history), len(history)+1)
+	copy(messages, history)
+	messages = append(messages, llm.Message{Role: "user", Content: query})
+	messages, err := a.runner.Run(messages)
+	if err != nil {
+		return nil, "", err
+	}
+	return messages, renderLatestAssistantContent(messages), nil
+}
+
+func renderLatestAssistantContent(messages []llm.Message) string {
 	if len(messages) == 0 {
-		return "", nil
+		return ""
 	}
-	content := messages[len(messages)-1].Content
-	if content == nil {
-		return "", nil
+	for i := len(messages) - 1; i >= 0; i-- {
+		if messages[i].Role != "assistant" {
+			continue
+		}
+		content := messages[i].Content
+		if content == nil {
+			return ""
+		}
+		if text, ok := content.(string); ok {
+			return text
+		}
+		return fmt.Sprintf("%v", content)
 	}
-	if text, ok := content.(string); ok {
-		return text, nil
-	}
-	return fmt.Sprintf("%v", content), nil
+	return ""
 }
 
 func (a *app) runOnce(out io.Writer, query string) error {
@@ -197,6 +207,7 @@ func (a *app) runREPL(in io.Reader, out io.Writer) error {
 		_, _ = fmt.Fprintf(out, "hint: run `%s` outside the REPL if you want the current minimal_happy_path and setup guidance; replace it with `%s` if the binary is already installed.\n", sourceCommand("check"), binaryCommand("check"))
 	}
 	scanner := bufio.NewScanner(in)
+	conversation := make([]llm.Message, 0)
 	for {
 		_, _ = fmt.Fprint(out, ">> ")
 		if !scanner.Scan() {
@@ -206,11 +217,12 @@ func (a *app) runREPL(in io.Reader, out io.Writer) error {
 		if query == "" || query == "exit" {
 			break
 		}
-		result, err := a.execute(query)
+		nextConversation, result, err := a.executeMessages(conversation, query)
 		if err != nil {
 			_, _ = fmt.Fprintf(out, "error: %v\n", err)
 			continue
 		}
+		conversation = nextConversation
 		if result != "" {
 			_, _ = fmt.Fprintln(out, result)
 			continue
