@@ -16,6 +16,9 @@ func TestPrintUsageIncludesVersionAndExamples(t *testing.T) {
 	if !strings.Contains(output, "assistant --help") {
 		t.Fatalf("expected help example, got %q", output)
 	}
+	if !strings.Contains(output, "assistant check") {
+		t.Fatalf("expected check example, got %q", output)
+	}
 	if !strings.Contains(output, "See .env.example for supported settings.") {
 		t.Fatalf("expected config hint, got %q", output)
 	}

@@ -2,7 +2,7 @@
 
 `icoo_assistant` 是一个基于 Go 的本地编码 Agent 原型，当前代码主体位于 [icoo_assistant](E:\codes\icoo_assistant\icoo_assistant)。
 
-当前仓库已经完成 `0.1.26` 基线，能力范围包括：
+当前仓库已经完成 `0.1.27` 基线，能力范围包括：
 
 - LLM 对话循环
 - 工具注册与调用分发
@@ -37,6 +37,7 @@ cd icoo_assistant
 go test ./...
 cp .env.example .env
 go run ./cmd/assistant --version
+go run ./cmd/assistant check
 go run ./cmd/assistant --help
 go run ./cmd/assistant
 ```
@@ -47,6 +48,7 @@ go run ./cmd/assistant
 
 ```bash
 go run ./cmd/assistant --version
+go run ./cmd/assistant check
 go run ./cmd/assistant "先用 tool_catalog 总结当前可用工具，再说明 project_task、task_audit 和 agent_hook_audit 的边界"
 go run ./cmd/assistant "创建一个项目任务，用于验证后台测试"
 go run ./cmd/assistant "使用 tool_catalog action=audit_paths 说明审计入口，再给出 task_audit 和 agent_hook_audit 的查询示例"
@@ -73,11 +75,28 @@ Go 模块目录 [icoo_assistant/.env.example](E:\codes\icoo_assistant\icoo_assis
 
 ## CLI
 
-目前支持三种基础入口：
+目前支持四种基础入口：
 
 - `go run ./cmd/assistant`：启动 REPL
 - `go run ./cmd/assistant "your task"`：执行单轮任务
+- `go run ./cmd/assistant check`：执行环境自检并确认最小运行前提
 - `go run ./cmd/assistant --version` / `--help`：查看版本或帮助
+
+## 环境自检
+
+`0.1.27` 开始，CLI 增加了 `check` 自检入口，用来在真正运行 Agent 之前快速确认当前仓库是否具备最小可用前提。建议先执行：
+
+```bash
+go run ./cmd/assistant check
+```
+
+当前自检会直接给出这些信息：
+
+- 当前工作区与 `.env` 状态
+- 当前会使用 `fake` 还是 `anthropic` client
+- `skills` 目录是否已配置
+- `.transcripts`、`.tasks`、`.background`、`.agent-hooks` 这些运行目录是否已就绪
+- 下一步建议直接运行什么命令
 
 ## Background 执行
 
@@ -98,7 +117,7 @@ Go 模块目录 [icoo_assistant/.env.example](E:\codes\icoo_assistant\icoo_assis
 
 ## Agent Hook
 
-当前已经为 Agent 主循环补上基础 hook 埋点，默认会把事件写入工作区的 `.agent-hooks/events.jsonl`。`0.1.26` 继续把异常复盘路径往前推了一步，任务侧现在不仅能对比最近两条同类失败样本、判断这类失败最近是稳定重复还是正在变化、看到最近变化点主要落在命令还是错误签名、拿到最新样本与上一条样本的对比入口提示、在进入 `task_audit history` 后直接看到 `role=previous` / `role=latest`、轻量 `pair_summary`、失败条目的 `reason=`、`latest_sample`、`latest_failure_command` 和 `latest_failure_signature`，还能额外用 `latest_failure_error` 更快确认当前最新失败的原始错误文本，再结合 `latest_failure_updated_at` 和 `latest_failure_entry` 直接对齐时间点与返回条目。当前埋点覆盖了：
+当前已经为 Agent 主循环补上基础 hook 埋点，默认会把事件写入工作区的 `.agent-hooks/events.jsonl`。`0.1.27` 先把可用性前置问题往前推了一步，CLI 现在可以先通过 `assistant check` 确认当前仓库的运行前提是否到位；任务侧仍然保留了最近几版补齐的失败复盘能力，包括 `latest_sample`、`latest_failure_command`、`latest_failure_error`、`latest_failure_signature`、`latest_failure_updated_at`、`latest_failure_entry`、`role=previous` / `role=latest` 和 `pair_summary`。当前埋点覆盖了：
 
 - run started / completed / failed
 - round started
@@ -120,9 +139,10 @@ Go 模块目录 [icoo_assistant/.env.example](E:\codes\icoo_assistant\icoo_assis
 
 ## Task 持久化
 
-`0.1.26` 继续把任务历史查询和工具边界做了收口。核心代码位于 [internal/task](E:\codes\icoo_assistant\icoo_assistant\internal\task)、[internal/tools/project_task.go](E:\codes\icoo_assistant\icoo_assistant\internal\tools\project_task.go)、[internal/tools/task_audit.go](E:\codes\icoo_assistant\icoo_assistant\internal\tools\task_audit.go)、[internal/tools/tool_catalog.go](E:\codes\icoo_assistant\icoo_assistant\internal\tools\tool_catalog.go)、[internal/tools/agent_hook_audit.go](E:\codes\icoo_assistant\icoo_assistant\internal\tools\agent_hook_audit.go) 和 [internal/background](E:\codes\icoo_assistant\icoo_assistant\internal\background)。当前支持：
+`0.1.27` 开始把重点切到“可用版交付”的主线上。核心代码位于 [internal/task](E:\codes\icoo_assistant\icoo_assistant\internal\task)、[internal/tools/project_task.go](E:\codes\icoo_assistant\icoo_assistant\internal\tools\project_task.go)、[internal/tools/task_audit.go](E:\codes\icoo_assistant\icoo_assistant\internal\tools\task_audit.go)、[internal/tools/tool_catalog.go](E:\codes\icoo_assistant\icoo_assistant\internal\tools\tool_catalog.go)、[internal/tools/agent_hook_audit.go](E:\codes\icoo_assistant\icoo_assistant\internal\tools\agent_hook_audit.go)、[internal/background](E:\codes\icoo_assistant\icoo_assistant\internal\background) 和 [cmd/assistant](E:\codes\icoo_assistant\icoo_assistant\cmd\assistant)。当前支持：
 
 - 初始化 `.tasks/` 目录
+- 使用 `assistant check` 进行环境自检
 - 创建、读取、列出、更新任务
 - `blockedBy` 依赖字段
 - 任务完成后自动解除下游阻塞
@@ -168,7 +188,7 @@ Go 模块目录 [icoo_assistant/.env.example](E:\codes\icoo_assistant\icoo_assis
 
 ## Tool 边界
 
-为了让演示和上手路径更顺滑，`0.1.26` 继续把 `tool_catalog` 作为统一工具说明入口，并补上了更适合异常复盘的 latest failure error 提示说明。`docs` 目录现在也增加了 [版本计划写法说明.md](E:\codes\icoo_assistant\docs\版本计划写法说明.md)，后续版本计划改用更紧凑、可检查的写法。当前推荐的职责边界可以简单记成：
+为了让演示和上手路径更顺滑，`0.1.27` 先补上了 `assistant check` 这条更适合初次使用的环境自检入口，`tool_catalog` 仍然负责工具边界说明。`docs` 目录现在也增加了 [版本计划写法说明.md](E:\codes\icoo_assistant\docs\版本计划写法说明.md) 和 [v0.1.30-初代可用版路线图.md](E:\codes\icoo_assistant\docs\v0.1.30-初代可用版路线图.md)，后续版本计划会优先围绕可用交付推进。当前推荐的职责边界可以简单记成：
 
 - `todo`：当前会话内的轻量步骤跟踪
 - `project_task`：项目级持久化任务管理
@@ -182,6 +202,7 @@ Go 模块目录 [icoo_assistant/.env.example](E:\codes\icoo_assistant\icoo_assis
 
 如果重点是“回看任务做了什么、Agent 又在运行时经历了什么”，可以优先走这条路径：
 
+- `assistant check`
 - `tool_catalog action=audit_paths`
 - `task_audit action=summary`
 - `task_audit action=summary status=failed`
@@ -244,5 +265,6 @@ Go 模块目录 [icoo_assistant/.env.example](E:\codes\icoo_assistant\icoo_assis
 - `0.1.24` 开发计划与完成度评估见 [docs/v0.1.24-开发计划.md](E:\codes\icoo_assistant\docs\v0.1.24-开发计划.md)
 - `0.1.25` 开发计划与完成度评估见 [docs/v0.1.25-开发计划.md](E:\codes\icoo_assistant\docs\v0.1.25-开发计划.md)
 - `0.1.26` 开发计划与完成度评估见 [docs/v0.1.26-开发计划.md](E:\codes\icoo_assistant\docs\v0.1.26-开发计划.md)
-- 下一轮 `v0.1.27` 版本计划见 [docs/v0.1.27-开发计划.md](E:\codes\icoo_assistant\docs\v0.1.27-开发计划.md)
+- `0.1.27` 开发计划与完成度评估见 [docs/v0.1.27-开发计划.md](E:\codes\icoo_assistant\docs\v0.1.27-开发计划.md)
+- 下一轮 `v0.1.28` 版本计划见 [docs/v0.1.28-开发计划.md](E:\codes\icoo_assistant\docs\v0.1.28-开发计划.md)
 - `v0.1.30` 初代可用版交付路线见 [docs/v0.1.30-初代可用版路线图.md](E:\codes\icoo_assistant\docs\v0.1.30-初代可用版路线图.md)
