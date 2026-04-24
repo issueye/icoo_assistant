@@ -63,6 +63,8 @@ func renderAgentHookAuditRecent(events []hookaudit.Event, query hookaudit.Query)
 	}
 	if len(events) == 0 {
 		lines = append(lines, "entries: none")
+		lines = append(lines, `task_history_hint: use task_audit action=history id=<task-id> for durable project task execution history`)
+		lines = append(lines, `navigation_hint: use tool_catalog action=audit_paths for audit entry-point guidance`)
 		return strings.Join(lines, "\n")
 	}
 	lines = append(lines, "entries:")
@@ -76,6 +78,8 @@ func renderAgentHookAuditRecent(events []hookaudit.Event, query hookaudit.Query)
 		}
 		lines = append(lines, line)
 	}
+	lines = append(lines, `task_history_hint: use task_audit action=history id=<task-id> when a durable task history review is needed`)
+	lines = append(lines, `navigation_hint: use tool_catalog action=audit_paths for audit entry-point guidance`)
 	return strings.Join(lines, "\n")
 }
 

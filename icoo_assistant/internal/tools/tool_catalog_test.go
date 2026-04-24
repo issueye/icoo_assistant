@@ -44,6 +44,25 @@ func TestToolCatalogDescribeHighlightsBoundary(t *testing.T) {
 	}
 }
 
+func TestToolCatalogAuditPaths(t *testing.T) {
+	def := tools.NewToolCatalogTool(tools.DefaultToolCatalogEntries(true))
+	result, err := def.Handler(tools.Call{
+		Name: "tool_catalog",
+		Input: map[string]interface{}{
+			"action": "audit_paths",
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(result, "task_first:") {
+		t.Fatalf("expected task-first audit flow, got %q", result)
+	}
+	if !strings.Contains(result, "agent_hook_audit action=recent") {
+		t.Fatalf("expected agent hook audit path, got %q", result)
+	}
+}
+
 func TestDefaultToolCatalogEntriesCanExcludeTask(t *testing.T) {
 	entries := tools.DefaultToolCatalogEntries(false)
 	for _, entry := range entries {

@@ -57,6 +57,8 @@ func renderTaskAuditHistory(item task.Task, limit int) string {
 	}
 	if len(item.BackgroundHistory) == 0 {
 		lines = append(lines, "entries: none")
+		lines = append(lines, fmt.Sprintf("latest_task_view: project_task action=get id=%s", item.ID))
+		lines = append(lines, `runtime_view_hint: use agent_hook_audit action=recent or tool_catalog action=audit_paths for runtime-side investigation`)
 		return strings.Join(lines, "\n")
 	}
 	lines = append(lines, "entries:")
@@ -70,5 +72,7 @@ func renderTaskAuditHistory(item task.Task, limit int) string {
 		}
 		lines = append(lines, line)
 	}
+	lines = append(lines, fmt.Sprintf("latest_task_view: project_task action=get id=%s", item.ID))
+	lines = append(lines, `runtime_view_hint: use agent_hook_audit action=recent name=agent.tool.completed to inspect runtime-side execution context`)
 	return strings.Join(lines, "\n")
 }

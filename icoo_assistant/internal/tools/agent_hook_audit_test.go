@@ -62,6 +62,9 @@ func TestAgentHookAuditToolRecent(t *testing.T) {
 	if strings.Contains(result, "run_id=run-1") {
 		t.Fatalf("expected limited result, got %q", result)
 	}
+	if !strings.Contains(result, "navigation_hint: use tool_catalog action=audit_paths") {
+		t.Fatalf("expected audit navigation hint, got %q", result)
+	}
 }
 
 func TestAgentHookAuditToolRecentEmpty(t *testing.T) {
@@ -75,5 +78,8 @@ func TestAgentHookAuditToolRecentEmpty(t *testing.T) {
 	}
 	if !strings.Contains(result, "entries: none") {
 		t.Fatalf("unexpected empty result: %q", result)
+	}
+	if !strings.Contains(result, "task_history_hint: use task_audit action=history id=<task-id>") {
+		t.Fatalf("expected task history hint, got %q", result)
 	}
 }

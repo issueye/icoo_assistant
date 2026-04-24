@@ -51,6 +51,12 @@ func TestTaskAuditToolHistory(t *testing.T) {
 	if strings.Contains(result, "job_id=job-0") {
 		t.Fatalf("expected limited audit history, got %q", result)
 	}
+	if !strings.Contains(result, "latest_task_view: project_task action=get id=task-a") {
+		t.Fatalf("expected latest task view hint, got %q", result)
+	}
+	if !strings.Contains(result, "runtime_view_hint: use agent_hook_audit action=recent") {
+		t.Fatalf("expected runtime-side hint, got %q", result)
+	}
 }
 
 func TestTaskAuditToolHistoryEmpty(t *testing.T) {
@@ -74,5 +80,8 @@ func TestTaskAuditToolHistoryEmpty(t *testing.T) {
 	}
 	if !strings.Contains(result, "entries: none") {
 		t.Fatalf("unexpected empty audit result: %q", result)
+	}
+	if !strings.Contains(result, "latest_task_view: project_task action=get id=task-a") {
+		t.Fatalf("expected latest task view hint, got %q", result)
 	}
 }

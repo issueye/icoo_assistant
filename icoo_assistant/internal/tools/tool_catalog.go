@@ -132,7 +132,7 @@ func NewToolCatalogTool(entries []ToolCatalogEntry) Definition {
 			InputSchema: map[string]interface{}{
 				"type": "object",
 				"properties": map[string]interface{}{
-					"action": map[string]interface{}{"type": "string", "enum": []string{"list", "describe"}},
+					"action": map[string]interface{}{"type": "string", "enum": []string{"list", "describe", "audit_paths"}},
 					"name":   map[string]interface{}{"type": "string"},
 				},
 				"required": []string{"action"},
@@ -143,6 +143,8 @@ func NewToolCatalogTool(entries []ToolCatalogEntry) Definition {
 			switch strings.ToLower(strings.TrimSpace(action)) {
 			case "list":
 				return renderToolCatalogList(entries), nil
+			case "audit_paths":
+				return renderToolCatalogAuditPaths(), nil
 			case "describe":
 				name, _ := call.Input["name"].(string)
 				name = strings.TrimSpace(name)
@@ -170,6 +172,7 @@ func renderToolCatalogList(entries []ToolCatalogEntry) string {
 		lines = append(lines, fmt.Sprintf("- %s: %s", entry.Name, entry.Summary))
 	}
 	lines = append(lines, `hint: use {"action":"describe","name":"<tool>"} for boundary guidance`)
+	lines = append(lines, `audit_hint: use {"action":"audit_paths"} for task/runtime audit navigation`)
 	return strings.Join(lines, "\n")
 }
 
@@ -185,6 +188,21 @@ func renderToolCatalogEntry(entry ToolCatalogEntry) string {
 	}
 	if entry.Example != "" {
 		lines = append(lines, fmt.Sprintf("example: %s", entry.Example))
+	}
+	return strings.Join(lines, "\n")
+}
+
+func renderToolCatalogAuditPaths() string {
+	lines := []string{
+		"audit_paths:",
+		`- project_task action=get: inspect the latest durable task snapshot and most recent background context`,
+		`- project_task action=history: inspect a compact task-centric execution history`,
+		`- task_audit action=history: inspect stable project task history for reporting or review`,
+		`- agent_hook_audit action=recent: inspect agent runtime events such as model calls, tool use, compact, and notifications`,
+		"recommended_flows:",
+		`- task_first: project_task get -> project_task history -> task_audit history`,
+		`- runtime_first: agent_hook_audit recent -> agent_hook_audit recent run_id=<run> -> task_audit history when a task review is needed`,
+		`hint: use {"action":"describe","name":"task_audit"} or {"action":"describe","name":"agent_hook_audit"} for per-tool boundaries`,
 	}
 	return strings.Join(lines, "\n")
 }
