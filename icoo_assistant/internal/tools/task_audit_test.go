@@ -118,6 +118,9 @@ func TestTaskAuditToolSummary(t *testing.T) {
 	if !strings.Contains(result, "priority_failure_sample_compare: sample_count=1 latest_job_id=job-4 comparison=insufficient_samples") {
 		t.Fatalf("expected priority failure sample compare, got %q", result)
 	}
+	if !strings.Contains(result, "priority_failure_change_hint: sample_count=1 change=insufficient_samples focus=collect_more_samples latest_job_id=job-4") {
+		t.Fatalf("expected priority failure change hint, got %q", result)
+	}
 	if !strings.Contains(result, "priority_failure_trend_hint: trend=emerging sample_count=1 latest_signature=timeout after <duration>") {
 		t.Fatalf("expected priority failure trend hint, got %q", result)
 	}
@@ -270,6 +273,9 @@ func TestTaskAuditToolSummaryCanFilterByStatus(t *testing.T) {
 	if !strings.Contains(result, "priority_failure_sample_compare: sample_count=1 latest_job_id=job-3 comparison=insufficient_samples") {
 		t.Fatalf("expected filtered priority failure sample compare, got %q", result)
 	}
+	if !strings.Contains(result, "priority_failure_change_hint: sample_count=1 change=insufficient_samples focus=collect_more_samples latest_job_id=job-3") {
+		t.Fatalf("expected filtered priority failure change hint, got %q", result)
+	}
 	if !strings.Contains(result, "priority_failure_trend_hint: trend=emerging sample_count=1 latest_signature=timeout after <duration>") {
 		t.Fatalf("expected filtered priority failure trend hint, got %q", result)
 	}
@@ -387,6 +393,9 @@ func TestTaskAuditToolSummaryCanFilterByFailureReason(t *testing.T) {
 	if !strings.Contains(result, "priority_failure_sample_compare: latest_job_id=job-4 previous_job_id=job-3 command=changed error_signature=same latest_signature=timeout after <duration> previous_signature=timeout after <duration>") {
 		t.Fatalf("expected reason-filtered priority failure sample compare, got %q", result)
 	}
+	if !strings.Contains(result, "priority_failure_change_hint: sample_count=2 change=command_only focus=command latest_job_id=job-4 previous_job_id=job-3 signature=timeout after <duration> latest_command=cmd-4 previous_command=cmd-3") {
+		t.Fatalf("expected reason-filtered priority failure change hint, got %q", result)
+	}
 	if !strings.Contains(result, "priority_failure_trend_hint: trend=stable sample_count=2 signature=timeout after <duration>") {
 		t.Fatalf("expected reason-filtered priority failure trend hint, got %q", result)
 	}
@@ -450,10 +459,54 @@ func TestTaskAuditToolSummaryPriorityReasonPrefersHigherCount(t *testing.T) {
 	if !strings.Contains(result, "priority_failure_sample_compare: latest_job_id=job-3 previous_job_id=job-1 command=changed error_signature=changed latest_signature=boom again previous_signature=boom") {
 		t.Fatalf("expected highest-count sample compare, got %q", result)
 	}
+	if !strings.Contains(result, "priority_failure_change_hint: sample_count=2 change=command_and_error_signature focus=command,error_signature latest_job_id=job-3 previous_job_id=job-1 latest_signature=boom again previous_signature=boom latest_command=cmd-3 previous_command=cmd-1") {
+		t.Fatalf("expected highest-count change hint, got %q", result)
+	}
 	if !strings.Contains(result, "priority_failure_trend_hint: trend=changing sample_count=2 latest_signature=boom again previous_signature=boom") {
 		t.Fatalf("expected highest-count trend hint, got %q", result)
 	}
 	if !strings.Contains(result, "priority_failure_hint: use task_audit action=summary id=task-a reason=command_error, then task_audit action=history id=task-a reason=command_error limit=1") {
 		t.Fatalf("expected command_error hint, got %q", result)
+	}
+}
+
+func TestTaskAuditToolSummaryPriorityChangeHintCanHighlightErrorOnlyChange(t *testing.T) {
+	manager, err := task.NewManager(filepath.Join(t.TempDir(), ".tasks"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := manager.Create(task.CreateInput{
+		ID:    "task-a",
+		Title: "Highlight error-only changes",
+	}); err != nil {
+		t.Fatal(err)
+	}
+	for _, entry := range []task.BackgroundContext{
+		{JobID: "job-1", Status: "failed", Command: "cmd-build", Error: "boom"},
+		{JobID: "job-2", Status: "failed", Command: "cmd-build", Error: "boom again"},
+	} {
+		if _, err := manager.RecordBackground("task-a", entry); err != nil {
+			t.Fatal(err)
+		}
+	}
+	tool := tools.NewTaskAuditTool(manager)
+	result, err := tool.Handler(tools.Call{Input: map[string]interface{}{
+		"action": "summary",
+		"id":     "task-a",
+	}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(result, "priority_failure_reason: command_error count=2") {
+		t.Fatalf("expected command_error priority reason, got %q", result)
+	}
+	if !strings.Contains(result, "priority_failure_sample_compare: latest_job_id=job-2 previous_job_id=job-1 command=same error_signature=changed latest_signature=boom again previous_signature=boom") {
+		t.Fatalf("expected error-only sample compare, got %q", result)
+	}
+	if !strings.Contains(result, "priority_failure_change_hint: sample_count=2 change=error_signature_only focus=error_signature latest_job_id=job-2 previous_job_id=job-1 latest_signature=boom again previous_signature=boom") {
+		t.Fatalf("expected error-only change hint, got %q", result)
+	}
+	if !strings.Contains(result, "priority_failure_trend_hint: trend=changing sample_count=2 latest_signature=boom again previous_signature=boom") {
+		t.Fatalf("expected error-only trend hint, got %q", result)
 	}
 }
