@@ -41,7 +41,7 @@ func TestPrintUsage(t *testing.T) {
 		t.Fatal(err)
 	}
 	output := string(data)
-	for _, snippet := range []string{"icoo_assistant 0.0.1", "assistant [query]", ".env.example"} {
+	for _, snippet := range []string{"icoo_assistant " + Version, "assistant [query]", ".env.example"} {
 		if !strings.Contains(output, snippet) {
 			t.Fatalf("expected usage to contain %q, got %q", snippet, output)
 		}

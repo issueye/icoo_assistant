@@ -2,7 +2,7 @@
 
 `icoo_assistant` 是一个基于 Go 的本地编码 Agent 原型，当前代码主体位于 [icoo_assistant](E:\codes\icoo_assistant\icoo_assistant)。
 
-当前仓库已经完成 `0.0.9` 基线，能力范围包括：
+当前仓库已经完成 `0.1.0` 基线，能力范围包括：
 
 - LLM 对话循环
 - 工具注册与调用分发
@@ -19,6 +19,7 @@
 - 项目任务有限执行历史
 - 项目任务历史查看入口
 - 独立任务审计查询入口
+- 工具职责目录与边界说明入口
 - 后台命令执行与结果回流
 
 ## 仓库结构
@@ -41,9 +42,17 @@ go run ./cmd/assistant
 
 如果配置了 `ANTHROPIC_API_KEY`，程序会使用真实 Anthropic 客户端；否则会回退到 fake client，方便先验证本地框架是否跑通。
 
+推荐先走一遍最小演示路径：
+
+```bash
+go run ./cmd/assistant --version
+go run ./cmd/assistant "先用 tool_catalog 总结当前可用工具，再说明 project_task 和 task_audit 的边界"
+go run ./cmd/assistant "创建一个项目任务，用于验证后台测试"
+```
+
 ## 配置说明
 
-Go 模块目录 [icoo_assistant/.env.example](E:\codes\icoo_assistant\icoo_assistant\.env.example) 提供了首版可用的环境变量模板，`0.0.1` 重点关注这些配置：
+Go 模块目录 [icoo_assistant/.env.example](E:\codes\icoo_assistant\icoo_assistant\.env.example) 提供了当前可用的环境变量模板，当前版本重点关注这些配置：
 
 - `ANTHROPIC_API_KEY`：配置后启用真实 Anthropic 客户端
 - `ANTHROPIC_MODEL`：默认 `claude-opus-4-7`
@@ -92,7 +101,7 @@ Go 模块目录 [icoo_assistant/.env.example](E:\codes\icoo_assistant\icoo_assis
 
 ## Task 持久化
 
-`0.0.9` 已经把任务历史查询进一步推进到“项目任务操作”和“审计查询”分工更清晰的形态。核心代码位于 [internal/task](E:\codes\icoo_assistant\icoo_assistant\internal\task)、[internal/tools/project_task.go](E:\codes\icoo_assistant\icoo_assistant\internal\tools\project_task.go)、[internal/tools/task_audit.go](E:\codes\icoo_assistant\icoo_assistant\internal\tools\task_audit.go) 和 [internal/background](E:\codes\icoo_assistant\icoo_assistant\internal\background)。当前支持：
+`0.1.0` 继续把任务历史查询和工具边界做了收口。核心代码位于 [internal/task](E:\codes\icoo_assistant\icoo_assistant\internal\task)、[internal/tools/project_task.go](E:\codes\icoo_assistant\icoo_assistant\internal\tools\project_task.go)、[internal/tools/task_audit.go](E:\codes\icoo_assistant\icoo_assistant\internal\tools\task_audit.go)、[internal/tools/tool_catalog.go](E:\codes\icoo_assistant\icoo_assistant\internal\tools\tool_catalog.go) 和 [internal/background](E:\codes\icoo_assistant\icoo_assistant\internal\background)。当前支持：
 
 - 初始化 `.tasks/` 目录
 - 创建、读取、列出、更新任务
@@ -106,10 +115,24 @@ Go 模块目录 [icoo_assistant/.env.example](E:\codes\icoo_assistant\icoo_assis
 - 默认 `get` 输出保持紧凑
 - 使用 `project_task action=history` 查看详细历史
 - 使用 `task_audit action=history` 进行更独立的历史审计查询
+- 使用 `tool_catalog action=list|describe` 查看工具职责和推荐场景
 - 后台启动时将关联任务推进到 `in_progress`
 - 后台失败时将 `in_progress` 任务退回 `pending`
 
 命名上，`project_task` 负责项目级持久化任务，现有 `task` 仍负责子代理委托，这样能保持会话内规划、项目任务和子任务派发的职责边界清晰。
+
+## Tool 边界
+
+为了让演示和上手路径更顺滑，`0.1.0` 新增了 `tool_catalog` 工具。当前推荐的职责边界可以简单记成：
+
+- `todo`：当前会话内的轻量步骤跟踪
+- `project_task`：项目级持久化任务管理
+- `task_audit`：项目任务执行历史审计
+- `task`：子代理委托
+- `background`：长时间运行命令
+- `bash`：当前轮内应完成的快速命令
+
+如果 Agent 对工具边界拿不准，可以先调用 `tool_catalog action=list`，再对具体工具执行 `tool_catalog action=describe`。
 
 ## 版本计划
 
@@ -122,4 +145,5 @@ Go 模块目录 [icoo_assistant/.env.example](E:\codes\icoo_assistant\icoo_assis
 - `0.0.7` 开发计划与完成度评估见 [docs/v0.0.7-开发计划.md](E:\codes\icoo_assistant\docs\v0.0.7-开发计划.md)
 - `0.0.8` 开发计划与完成度评估见 [docs/v0.0.8-开发计划.md](E:\codes\icoo_assistant\docs\v0.0.8-开发计划.md)
 - `0.0.9` 开发计划与完成度评估见 [docs/v0.0.9-开发计划.md](E:\codes\icoo_assistant\docs\v0.0.9-开发计划.md)
-- 下一轮 `v0.1.0` 版本计划见 [docs/v0.1.0-开发计划.md](E:\codes\icoo_assistant\docs\v0.1.0-开发计划.md)
+- `0.1.0` 开发计划与完成度评估见 [docs/v0.1.0-开发计划.md](E:\codes\icoo_assistant\docs\v0.1.0-开发计划.md)
+- 下一轮 `v0.1.1` 版本计划见 [docs/v0.1.1-开发计划.md](E:\codes\icoo_assistant\docs\v0.1.1-开发计划.md)

@@ -58,6 +58,7 @@ func newApp(cfg config.Config) (*app, error) {
 		return nil, err
 	}
 	systemPrompt := cfg.SystemPrompt + "\n\nSkills available:\n" + skillLoader.Descriptions()
+	baseCatalog := tools.DefaultToolCatalogEntries(false)
 	baseRegistry, err := tools.NewRegistry(
 		tools.NewBashTool(tools.CommandRunner{Workdir: cfg.Workdir, Timeout: cfg.CommandTimeout}),
 		tools.NewReadFileTool(ws),
@@ -66,6 +67,7 @@ func newApp(cfg config.Config) (*app, error) {
 		tools.NewBackgroundTool(backgroundManager),
 		tools.NewProjectTaskTool(taskManager, backgroundManager),
 		tools.NewTaskAuditTool(taskManager),
+		tools.NewToolCatalogTool(baseCatalog),
 		tools.NewTodoTool(todoManager),
 		tools.NewCompactTool(),
 		tools.NewLoadSkillTool(skillLoader),
@@ -94,6 +96,7 @@ func newApp(cfg config.Config) (*app, error) {
 		tools.NewBackgroundTool(backgroundManager),
 		tools.NewProjectTaskTool(taskManager, backgroundManager),
 		tools.NewTaskAuditTool(taskManager),
+		tools.NewToolCatalogTool(tools.DefaultToolCatalogEntries(true)),
 		tools.NewTodoTool(todoManager),
 		tools.NewCompactTool(),
 		tools.NewTaskTool(),
