@@ -30,6 +30,7 @@ type Runner struct {
 	Registry       *tools.Registry
 	TodoManager    *todo.Manager
 	CompactManager *compact.Manager
+	Transcript     TranscriptRecorder
 	SubagentRunner SubagentRunner
 	Background     BackgroundNotifier
 	Hooks          []Hook
@@ -37,7 +38,7 @@ type Runner struct {
 	now            func() time.Time
 }
 
-func (r *Runner) Run(messages []llm.Message) ([]llm.Message, error) {
+func (r *Runner) Run(messages []llm.Message) (_ []llm.Message, err error) {
 	if r.Client == nil {
 		return nil, fmt.Errorf("client required")
 	}
@@ -52,6 +53,12 @@ func (r *Runner) Run(messages []llm.Message) ([]llm.Message, error) {
 		r.now = time.Now
 	}
 	runID := fmt.Sprintf("run-%d", r.now().UTC().UnixNano())
+	defer func() {
+		recordErr := r.recordTranscript(runID, messages, err)
+		if err == nil && recordErr != nil {
+			err = recordErr
+		}
+	}()
 	r.emit(Event{
 		Name:  "agent.run.started",
 		RunID: runID,
@@ -215,11 +222,14 @@ func (r *Runner) Run(messages []llm.Message) ([]llm.Message, error) {
 		} else {
 			roundsSinceTodo++
 		}
+		shouldInjectTodoReminder := roundsSinceTodo >= 3
 		if roundsSinceTodo >= 3 {
 			r.emit(Event{Name: "agent.todo.reminder_injected", RunID: runID, Round: round})
-			results = append(results, tools.Result{Type: "tool_result", ToolUseID: "reminder", Content: "<reminder>Update your todos.</reminder>"})
 		}
 		messages = append(messages, llm.Message{Role: "user", Content: results})
+		if shouldInjectTodoReminder {
+			messages = append(messages, llm.Message{Role: "user", Content: "<reminder>Update your todos.</reminder>"})
+		}
 		if manualCompact && r.CompactManager != nil {
 			r.emit(Event{Name: "agent.compact.manual_requested", RunID: runID, Round: round})
 			compressed, err := r.CompactManager.AutoCompact(r.Client, messages)
@@ -238,6 +248,42 @@ func (r *Runner) Run(messages []llm.Message) ([]llm.Message, error) {
 		},
 	})
 	return nil, fmt.Errorf("max rounds exceeded")
+}
+
+func (r *Runner) recordTranscript(runID string, messages []llm.Message, runErr error) error {
+	recorder := r.Transcript
+	if recorder == nil && r.CompactManager != nil && strings.TrimSpace(r.CompactManager.Dir) != "" {
+		defaultRecorder, err := NewJSONTranscriptRecorder(r.CompactManager.Dir)
+		if err != nil {
+			return err
+		}
+		r.Transcript = defaultRecorder
+		recorder = defaultRecorder
+	}
+	if recorder == nil {
+		return nil
+	}
+	record := TranscriptRecord{
+		Timestamp:    r.now().UTC(),
+		RunID:        runID,
+		Status:       "completed",
+		MessageCount: len(messages),
+		Messages:     cloneMessages(messages),
+	}
+	if runErr != nil {
+		record.Status = "failed"
+		record.Error = runErr.Error()
+	}
+	return recorder.Record(record)
+}
+
+func cloneMessages(messages []llm.Message) []llm.Message {
+	if len(messages) == 0 {
+		return nil
+	}
+	cloned := make([]llm.Message, len(messages))
+	copy(cloned, messages)
+	return cloned
 }
 
 func formatBackgroundNotifications(completions []background.Completion) string {

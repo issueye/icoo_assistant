@@ -33,8 +33,17 @@ type captureHook struct {
 	events []agent.Event
 }
 
+type captureTranscriptRecorder struct {
+	records []agent.TranscriptRecord
+}
+
 func (h *captureHook) OnEvent(event agent.Event) {
 	h.events = append(h.events, event)
+}
+
+func (r *captureTranscriptRecorder) Record(record agent.TranscriptRecord) error {
+	r.records = append(r.records, record)
+	return nil
 }
 
 func (f *fakeBackgroundNotifier) PollNotifications() ([]background.Completion, error) {
@@ -91,12 +100,8 @@ func TestRunnerAddsTodoReminderAfterThreeRounds(t *testing.T) {
 	}
 	foundReminder := false
 	for _, msg := range messages {
-		if results, ok := msg.Content.([]tools.Result); ok {
-			for _, result := range results {
-				if result.Content == "<reminder>Update your todos.</reminder>" {
-					foundReminder = true
-				}
-			}
+		if text, ok := msg.Content.(string); ok && text == "<reminder>Update your todos.</reminder>" {
+			foundReminder = true
 		}
 	}
 	if !foundReminder {
@@ -259,6 +264,121 @@ func TestJSONLHookWritesEvents(t *testing.T) {
 	}
 	if parsed.Name != "agent.run.started" || parsed.RunID != "run-1" {
 		t.Fatalf("unexpected parsed event: %#v", parsed)
+	}
+}
+
+func TestRunnerWritesTranscriptOnCompletion(t *testing.T) {
+	client := &llm.FakeClient{Responses: []llm.Response{
+		{StopReason: "end", Text: "done"},
+	}}
+	registry, err := tools.NewRegistry()
+	if err != nil {
+		t.Fatal(err)
+	}
+	recorder := &captureTranscriptRecorder{}
+	runner := &agent.Runner{
+		Client:     client,
+		Registry:   registry,
+		Transcript: recorder,
+		Config:     agent.Config{SystemPrompt: "test", MaxRounds: 2},
+	}
+	messages, err := runner.Run([]llm.Message{{Role: "user", Content: "hello"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(messages) != 2 {
+		t.Fatalf("unexpected message count: %d", len(messages))
+	}
+	if len(recorder.records) != 1 {
+		t.Fatalf("expected one transcript record, got %d", len(recorder.records))
+	}
+	record := recorder.records[0]
+	if record.Status != "completed" {
+		t.Fatalf("expected completed transcript, got %#v", record)
+	}
+	if record.MessageCount != 2 {
+		t.Fatalf("expected 2 messages, got %d", record.MessageCount)
+	}
+	if len(record.Messages) != 2 {
+		t.Fatalf("expected 2 recorded messages, got %d", len(record.Messages))
+	}
+	if record.Messages[0].Content != "hello" {
+		t.Fatalf("unexpected first message: %#v", record.Messages[0])
+	}
+	if record.Messages[1].Content != "done" {
+		t.Fatalf("unexpected second message: %#v", record.Messages[1])
+	}
+}
+
+func TestRunnerWritesTranscriptOnFailure(t *testing.T) {
+	client := &llm.FakeClient{Responses: []llm.Response{
+		{StopReason: "tool_use", ToolUses: []llm.ToolUse{{ID: "1", Name: "demo", Input: map[string]interface{}{}}}},
+	}}
+	registry, err := tools.NewRegistry(tools.Definition{
+		Tool:    llm.Tool{Name: "demo", Description: "demo", InputSchema: map[string]interface{}{}},
+		Handler: func(call tools.Call) (string, error) { return "ok", nil },
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	recorder := &captureTranscriptRecorder{}
+	runner := &agent.Runner{
+		Client:     client,
+		Registry:   registry,
+		Transcript: recorder,
+		Config:     agent.Config{SystemPrompt: "test", MaxRounds: 1},
+	}
+	_, err = runner.Run([]llm.Message{{Role: "user", Content: "hello"}})
+	if err == nil {
+		t.Fatal("expected max rounds exceeded error")
+	}
+	if len(recorder.records) != 1 {
+		t.Fatalf("expected one transcript record, got %d", len(recorder.records))
+	}
+	record := recorder.records[0]
+	if record.Status != "failed" {
+		t.Fatalf("expected failed transcript, got %#v", record)
+	}
+	if !strings.Contains(record.Error, "max rounds exceeded") {
+		t.Fatalf("unexpected failure record: %#v", record)
+	}
+	if record.MessageCount != len(record.Messages) {
+		t.Fatalf("expected message count to match recorded messages, got %d vs %d", record.MessageCount, len(record.Messages))
+	}
+	if record.MessageCount < 3 {
+		t.Fatalf("expected failure transcript to retain the in-flight conversation, got %d messages", record.MessageCount)
+	}
+	if record.Messages[0].Content != "hello" {
+		t.Fatalf("expected original user message to be retained, got %#v", record.Messages[0])
+	}
+}
+
+func TestJSONTranscriptRecorderWritesRecord(t *testing.T) {
+	dir := t.TempDir()
+	recorder, err := agent.NewJSONTranscriptRecorder(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	record := agent.TranscriptRecord{
+		Timestamp:    time.Unix(1700000000, 0).UTC(),
+		RunID:        "run-1",
+		Status:       "completed",
+		MessageCount: 1,
+		Messages:     []llm.Message{{Role: "user", Content: "hello"}},
+	}
+	if err := recorder.Record(record); err != nil {
+		t.Fatal(err)
+	}
+	data, err := os.ReadFile(filepath.Join(dir, "conversation_run-1.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var parsed agent.TranscriptRecord
+	if err := json.Unmarshal(data, &parsed); err != nil {
+		t.Fatal(err)
+	}
+	if parsed.RunID != "run-1" || parsed.MessageCount != 1 {
+		t.Fatalf("unexpected parsed transcript: %#v", parsed)
 	}
 }
 
