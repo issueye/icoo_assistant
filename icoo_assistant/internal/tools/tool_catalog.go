@@ -88,7 +88,7 @@ func DefaultToolCatalogEntries(includeTask bool) []ToolCatalogEntry {
 			UseWhen:     "Use when task execution history should be summarized, reviewed, reported, or filtered by execution status or failure reason.",
 			AvoidWhen:   "Avoid for normal task CRUD; use project_task instead.",
 			Example:     `{"action":"summary","id":"task-1"}`,
-			Description: "Keeps audit queries separate from day-to-day project task operations and supports failure-focused summaries, reason classification, priority failure hints with selection basis, latest samples per reason, recent failure trend hints, plus status- or reason-filtered inspection.",
+			Description: "Keeps audit queries separate from day-to-day project task operations and supports failure-focused summaries, reason classification, priority failure hints with selection basis and recent context, latest samples per reason, recent failure trend hints, plus status- or reason-filtered inspection.",
 		},
 		{
 			Name:        "todo",
@@ -197,11 +197,11 @@ func renderToolCatalogAuditPaths() string {
 		"audit_paths:",
 		`- project_task action=get: inspect the latest durable task snapshot and most recent background context`,
 		`- project_task action=history: inspect a compact task-centric execution history`,
-		`- task_audit action=summary: inspect status counts, failure reason counts, priority failure hints with basis, recent failure trend, and the latest sample for each failure reason before drilling into detailed history or focusing on one failure reason`,
+		`- task_audit action=summary: inspect status counts, failure reason counts, priority failure hints with basis and recent context, recent failure trend, and the latest sample for each failure reason before drilling into detailed history or focusing on one failure reason`,
 		`- task_audit action=history: inspect stable project task history for reporting, review, or reason-focused drill-down`,
 		`- agent_hook_audit action=recent: inspect agent runtime events such as model calls, tool use, compact, and notifications`,
 		"recommended_flows:",
-		`- task_first: project_task get -> task_audit summary -> inspect priority_failure_basis -> follow priority_failure_hint or task_audit summary reason=<reason> -> task_audit history`,
+		`- task_first: project_task get -> task_audit summary -> inspect priority_failure_basis and priority_failure_context -> follow priority_failure_hint or task_audit summary reason=<reason> -> task_audit history`,
 		`- runtime_first: agent_hook_audit recent -> agent_hook_audit recent run_id=<run> -> task_audit history when a task review is needed`,
 		`hint: use {"action":"describe","name":"task_audit"} or {"action":"describe","name":"agent_hook_audit"} for per-tool boundaries`,
 	}
