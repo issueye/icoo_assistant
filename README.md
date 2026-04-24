@@ -206,6 +206,8 @@ Go 模块目录 [icoo_assistant/.env.example](E:\codes\icoo_assistant\icoo_assis
 
 ## 版本计划
 
+`v0.1.30` 的目标已经调整为“交付一个可以使用的初代版本”，对应倒排路线见 [docs/v0.1.30-初代可用版路线图.md](E:\codes\icoo_assistant\docs\v0.1.30-初代可用版路线图.md)。
+
 - `0.0.1` 开发计划与完成度评估见 [docs/v0.0.1-开发计划.md](E:\codes\icoo_assistant\docs\v0.0.1-开发计划.md)
 - `0.0.2` 开发计划与完成度评估见 [docs/v0.0.2-开发计划.md](E:\codes\icoo_assistant\docs\v0.0.2-开发计划.md)
 - `0.0.3` 开发计划与完成度评估见 [docs/v0.0.3-开发计划.md](E:\codes\icoo_assistant\docs\v0.0.3-开发计划.md)
@@ -243,3 +245,4 @@ Go 模块目录 [icoo_assistant/.env.example](E:\codes\icoo_assistant\icoo_assis
 - `0.1.25` 开发计划与完成度评估见 [docs/v0.1.25-开发计划.md](E:\codes\icoo_assistant\docs\v0.1.25-开发计划.md)
 - `0.1.26` 开发计划与完成度评估见 [docs/v0.1.26-开发计划.md](E:\codes\icoo_assistant\docs\v0.1.26-开发计划.md)
 - 下一轮 `v0.1.27` 版本计划见 [docs/v0.1.27-开发计划.md](E:\codes\icoo_assistant\docs\v0.1.27-开发计划.md)
+- `v0.1.30` 初代可用版交付路线见 [docs/v0.1.30-初代可用版路线图.md](E:\codes\icoo_assistant\docs\v0.1.30-初代可用版路线图.md)
