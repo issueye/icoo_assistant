@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os/exec"
+	"runtime"
 	"strings"
 	"time"
 
@@ -19,7 +20,7 @@ func NewBashTool(runner CommandRunner) Definition {
 	return Definition{
 		Tool: llm.Tool{
 			Name:        "bash",
-			Description: "Run a shell command.",
+			Description: "Run a shell command in the workspace.",
 			InputSchema: map[string]interface{}{
 				"type": "object",
 				"properties": map[string]interface{}{
@@ -44,11 +45,12 @@ func NewBashTool(runner CommandRunner) Definition {
 			}
 			ctx, cancel := context.WithTimeout(context.Background(), timeout)
 			defer cancel()
-			cmd := exec.CommandContext(ctx, "bash", "-lc", command)
+			shell, args := defaultShellCommand(command)
+			cmd := exec.CommandContext(ctx, shell, args...)
 			cmd.Dir = runner.Workdir
 			out, err := cmd.CombinedOutput()
 			if ctx.Err() == context.DeadlineExceeded {
-				return "Error: Timeout (120s)", nil
+				return fmt.Sprintf("Error: Timeout (%s)", timeout), nil
 			}
 			text := strings.TrimSpace(string(out))
 			if text == "" {
@@ -63,4 +65,11 @@ func NewBashTool(runner CommandRunner) Definition {
 			return text, nil
 		},
 	}
+}
+
+func defaultShellCommand(command string) (string, []string) {
+	if runtime.GOOS == "windows" {
+		return "powershell.exe", []string{"-NoLogo", "-NoProfile", "-Command", command}
+	}
+	return "sh", []string{"-lc", command}
 }
