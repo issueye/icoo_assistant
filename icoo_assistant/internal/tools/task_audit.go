@@ -98,6 +98,11 @@ func renderTaskAuditHistory(item task.Task, limit int, statusFilter string) stri
 
 func renderTaskAuditSummary(item task.Task, statusFilter string) string {
 	filtered := filterBackgroundHistoryByStatus(item.BackgroundHistory, statusFilter)
+	failureSource := item.BackgroundHistory
+	if statusFilter != "" {
+		failureSource = filtered
+	}
+	failures := filterBackgroundHistoryByStatus(failureSource, "failed")
 	lines := []string{
 		fmt.Sprintf("task_id: %s", item.ID),
 		fmt.Sprintf("title: %s", item.Title),
@@ -109,8 +114,10 @@ func renderTaskAuditSummary(item task.Task, statusFilter string) string {
 	}
 	if len(item.BackgroundHistory) == 0 {
 		lines = append(lines, "status_counts: none")
+		lines = append(lines, "failure_reason_counts: none")
 		lines = append(lines, "latest_entry: none")
 		lines = append(lines, "latest_failure: none")
+		lines = append(lines, "latest_failure_reason: none")
 		lines = append(lines, fmt.Sprintf("history_hint: use task_audit action=history id=%s", item.ID))
 		lines = append(lines, `runtime_view_hint: use agent_hook_audit action=summary for runtime-side troubleshooting`)
 		return strings.Join(lines, "\n")
@@ -119,12 +126,22 @@ func renderTaskAuditSummary(item task.Task, statusFilter string) string {
 	for _, line := range sortedCountLines(backgroundStatusCounts(item.BackgroundHistory)) {
 		lines = append(lines, fmt.Sprintf("- %s", line))
 	}
+	if len(failures) == 0 {
+		lines = append(lines, "failure_reason_counts: none")
+	} else {
+		lines = append(lines, "failure_reason_counts:")
+		for _, line := range sortedCountLines(backgroundFailureReasonCounts(failures)) {
+			lines = append(lines, fmt.Sprintf("- %s", line))
+		}
+	}
 	lines = append(lines, fmt.Sprintf("latest_entry: %s", renderBackgroundContextSummary(item.BackgroundHistory[len(item.BackgroundHistory)-1])))
 	latestFailure := latestBackgroundByStatus(item.BackgroundHistory, "failed")
 	if latestFailure == nil {
 		lines = append(lines, "latest_failure: none")
+		lines = append(lines, "latest_failure_reason: none")
 	} else {
 		lines = append(lines, fmt.Sprintf("latest_failure: %s", renderBackgroundContextSummary(*latestFailure)))
+		lines = append(lines, fmt.Sprintf("latest_failure_reason: %s", classifyBackgroundFailureReason(*latestFailure)))
 	}
 	if len(filtered) == 0 {
 		lines = append(lines, "matched_latest_entry: none")
@@ -192,4 +209,24 @@ func renderBackgroundContextSummary(entry task.BackgroundContext) string {
 		line = fmt.Sprintf("%s error=%s", line, entry.Error)
 	}
 	return line
+}
+
+func backgroundFailureReasonCounts(history []task.BackgroundContext) map[string]int {
+	counts := map[string]int{}
+	for _, entry := range history {
+		counts[classifyBackgroundFailureReason(entry)]++
+	}
+	return counts
+}
+
+func classifyBackgroundFailureReason(entry task.BackgroundContext) string {
+	errorText := strings.ToLower(strings.TrimSpace(entry.Error))
+	switch {
+	case errorText == "":
+		return "unknown"
+	case strings.HasPrefix(errorText, "timeout after"):
+		return "timeout"
+	default:
+		return "command_error"
+	}
 }
