@@ -41,16 +41,17 @@ func TestPrintUsage(t *testing.T) {
 		t.Fatal(err)
 	}
 	output := string(data)
-	for _, snippet := range []string{"icoo_assistant " + Version, "assistant [query]", "assistant check", ".env.example", "Without ANTHROPIC_API_KEY, assistant runs in fake mode"} {
+	for _, snippet := range []string{"icoo_assistant " + Version, "go run ./cmd/assistant [query]", "go run ./cmd/assistant check", ".env.example", "Without ANTHROPIC_API_KEY, assistant runs in fake mode"} {
 		if !strings.Contains(output, snippet) {
 			t.Fatalf("expected usage to contain %q, got %q", snippet, output)
 		}
 	}
 	for _, snippet := range []string{
-		"assistant doctor",
+		"go run ./cmd/assistant doctor",
 		"Recommended first-run path:",
-		"1. assistant check",
+		"1. go run ./cmd/assistant check",
 		"In fake mode, steps 2-4 still work as a dry run",
+		"Replace `go run ./cmd/assistant` with `assistant` if the binary is already installed.",
 	} {
 		if !strings.Contains(output, snippet) {
 			t.Fatalf("expected usage to contain %q, got %q", snippet, output)

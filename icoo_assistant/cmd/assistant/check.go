@@ -107,29 +107,38 @@ func buildSelfCheckReport(cfg config.Config) (string, error) {
 			lines = append(lines, "- "+advisory)
 		}
 	}
-	lines = append(lines, "first_run_status: completed step=1 command=assistant check")
+	lines = append(lines, fmt.Sprintf("command_prefix: default=%s", sourceCommandPrefix))
+	lines = append(lines, fmt.Sprintf("command_prefix_note: replace `%s` with `%s` if the binary is already installed", sourceCommandPrefix, binaryCommandPrefix))
+	lines = append(lines, "first_run_status: completed step=1 self_check=ready")
 	lines = append(lines, "minimal_happy_path:")
 	for _, step := range minimalHappyPathLines(mode) {
 		lines = append(lines, step)
 	}
 	if mode == "fake" {
-		lines = append(lines, `next_step: continue with minimal_happy_path step=2 command=assistant "先用 tool_catalog 总结当前可用工具，再说明 project_task、task_audit 和 agent_hook_audit 的边界"; set ANTHROPIC_API_KEY and rerun assistant check first if you want real model calls`)
+		lines = append(lines, fmt.Sprintf(
+			`next_step: continue with minimal_happy_path step=2 command=%s; set ANTHROPIC_API_KEY and rerun %s first if you want real model calls`,
+			sourceCommand(`"先用 tool_catalog 总结当前可用工具，再说明 project_task、task_audit 和 agent_hook_audit 的边界"`),
+			sourceCommand("check"),
+		))
 	} else {
-		lines = append(lines, `next_step: continue with minimal_happy_path step=2 command=assistant "先用 tool_catalog 总结当前可用工具，再说明 project_task、task_audit 和 agent_hook_audit 的边界"`)
+		lines = append(lines, fmt.Sprintf(
+			`next_step: continue with minimal_happy_path step=2 command=%s`,
+			sourceCommand(`"先用 tool_catalog 总结当前可用工具，再说明 project_task、task_audit 和 agent_hook_audit 的边界"`),
+		))
 	}
 	return strings.Join(lines, "\n") + "\n", nil
 }
 
 func minimalHappyPathLines(mode string) []string {
 	lines := make([]string, 0, 5)
-	lines = append(lines, "1. assistant check")
+	lines = append(lines, "1. "+sourceCommand("check"))
 	if mode == "fake" {
-		lines = append(lines, "optional: set ANTHROPIC_API_KEY in .env or shell and rerun assistant check before step 2 if you want real model calls")
+		lines = append(lines, fmt.Sprintf("optional: set ANTHROPIC_API_KEY in .env or shell and rerun %s before step 2 if you want real model calls", sourceCommand("check")))
 	}
 	lines = append(lines,
-		`2. assistant "先用 tool_catalog 总结当前可用工具，再说明 project_task、task_audit 和 agent_hook_audit 的边界"`,
-		`3. assistant "创建一个项目任务，用于验证后台测试"`,
-		`4. assistant "使用 tool_catalog action=audit_paths 说明审计入口，再给出 task_audit 和 agent_hook_audit 的查询示例"`,
+		`2. `+sourceCommand(`"先用 tool_catalog 总结当前可用工具，再说明 project_task、task_audit 和 agent_hook_audit 的边界"`),
+		`3. `+sourceCommand(`"创建一个项目任务，用于验证后台测试"`),
+		`4. `+sourceCommand(`"使用 tool_catalog action=audit_paths 说明审计入口，再给出 task_audit 和 agent_hook_audit 的查询示例"`),
 	)
 	return lines
 }

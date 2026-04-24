@@ -34,7 +34,7 @@ func (a *app) writeDegradedModeHint(out io.Writer) {
 		return
 	}
 	_, _ = fmt.Fprintln(out, "warning: assistant is running in fake mode; set ANTHROPIC_API_KEY in .env or shell for real model calls.")
-	_, _ = fmt.Fprintln(out, "hint: run `assistant check` to confirm the current mode and follow the reported minimal_happy_path.")
+	_, _ = fmt.Fprintf(out, "hint: run `%s` to confirm the current mode and follow the reported minimal_happy_path; replace it with `%s` if the binary is already installed.\n", sourceCommand("check"), binaryCommand("check"))
 }
 
 func (a *app) writeFakeModeNoOutputHint(out io.Writer) {
@@ -183,7 +183,7 @@ func (a *app) runREPL(in io.Reader, out io.Writer) error {
 	_, _ = fmt.Fprintf(out, "assistant REPL started (%s client). Type exit to quit.\n", a.mode)
 	if a.isFakeMode() {
 		_, _ = fmt.Fprintln(out, "warning: REPL is running in fake mode; model-generated answers are disabled until ANTHROPIC_API_KEY is set.")
-		_, _ = fmt.Fprintln(out, "hint: run `assistant check` outside the REPL if you want the current minimal_happy_path and setup guidance.")
+		_, _ = fmt.Fprintf(out, "hint: run `%s` outside the REPL if you want the current minimal_happy_path and setup guidance; replace it with `%s` if the binary is already installed.\n", sourceCommand("check"), binaryCommand("check"))
 	}
 	scanner := bufio.NewScanner(in)
 	for {

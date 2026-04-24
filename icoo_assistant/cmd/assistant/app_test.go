@@ -50,6 +50,7 @@ func TestRunREPLWithFakeClientExplainsDegradedModeAndEmptyOutput(t *testing.T) {
 		"assistant REPL started (fake client)",
 		"warning: REPL is running in fake mode",
 		"warning: no model output was produced because the fake client returns empty responses by design.",
+		"hint: run `go run ./cmd/assistant check` outside the REPL",
 		"hint: this is expected in fake mode",
 	} {
 		if !strings.Contains(output, snippet) {
@@ -76,7 +77,7 @@ func TestRunOnceWithFakeClientProducesGuidance(t *testing.T) {
 	output := out.String()
 	for _, snippet := range []string{
 		"warning: assistant is running in fake mode",
-		"hint: run `assistant check`",
+		"hint: run `go run ./cmd/assistant check`",
 		"warning: no model output was produced because the fake client returns empty responses by design.",
 	} {
 		if !strings.Contains(output, snippet) {
