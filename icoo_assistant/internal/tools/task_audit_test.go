@@ -100,6 +100,12 @@ func TestTaskAuditToolSummary(t *testing.T) {
 	if !strings.Contains(result, "- command_error=1") || !strings.Contains(result, "- timeout=1") {
 		t.Fatalf("expected failure reason counts, got %q", result)
 	}
+	if !strings.Contains(result, "priority_failure_reason: timeout count=1") {
+		t.Fatalf("expected priority failure reason, got %q", result)
+	}
+	if !strings.Contains(result, "priority_failure_hint: use task_audit action=summary id=task-a reason=timeout, then task_audit action=history id=task-a reason=timeout") {
+		t.Fatalf("expected priority failure hint, got %q", result)
+	}
 	if !strings.Contains(result, "latest_failure_by_reason:") {
 		t.Fatalf("expected per-reason failure samples, got %q", result)
 	}
@@ -228,6 +234,9 @@ func TestTaskAuditToolSummaryCanFilterByStatus(t *testing.T) {
 	if !strings.Contains(result, "- command_error=1") || !strings.Contains(result, "- timeout=1") {
 		t.Fatalf("expected filtered failure reason counts, got %q", result)
 	}
+	if !strings.Contains(result, "priority_failure_reason: timeout count=1") {
+		t.Fatalf("expected filtered priority failure reason, got %q", result)
+	}
 	if !strings.Contains(result, "- timeout => job_id=job-3 status=failed") {
 		t.Fatalf("expected filtered latest sample per reason, got %q", result)
 	}
@@ -324,6 +333,9 @@ func TestTaskAuditToolSummaryCanFilterByFailureReason(t *testing.T) {
 	if !strings.Contains(result, "- timeout=2") || strings.Contains(result, "- command_error=") {
 		t.Fatalf("expected only timeout reason counts, got %q", result)
 	}
+	if !strings.Contains(result, "priority_failure_reason: timeout count=2") {
+		t.Fatalf("expected reason-filtered priority failure reason, got %q", result)
+	}
 	if !strings.Contains(result, "- timeout => job_id=job-4 status=failed") {
 		t.Fatalf("expected latest timeout sample, got %q", result)
 	}
@@ -335,5 +347,41 @@ func TestTaskAuditToolSummaryCanFilterByFailureReason(t *testing.T) {
 	}
 	if !strings.Contains(result, "filtered_history_hint: use task_audit action=history id=task-a reason=timeout") {
 		t.Fatalf("expected reason-filtered history hint, got %q", result)
+	}
+}
+
+func TestTaskAuditToolSummaryPriorityReasonPrefersHigherCount(t *testing.T) {
+	manager, err := task.NewManager(filepath.Join(t.TempDir(), ".tasks"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := manager.Create(task.CreateInput{
+		ID:    "task-a",
+		Title: "Rank failure reasons",
+	}); err != nil {
+		t.Fatal(err)
+	}
+	for _, entry := range []task.BackgroundContext{
+		{JobID: "job-1", Status: "failed", Command: "cmd-1", Error: "boom"},
+		{JobID: "job-2", Status: "failed", Command: "cmd-2", Error: "timeout after 5s"},
+		{JobID: "job-3", Status: "failed", Command: "cmd-3", Error: "boom again"},
+	} {
+		if _, err := manager.RecordBackground("task-a", entry); err != nil {
+			t.Fatal(err)
+		}
+	}
+	tool := tools.NewTaskAuditTool(manager)
+	result, err := tool.Handler(tools.Call{Input: map[string]interface{}{
+		"action": "summary",
+		"id":     "task-a",
+	}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(result, "priority_failure_reason: command_error count=2") {
+		t.Fatalf("expected higher-count reason to be prioritized, got %q", result)
+	}
+	if !strings.Contains(result, "priority_failure_hint: use task_audit action=summary id=task-a reason=command_error, then task_audit action=history id=task-a reason=command_error") {
+		t.Fatalf("expected command_error hint, got %q", result)
 	}
 }

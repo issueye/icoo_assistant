@@ -125,6 +125,8 @@ func renderTaskAuditSummary(item task.Task, statusFilter, reasonFilter string) s
 	if len(item.BackgroundHistory) == 0 {
 		lines = append(lines, "status_counts: none")
 		lines = append(lines, "failure_reason_counts: none")
+		lines = append(lines, "priority_failure_reason: none")
+		lines = append(lines, "priority_failure_hint: none")
 		lines = append(lines, "latest_failure_by_reason: none")
 		lines = append(lines, "recent_failure_trend: none")
 		lines = append(lines, "latest_entry: none")
@@ -140,13 +142,18 @@ func renderTaskAuditSummary(item task.Task, statusFilter, reasonFilter string) s
 	}
 	if len(failures) == 0 {
 		lines = append(lines, "failure_reason_counts: none")
+		lines = append(lines, "priority_failure_reason: none")
+		lines = append(lines, "priority_failure_hint: none")
 		lines = append(lines, "latest_failure_by_reason: none")
 		lines = append(lines, "recent_failure_trend: none")
 	} else {
+		priorityReason, priorityCount := selectPriorityFailureReason(failures)
 		lines = append(lines, "failure_reason_counts:")
 		for _, line := range sortedCountLines(backgroundFailureReasonCounts(failures)) {
 			lines = append(lines, fmt.Sprintf("- %s", line))
 		}
+		lines = append(lines, fmt.Sprintf("priority_failure_reason: %s count=%d", priorityReason, priorityCount))
+		lines = append(lines, fmt.Sprintf("priority_failure_hint: use task_audit action=summary id=%s reason=%s, then task_audit action=history id=%s reason=%s", item.ID, priorityReason, item.ID, priorityReason))
 		lines = append(lines, "latest_failure_by_reason:")
 		for _, line := range renderLatestFailureByReasonLines(failures) {
 			lines = append(lines, fmt.Sprintf("- %s", line))
@@ -179,6 +186,22 @@ func renderTaskAuditSummary(item task.Task, statusFilter, reasonFilter string) s
 	}
 	lines = append(lines, `runtime_view_hint: use agent_hook_audit action=summary or action=recent for runtime-side troubleshooting`)
 	return strings.Join(lines, "\n")
+}
+
+func selectPriorityFailureReason(history []task.BackgroundContext) (string, int) {
+	counts := backgroundFailureReasonCounts(history)
+	bestReason := ""
+	bestCount := 0
+	bestLatestIndex := -1
+	for reason, count := range counts {
+		latestIndex := latestBackgroundReasonIndex(history, reason)
+		if count > bestCount || (count == bestCount && latestIndex > bestLatestIndex) || (count == bestCount && latestIndex == bestLatestIndex && (bestReason == "" || reason < bestReason)) {
+			bestReason = reason
+			bestCount = count
+			bestLatestIndex = latestIndex
+		}
+	}
+	return bestReason, bestCount
 }
 
 func applyTaskAuditFilters(history []task.BackgroundContext, statusFilter, reasonFilter string) []task.BackgroundContext {
@@ -304,6 +327,17 @@ func latestBackgroundByReason(history []task.BackgroundContext, reason string) *
 		}
 	}
 	return nil
+}
+
+func latestBackgroundReasonIndex(history []task.BackgroundContext, reason string) int {
+	reason = strings.ToLower(strings.TrimSpace(reason))
+	for index := len(history) - 1; index >= 0; index-- {
+		entry := history[index]
+		if classifyBackgroundFailureReason(entry) == reason {
+			return index
+		}
+	}
+	return -1
 }
 
 func renderLatestFailureByReasonLines(history []task.BackgroundContext) []string {
