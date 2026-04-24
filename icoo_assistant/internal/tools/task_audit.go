@@ -117,6 +117,9 @@ func renderTaskAuditHistory(item task.Task, limit int, statusFilter, reasonFilte
 	lines = append(lines, "entries:")
 	for index, entry := range recent {
 		line := fmt.Sprintf("%d. job_id=%s status=%s updated_at=%s", index+1, entry.JobID, entry.Status, entry.UpdatedAt.UTC().Format("2006-01-02T15:04:05Z"))
+		if role := renderTaskAuditHistoryRole(index, len(recent), statusFilter, reasonFilter); role != "" {
+			line = fmt.Sprintf("%s role=%s", line, role)
+		}
 		if entry.Command != "" {
 			line = fmt.Sprintf("%s command=%s", line, entry.Command)
 		}
@@ -128,6 +131,28 @@ func renderTaskAuditHistory(item task.Task, limit int, statusFilter, reasonFilte
 	lines = append(lines, fmt.Sprintf("latest_task_view: project_task action=get id=%s", item.ID))
 	lines = append(lines, `runtime_view_hint: use agent_hook_audit action=summary or action=recent name=agent.tool.completed to inspect runtime-side execution context`)
 	return strings.Join(lines, "\n")
+}
+
+func renderTaskAuditHistoryRole(index, total int, statusFilter, reasonFilter string) string {
+	if total == 0 {
+		return ""
+	}
+	if reasonFilter == "" && statusFilter != "failed" {
+		return ""
+	}
+	if total == 1 {
+		return "latest"
+	}
+	if total != 2 {
+		return ""
+	}
+	if index == 0 {
+		return "previous"
+	}
+	if index == 1 {
+		return "latest"
+	}
+	return ""
 }
 
 func renderTaskAuditSummary(item task.Task, statusFilter, reasonFilter string) string {

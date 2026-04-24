@@ -340,8 +340,52 @@ func TestTaskAuditToolHistoryCanFilterByFailureReason(t *testing.T) {
 	if !strings.Contains(result, "job_id=job-3 status=failed") {
 		t.Fatalf("expected timeout failure in result, got %q", result)
 	}
+	if !strings.Contains(result, "job_id=job-3 status=failed") || !strings.Contains(result, "role=latest") {
+		t.Fatalf("expected latest role on single timeout failure, got %q", result)
+	}
 	if strings.Contains(result, "job_id=job-1") || strings.Contains(result, "job_id=job-2") {
 		t.Fatalf("expected only matching reason in result, got %q", result)
+	}
+}
+
+func TestTaskAuditToolHistoryCanMarkPreviousAndLatestForReasonFilteredPair(t *testing.T) {
+	manager, err := task.NewManager(filepath.Join(t.TempDir(), ".tasks"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := manager.Create(task.CreateInput{
+		ID:    "task-a",
+		Title: "Inspect timeout pair roles",
+	}); err != nil {
+		t.Fatal(err)
+	}
+	for _, entry := range []task.BackgroundContext{
+		{JobID: "job-1", Status: "failed", Command: "cmd-1", Error: "boom"},
+		{JobID: "job-2", Status: "failed", Command: "cmd-2", Error: "timeout after 5s"},
+		{JobID: "job-3", Status: "failed", Command: "cmd-3", Error: "timeout after 8s"},
+	} {
+		if _, err := manager.RecordBackground("task-a", entry); err != nil {
+			t.Fatal(err)
+		}
+	}
+	tool := tools.NewTaskAuditTool(manager)
+	result, err := tool.Handler(tools.Call{Input: map[string]interface{}{
+		"action": "history",
+		"id":     "task-a",
+		"reason": "timeout",
+		"limit":  float64(2),
+	}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(result, "filter_reason: timeout") || !strings.Contains(result, "returned_count: 2") {
+		t.Fatalf("expected reason-filtered pair counters, got %q", result)
+	}
+	if !strings.Contains(result, "job_id=job-2 status=failed") || !strings.Contains(result, "role=previous") {
+		t.Fatalf("expected previous role on older timeout sample, got %q", result)
+	}
+	if !strings.Contains(result, "job_id=job-3 status=failed") || !strings.Contains(result, "role=latest") {
+		t.Fatalf("expected latest role on newest timeout sample, got %q", result)
 	}
 }
 

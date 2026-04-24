@@ -81,6 +81,9 @@ func TestToolCatalogAuditPaths(t *testing.T) {
 	if !strings.Contains(result, "priority failure hints with basis, recent context, repeat-pattern hints, sample-target guidance, recent sample comparison hints, direct latest-vs-previous compare targets, focused change-point hints, recent failure trend, and lightweight stability-vs-change trend hints") {
 		t.Fatalf("expected priority hint path, got %q", result)
 	}
+	if !strings.Contains(result, "role=previous/latest") {
+		t.Fatalf("expected history role guidance, got %q", result)
+	}
 	if !strings.Contains(result, "priority_failure_basis") {
 		t.Fatalf("expected priority basis flow, got %q", result)
 	}
