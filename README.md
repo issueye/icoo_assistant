@@ -2,7 +2,7 @@
 
 `icoo_assistant` 是一个基于 Go 的本地编码 Agent 原型，当前代码主体位于 [icoo_assistant](E:\codes\icoo_assistant\icoo_assistant)。
 
-当前仓库已经完成 `0.0.3` 基线，能力范围包括：
+当前仓库已经完成 `0.0.4` 基线，能力范围包括：
 
 - LLM 对话循环
 - 工具注册与调用分发
@@ -13,6 +13,7 @@
 - Skill 加载
 - Subagent 摘要委托
 - 项目级任务持久化骨架
+- 项目任务工具入口
 - 后台命令执行与结果回流
 
 ## 仓库结构
@@ -69,20 +70,35 @@ Go 模块目录 [icoo_assistant/.env.example](E:\codes\icoo_assistant\icoo_assis
 - 列出后台任务
 - 主循环自动轮询已完成后台任务并注入摘要结果
 
+## Agent Hook
+
+当前已经为 Agent 主循环补上基础 hook 埋点，默认会把事件写入工作区的 `.agent-hooks/events.jsonl`。这批埋点覆盖了：
+
+- run started / completed / failed
+- round started
+- model requested / responded
+- tool started / completed
+- subagent started / completed
+- compact auto / manual
+- background notifications injected
+- todo reminder injected
+
 ## Task 持久化
 
-`0.0.2` 已新增项目级任务持久化底座，代码位于 [internal/task](E:\codes\icoo_assistant\icoo_assistant\internal\task)。当前实现支持：
+`0.0.4` 已经把项目任务从内部模块推进到了正式工具入口。核心代码位于 [internal/task](E:\codes\icoo_assistant\icoo_assistant\internal\task) 和 [internal/tools/project_task.go](E:\codes\icoo_assistant\icoo_assistant\internal\tools\project_task.go)。当前支持：
 
 - 初始化 `.tasks/` 目录
 - 创建、读取、列出、更新任务
 - `blockedBy` 依赖字段
 - 任务完成后自动解除下游阻塞
+- 通过 `project_task` 工具执行 `create / get / list / update / update_status`
 
-这一层目前还没有接入独立 CLI 子命令，但已经具备稳定的内部模块和工具层入口，可供后续版本继续扩展。
+命名上，`project_task` 负责项目级持久化任务，现有 `task` 仍负责子代理委托，这样能保持会话内规划、项目任务和子任务派发的职责边界清晰。
 
 ## 版本计划
 
 - `0.0.1` 开发计划与完成度评估见 [docs/v0.0.1-开发计划.md](E:\codes\icoo_assistant\docs\v0.0.1-开发计划.md)
 - `0.0.2` 开发计划与完成度评估见 [docs/v0.0.2-开发计划.md](E:\codes\icoo_assistant\docs\v0.0.2-开发计划.md)
 - `0.0.3` 开发计划与完成度评估见 [docs/v0.0.3-开发计划.md](E:\codes\icoo_assistant\docs\v0.0.3-开发计划.md)
-- 下一轮 `0.0.4` 版本计划见 [docs/v0.0.4-开发计划.md](E:\codes\icoo_assistant\docs\v0.0.4-开发计划.md)
+- `0.0.4` 开发计划与完成度评估见 [docs/v0.0.4-开发计划.md](E:\codes\icoo_assistant\docs\v0.0.4-开发计划.md)
+- 下一轮 `0.0.5` 版本计划见 [docs/v0.0.5-开发计划.md](E:\codes\icoo_assistant\docs\v0.0.5-开发计划.md)

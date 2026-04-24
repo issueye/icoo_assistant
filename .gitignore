@@ -24,3 +24,9 @@ yarn-error.log*
 *.sln
 *.sw?
 learn-claude-code/*
+
+# agent runtime artifacts
+.agent-hooks/
+.background/
+.tasks/
+.transcripts/

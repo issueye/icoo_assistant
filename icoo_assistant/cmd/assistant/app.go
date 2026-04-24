@@ -13,6 +13,7 @@ import (
 	"icoo_assistant/internal/llm"
 	"icoo_assistant/internal/skill"
 	"icoo_assistant/internal/subagent"
+	"icoo_assistant/internal/task"
 	"icoo_assistant/internal/todo"
 	"icoo_assistant/internal/tools"
 	"icoo_assistant/internal/workspace"
@@ -42,6 +43,15 @@ func newApp(cfg config.Config) (*app, error) {
 	if err != nil {
 		return nil, err
 	}
+	taskManager, err := task.NewManager(task.DefaultDir(cfg.Workdir))
+	if err != nil {
+		return nil, err
+	}
+	hookWriter, err := agent.NewJSONLHook(agent.DefaultHookDir(cfg.Workdir))
+	if err != nil {
+		return nil, err
+	}
+	hooks := []agent.Hook{hookWriter}
 	skillLoader, err := skill.Load(cfg.SkillsDir)
 	if err != nil {
 		return nil, err
@@ -53,6 +63,7 @@ func newApp(cfg config.Config) (*app, error) {
 		tools.NewWriteFileTool(ws),
 		tools.NewEditFileTool(ws),
 		tools.NewBackgroundTool(backgroundManager),
+		tools.NewProjectTaskTool(taskManager),
 		tools.NewTodoTool(todoManager),
 		tools.NewCompactTool(),
 		tools.NewLoadSkillTool(skillLoader),
@@ -67,6 +78,7 @@ func newApp(cfg config.Config) (*app, error) {
 	subRunner := &subagent.Runner{
 		Client:   client,
 		Registry: baseRegistry,
+		Hooks:    hooks,
 		Config: agent.Config{
 			SystemPrompt: systemPrompt,
 			MaxRounds:    cfg.MaxRounds,
@@ -78,6 +90,7 @@ func newApp(cfg config.Config) (*app, error) {
 		tools.NewWriteFileTool(ws),
 		tools.NewEditFileTool(ws),
 		tools.NewBackgroundTool(backgroundManager),
+		tools.NewProjectTaskTool(taskManager),
 		tools.NewTodoTool(todoManager),
 		tools.NewCompactTool(),
 		tools.NewTaskTool(),
@@ -94,6 +107,7 @@ func newApp(cfg config.Config) (*app, error) {
 			CompactManager: compactManager,
 			SubagentRunner: subRunner,
 			Background:     backgroundManager,
+			Hooks:          hooks,
 			Config: agent.Config{
 				SystemPrompt: systemPrompt,
 				MaxRounds:    cfg.MaxRounds,

@@ -1,8 +1,12 @@
 package agent_test
 
 import (
+	"encoding/json"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"icoo_assistant/internal/agent"
 	"icoo_assistant/internal/background"
@@ -23,6 +27,14 @@ func (f fakeSubagent) Run(prompt string) (string, error) {
 type fakeBackgroundNotifier struct {
 	completions []background.Completion
 	polled      bool
+}
+
+type captureHook struct {
+	events []agent.Event
+}
+
+func (h *captureHook) OnEvent(event agent.Event) {
+	h.events = append(h.events, event)
 }
 
 func (f *fakeBackgroundNotifier) PollNotifications() ([]background.Completion, error) {
@@ -176,4 +188,85 @@ func TestRunnerInjectsBackgroundNotifications(t *testing.T) {
 	if !strings.Contains(client.Snapshots[0], "background_result") {
 		t.Fatalf("expected background notification in snapshot, got %q", client.Snapshots[0])
 	}
+}
+
+func TestRunnerEmitsHookEvents(t *testing.T) {
+	client := &llm.FakeClient{Responses: []llm.Response{
+		{StopReason: "tool_use", ToolUses: []llm.ToolUse{{ID: "call-1", Name: "demo", Input: map[string]interface{}{}}}},
+		{StopReason: "end", Text: "done"},
+	}}
+	registry, err := tools.NewRegistry(tools.Definition{
+		Tool:    llm.Tool{Name: "demo", Description: "demo", InputSchema: map[string]interface{}{}},
+		Handler: func(call tools.Call) (string, error) { return "tool output", nil },
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	hook := &captureHook{}
+	runner := &agent.Runner{
+		Client:   client,
+		Registry: registry,
+		Hooks:    []agent.Hook{hook},
+		Config:   agent.Config{SystemPrompt: "test", MaxRounds: 5},
+	}
+	if _, err := runner.Run([]llm.Message{{Role: "user", Content: "run demo"}}); err != nil {
+		t.Fatal(err)
+	}
+	names := make([]string, 0, len(hook.events))
+	for _, event := range hook.events {
+		names = append(names, event.Name)
+	}
+	for _, expected := range []string{
+		"agent.run.started",
+		"agent.round.started",
+		"agent.model.requested",
+		"agent.model.responded",
+		"agent.tool.started",
+		"agent.tool.completed",
+		"agent.run.completed",
+	} {
+		if !containsString(names, expected) {
+			t.Fatalf("expected hook event %q in %#v", expected, names)
+		}
+	}
+}
+
+func TestJSONLHookWritesEvents(t *testing.T) {
+	dir := filepath.Join(t.TempDir(), ".agent-hooks")
+	hook, err := agent.NewJSONLHook(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	event := agent.Event{
+		Timestamp: time.Unix(1700000000, 0).UTC(),
+		Name:      "agent.run.started",
+		RunID:     "run-1",
+		Round:     1,
+		Fields:    map[string]interface{}{"message_count": 1},
+	}
+	hook.OnEvent(event)
+	data, err := os.ReadFile(filepath.Join(dir, "events.jsonl"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	lines := strings.Split(strings.TrimSpace(string(data)), "\n")
+	if len(lines) != 1 {
+		t.Fatalf("expected one event line, got %d", len(lines))
+	}
+	var parsed agent.Event
+	if err := json.Unmarshal([]byte(lines[0]), &parsed); err != nil {
+		t.Fatal(err)
+	}
+	if parsed.Name != "agent.run.started" || parsed.RunID != "run-1" {
+		t.Fatalf("unexpected parsed event: %#v", parsed)
+	}
+}
+
+func containsString(items []string, target string) bool {
+	for _, item := range items {
+		if item == target {
+			return true
+		}
+	}
+	return false
 }

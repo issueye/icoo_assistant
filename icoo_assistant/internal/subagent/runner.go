@@ -12,6 +12,7 @@ type Runner struct {
 	Client   llm.Client
 	Registry *tools.Registry
 	Config   agent.Config
+	Hooks    []agent.Hook
 }
 
 func (r *Runner) Run(prompt string) (string, error) {
@@ -24,6 +25,7 @@ func (r *Runner) Run(prompt string) (string, error) {
 	child := &agent.Runner{
 		Client:   r.Client,
 		Registry: r.Registry,
+		Hooks:    r.Hooks,
 		Config: agent.Config{
 			SystemPrompt: r.Config.SystemPrompt,
 			MaxRounds:    r.Config.MaxRounds,
