@@ -1,10 +1,7 @@
 package tools
 
 import (
-	"context"
 	"fmt"
-	"os/exec"
-	"runtime"
 	"strings"
 	"time"
 
@@ -34,42 +31,14 @@ func NewBashTool(runner CommandRunner) Definition {
 			if !ok || strings.TrimSpace(command) == "" {
 				return "", fmt.Errorf("command required")
 			}
-			for _, dangerous := range []string{"rm -rf /", "sudo", "shutdown", "reboot", "> /dev/"} {
-				if strings.Contains(command, dangerous) {
+			text, err := RunCommand(runner.Workdir, command, runner.Timeout)
+			if err != nil {
+				if strings.Contains(err.Error(), "dangerous command blocked") {
 					return "Error: Dangerous command blocked", nil
 				}
-			}
-			timeout := runner.Timeout
-			if timeout <= 0 {
-				timeout = 120 * time.Second
-			}
-			ctx, cancel := context.WithTimeout(context.Background(), timeout)
-			defer cancel()
-			shell, args := defaultShellCommand(command)
-			cmd := exec.CommandContext(ctx, shell, args...)
-			cmd.Dir = runner.Workdir
-			out, err := cmd.CombinedOutput()
-			if ctx.Err() == context.DeadlineExceeded {
-				return fmt.Sprintf("Error: Timeout (%s)", timeout), nil
-			}
-			text := strings.TrimSpace(string(out))
-			if text == "" {
-				text = "(no output)"
-			}
-			if len(text) > 50000 {
-				text = text[:50000]
-			}
-			if err != nil {
-				return text, nil
+				return "", err
 			}
 			return text, nil
 		},
 	}
-}
-
-func defaultShellCommand(command string) (string, []string) {
-	if runtime.GOOS == "windows" {
-		return "powershell.exe", []string{"-NoLogo", "-NoProfile", "-Command", command}
-	}
-	return "sh", []string{"-lc", command}
 }

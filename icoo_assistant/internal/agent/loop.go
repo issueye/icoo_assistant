@@ -2,7 +2,9 @@ package agent
 
 import (
 	"fmt"
+	"strings"
 
+	"icoo_assistant/internal/background"
 	"icoo_assistant/internal/compact"
 	"icoo_assistant/internal/llm"
 	"icoo_assistant/internal/todo"
@@ -11,6 +13,10 @@ import (
 
 type SubagentRunner interface {
 	Run(prompt string) (string, error)
+}
+
+type BackgroundNotifier interface {
+	PollNotifications() ([]background.Completion, error)
 }
 
 type Config struct {
@@ -24,6 +30,7 @@ type Runner struct {
 	TodoManager    *todo.Manager
 	CompactManager *compact.Manager
 	SubagentRunner SubagentRunner
+	Background     BackgroundNotifier
 	Config         Config
 }
 
@@ -40,6 +47,15 @@ func (r *Runner) Run(messages []llm.Message) ([]llm.Message, error) {
 	}
 	roundsSinceTodo := 0
 	for i := 0; i < maxRounds; i++ {
+		if r.Background != nil {
+			completions, err := r.Background.PollNotifications()
+			if err != nil {
+				return nil, err
+			}
+			if len(completions) > 0 {
+				messages = append(messages, llm.Message{Role: "user", Content: formatBackgroundNotifications(completions)})
+			}
+		}
 		if r.CompactManager != nil {
 			r.CompactManager.MicroCompact(messages)
 			threshold := r.CompactManager.Threshold
@@ -113,4 +129,12 @@ func (r *Runner) Run(messages []llm.Message) ([]llm.Message, error) {
 		}
 	}
 	return nil, fmt.Errorf("max rounds exceeded")
+}
+
+func formatBackgroundNotifications(completions []background.Completion) string {
+	parts := make([]string, 0, len(completions))
+	for _, completion := range completions {
+		parts = append(parts, completion.Summary)
+	}
+	return strings.Join(parts, "\n\n")
 }

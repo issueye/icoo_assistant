@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"icoo_assistant/internal/agent"
+	"icoo_assistant/internal/background"
 	"icoo_assistant/internal/compact"
 	"icoo_assistant/internal/config"
 	"icoo_assistant/internal/llm"
@@ -33,6 +34,14 @@ func newApp(cfg config.Config) (*app, error) {
 		KeepRecent: 3,
 		Dir:        cfg.TranscriptDir,
 	}
+	backgroundManager, err := background.NewManager(
+		background.DefaultDir(cfg.Workdir),
+		cfg.Workdir,
+		cfg.CommandTimeout,
+	)
+	if err != nil {
+		return nil, err
+	}
 	skillLoader, err := skill.Load(cfg.SkillsDir)
 	if err != nil {
 		return nil, err
@@ -43,6 +52,7 @@ func newApp(cfg config.Config) (*app, error) {
 		tools.NewReadFileTool(ws),
 		tools.NewWriteFileTool(ws),
 		tools.NewEditFileTool(ws),
+		tools.NewBackgroundTool(backgroundManager),
 		tools.NewTodoTool(todoManager),
 		tools.NewCompactTool(),
 		tools.NewLoadSkillTool(skillLoader),
@@ -67,6 +77,7 @@ func newApp(cfg config.Config) (*app, error) {
 		tools.NewReadFileTool(ws),
 		tools.NewWriteFileTool(ws),
 		tools.NewEditFileTool(ws),
+		tools.NewBackgroundTool(backgroundManager),
 		tools.NewTodoTool(todoManager),
 		tools.NewCompactTool(),
 		tools.NewTaskTool(),
@@ -82,6 +93,7 @@ func newApp(cfg config.Config) (*app, error) {
 			TodoManager:    todoManager,
 			CompactManager: compactManager,
 			SubagentRunner: subRunner,
+			Background:     backgroundManager,
 			Config: agent.Config{
 				SystemPrompt: systemPrompt,
 				MaxRounds:    cfg.MaxRounds,

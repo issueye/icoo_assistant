@@ -1,9 +1,11 @@
 package agent_test
 
 import (
+	"strings"
 	"testing"
 
 	"icoo_assistant/internal/agent"
+	"icoo_assistant/internal/background"
 	"icoo_assistant/internal/compact"
 	"icoo_assistant/internal/llm"
 	"icoo_assistant/internal/todo"
@@ -16,6 +18,19 @@ type fakeSubagent struct {
 
 func (f fakeSubagent) Run(prompt string) (string, error) {
 	return f.summary + ": " + prompt, nil
+}
+
+type fakeBackgroundNotifier struct {
+	completions []background.Completion
+	polled      bool
+}
+
+func (f *fakeBackgroundNotifier) PollNotifications() ([]background.Completion, error) {
+	if f.polled {
+		return nil, nil
+	}
+	f.polled = true
+	return f.completions, nil
 }
 
 func TestRunnerCompletesToolUseLoop(t *testing.T) {
@@ -124,5 +139,41 @@ func TestRunnerDelegatesTaskToSubagent(t *testing.T) {
 	}
 	if !found {
 		t.Fatal("expected subagent summary in tool results")
+	}
+}
+
+func TestRunnerInjectsBackgroundNotifications(t *testing.T) {
+	client := &llm.FakeClient{Responses: []llm.Response{
+		{StopReason: "end", Text: "done"},
+	}}
+	registry, err := tools.NewRegistry(tools.Definition{
+		Tool:    llm.Tool{Name: "demo", Description: "demo", InputSchema: map[string]interface{}{}},
+		Handler: func(call tools.Call) (string, error) { return "ok", nil },
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	notifier := &fakeBackgroundNotifier{
+		completions: []background.Completion{{
+			JobID:   "job-1",
+			TaskID:  "task-a",
+			Status:  "completed",
+			Summary: "<background_result>\njob_id: job-1\nstatus: completed\n</background_result>",
+		}},
+	}
+	runner := &agent.Runner{
+		Client:     client,
+		Registry:   registry,
+		Background: notifier,
+		Config:     agent.Config{SystemPrompt: "test", MaxRounds: 3},
+	}
+	if _, err := runner.Run([]llm.Message{{Role: "user", Content: "continue"}}); err != nil {
+		t.Fatal(err)
+	}
+	if len(client.Snapshots) == 0 {
+		t.Fatal("expected at least one client snapshot")
+	}
+	if !strings.Contains(client.Snapshots[0], "background_result") {
+		t.Fatalf("expected background notification in snapshot, got %q", client.Snapshots[0])
 	}
 }

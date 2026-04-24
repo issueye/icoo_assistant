@@ -2,7 +2,7 @@
 
 `icoo_assistant` 是一个基于 Go 的本地编码 Agent 原型，当前代码主体位于 [icoo_assistant](E:\codes\icoo_assistant\icoo_assistant)。
 
-当前仓库已经完成 `0.0.2` 基线，能力范围包括：
+当前仓库已经完成 `0.0.3` 基线，能力范围包括：
 
 - LLM 对话循环
 - 工具注册与调用分发
@@ -13,12 +13,14 @@
 - Skill 加载
 - Subagent 摘要委托
 - 项目级任务持久化骨架
+- 后台命令执行与结果回流
 
 ## 仓库结构
 
 - [docs](E:\codes\icoo_assistant\docs)：需求、开发计划、版本计划文档
 - [icoo_assistant](E:\codes\icoo_assistant\icoo_assistant)：Go 模块源码
 - [icoo_assistant/internal/task](E:\codes\icoo_assistant\icoo_assistant\internal\task)：项目级任务持久化模块
+- [icoo_assistant/internal/background](E:\codes\icoo_assistant\icoo_assistant\internal\background)：后台任务模块
 
 ## 快速开始
 
@@ -52,6 +54,21 @@ Go 模块目录 [icoo_assistant/.env.example](E:\codes\icoo_assistant\icoo_assis
 - `go run ./cmd/assistant "your task"`：执行单轮任务
 - `go run ./cmd/assistant --version` / `--help`：查看版本或帮助
 
+## Background 执行
+
+`0.0.3` 已新增后台命令执行能力，包含这些部分：
+
+- [internal/background](E:\codes\icoo_assistant\icoo_assistant\internal\background)：后台任务管理器与结果通知
+- [internal/tools/background.go](E:\codes\icoo_assistant\icoo_assistant\internal\tools\background.go)：后台任务工具入口
+- [internal/agent/loop.go](E:\codes\icoo_assistant\icoo_assistant\internal\agent\loop.go)：主循环中的后台完成结果注入点
+
+当前支持：
+
+- 启动后台命令
+- 查询单个后台任务状态
+- 列出后台任务
+- 主循环自动轮询已完成后台任务并注入摘要结果
+
 ## Task 持久化
 
 `0.0.2` 已新增项目级任务持久化底座，代码位于 [internal/task](E:\codes\icoo_assistant\icoo_assistant\internal\task)。当前实现支持：
@@ -61,10 +78,11 @@ Go 模块目录 [icoo_assistant/.env.example](E:\codes\icoo_assistant\icoo_assis
 - `blockedBy` 依赖字段
 - 任务完成后自动解除下游阻塞
 
-这一层目前还没有接入正式 CLI 或工具入口，先作为稳定的内部模块供后续版本扩展。
+这一层目前还没有接入独立 CLI 子命令，但已经具备稳定的内部模块和工具层入口，可供后续版本继续扩展。
 
 ## 版本计划
 
 - `0.0.1` 开发计划与完成度评估见 [docs/v0.0.1-开发计划.md](E:\codes\icoo_assistant\docs\v0.0.1-开发计划.md)
 - `0.0.2` 开发计划与完成度评估见 [docs/v0.0.2-开发计划.md](E:\codes\icoo_assistant\docs\v0.0.2-开发计划.md)
-- 下一轮 `0.0.3` 版本计划见 [docs/v0.0.3-开发计划.md](E:\codes\icoo_assistant\docs\v0.0.3-开发计划.md)
+- `0.0.3` 开发计划与完成度评估见 [docs/v0.0.3-开发计划.md](E:\codes\icoo_assistant\docs\v0.0.3-开发计划.md)
+- 下一轮 `0.0.4` 版本计划见 [docs/v0.0.4-开发计划.md](E:\codes\icoo_assistant\docs\v0.0.4-开发计划.md)
