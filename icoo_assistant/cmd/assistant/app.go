@@ -47,6 +47,7 @@ func newApp(cfg config.Config) (*app, error) {
 	if err != nil {
 		return nil, err
 	}
+	backgroundManager.SetLifecycleHooks(task.NewBackgroundLifecycleLink(taskManager))
 	hookWriter, err := agent.NewJSONLHook(agent.DefaultHookDir(cfg.Workdir))
 	if err != nil {
 		return nil, err

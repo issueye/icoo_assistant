@@ -203,6 +203,18 @@ func renderProjectTask(item task.Task, jobs []background.Job) string {
 	}
 	lines = append(lines, fmt.Sprintf("created_at: %s", item.CreatedAt.UTC().Format("2006-01-02T15:04:05Z")))
 	lines = append(lines, fmt.Sprintf("updated_at: %s", item.UpdatedAt.UTC().Format("2006-01-02T15:04:05Z")))
+	if item.LastBackground != nil {
+		lines = append(lines, "last_background:")
+		lines = append(lines, fmt.Sprintf("- job_id: %s", item.LastBackground.JobID))
+		lines = append(lines, fmt.Sprintf("- status: %s", item.LastBackground.Status))
+		if item.LastBackground.Command != "" {
+			lines = append(lines, fmt.Sprintf("- command: %s", item.LastBackground.Command))
+		}
+		if item.LastBackground.Error != "" {
+			lines = append(lines, fmt.Sprintf("- error: %s", item.LastBackground.Error))
+		}
+		lines = append(lines, fmt.Sprintf("- updated_at: %s", item.LastBackground.UpdatedAt.UTC().Format("2006-01-02T15:04:05Z")))
+	}
 	if len(jobs) > 0 {
 		lines = append(lines, "background_jobs:")
 		for _, job := range jobs {

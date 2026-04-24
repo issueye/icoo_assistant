@@ -33,6 +33,13 @@ type Job struct {
 	NotifiedAt *time.Time `json:"notifiedAt,omitempty"`
 }
 
+func (j Job) FinishedAtValue() time.Time {
+	if j.FinishedAt == nil {
+		return time.Time{}
+	}
+	return j.FinishedAt.UTC()
+}
+
 type StartInput struct {
 	ID      string
 	Command string
@@ -47,13 +54,19 @@ type Completion struct {
 	Summary string
 }
 
+type LifecycleHooks interface {
+	BeforeStart(job Job) error
+	AfterFinish(job Job) error
+}
+
 type Manager struct {
 	Dir     string
 	Workdir string
 	Timeout time.Duration
 
-	mu  sync.Mutex
-	now func() time.Time
+	mu    sync.Mutex
+	now   func() time.Time
+	hooks LifecycleHooks
 }
 
 func DefaultDir(root string) string {
@@ -76,6 +89,12 @@ func NewManager(dir, workdir string, timeout time.Duration) (*Manager, error) {
 	}, nil
 }
 
+func (m *Manager) SetLifecycleHooks(hooks LifecycleHooks) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.hooks = hooks
+}
+
 func (m *Manager) Start(input StartInput) (Job, error) {
 	command := strings.TrimSpace(input.Command)
 	if command == "" {
@@ -90,6 +109,7 @@ func (m *Manager) Start(input StartInput) (Job, error) {
 		m.mu.Unlock()
 		return Job{}, err
 	}
+	hooks := m.hooks
 	if _, err := os.Stat(m.pathForID(job.ID)); err == nil {
 		m.mu.Unlock()
 		return Job{}, fmt.Errorf("background job %s already exists", job.ID)
@@ -102,6 +122,12 @@ func (m *Manager) Start(input StartInput) (Job, error) {
 		return Job{}, err
 	}
 	m.mu.Unlock()
+	if hooks != nil {
+		if err := hooks.BeforeStart(job); err != nil {
+			_ = os.Remove(m.pathForID(job.ID))
+			return Job{}, err
+		}
+	}
 
 	go m.run(job.ID, command)
 	return job, nil
@@ -209,9 +235,9 @@ func (m *Manager) run(id, command string) {
 	}
 
 	m.mu.Lock()
-	defer m.mu.Unlock()
 	job, readErr := m.readJobLocked(id)
 	if readErr != nil {
+		m.mu.Unlock()
 		return
 	}
 	job.Output = output
@@ -219,7 +245,12 @@ func (m *Manager) run(id, command string) {
 	job.Error = errorText
 	finished := m.now().UTC()
 	job.FinishedAt = &finished
+	hooks := m.hooks
 	_ = m.writeJobLocked(job)
+	m.mu.Unlock()
+	if hooks != nil {
+		_ = hooks.AfterFinish(job)
+	}
 }
 
 func (m *Manager) listLocked() ([]Job, error) {

@@ -115,6 +115,7 @@ func TestProjectTaskToolShowsAssociatedBackgroundJobs(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	backgroundManager.SetLifecycleHooks(task.NewBackgroundLifecycleLink(taskManager))
 	if _, err := taskManager.Create(task.CreateInput{
 		ID:    "task-a",
 		Title: "Implement task view",
@@ -143,6 +144,9 @@ func TestProjectTaskToolShowsAssociatedBackgroundJobs(t *testing.T) {
 	}
 	if !strings.Contains(result, "background_jobs:") || !strings.Contains(result, "job-1 [completed]") {
 		t.Fatalf("unexpected task result with background jobs: %q", result)
+	}
+	if !strings.Contains(result, "last_background:") {
+		t.Fatalf("expected last_background section, got %q", result)
 	}
 }
 

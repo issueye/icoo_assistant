@@ -19,13 +19,22 @@ const (
 )
 
 type Task struct {
-	ID        string    `json:"id"`
-	Title     string    `json:"title"`
+	ID             string             `json:"id"`
+	Title          string             `json:"title"`
+	Status         string             `json:"status"`
+	BlockedBy      []string           `json:"blockedBy,omitempty"`
+	Owner          string             `json:"owner,omitempty"`
+	Worktree       string             `json:"worktree,omitempty"`
+	LastBackground *BackgroundContext `json:"lastBackground,omitempty"`
+	CreatedAt      time.Time          `json:"createdAt"`
+	UpdatedAt      time.Time          `json:"updatedAt"`
+}
+
+type BackgroundContext struct {
+	JobID     string    `json:"jobId"`
 	Status    string    `json:"status"`
-	BlockedBy []string  `json:"blockedBy,omitempty"`
-	Owner     string    `json:"owner,omitempty"`
-	Worktree  string    `json:"worktree,omitempty"`
-	CreatedAt time.Time `json:"createdAt"`
+	Command   string    `json:"command,omitempty"`
+	Error     string    `json:"error,omitempty"`
 	UpdatedAt time.Time `json:"updatedAt"`
 }
 
@@ -144,6 +153,26 @@ func (m *Manager) UpdateStatus(id, status string) (Task, error) {
 	return task, nil
 }
 
+func (m *Manager) RecordBackground(id string, context BackgroundContext) (Task, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	item, err := m.readTaskLocked(id)
+	if err != nil {
+		return Task{}, err
+	}
+	normalized, err := normalizeBackgroundContext(context)
+	if err != nil {
+		return Task{}, err
+	}
+	item.LastBackground = &normalized
+	item.UpdatedAt = m.now().UTC()
+	if err := m.writeTaskLocked(item); err != nil {
+		return Task{}, err
+	}
+	return item, nil
+}
+
 func (m *Manager) buildCreateTask(input CreateInput) (Task, error) {
 	now := m.now().UTC()
 	id := strings.TrimSpace(input.ID)
@@ -185,15 +214,46 @@ func (m *Manager) normalizeTask(task Task, createdAt time.Time) (Task, error) {
 		createdAt = now
 	}
 	return Task{
-		ID:        id,
-		Title:     title,
-		Status:    status,
-		BlockedBy: blockedBy,
-		Owner:     strings.TrimSpace(task.Owner),
-		Worktree:  strings.TrimSpace(task.Worktree),
-		CreatedAt: createdAt.UTC(),
-		UpdatedAt: now,
+		ID:             id,
+		Title:          title,
+		Status:         status,
+		BlockedBy:      blockedBy,
+		Owner:          strings.TrimSpace(task.Owner),
+		Worktree:       strings.TrimSpace(task.Worktree),
+		LastBackground: copyBackgroundContext(task.LastBackground),
+		CreatedAt:      createdAt.UTC(),
+		UpdatedAt:      now,
 	}, nil
+}
+
+func normalizeBackgroundContext(context BackgroundContext) (BackgroundContext, error) {
+	jobID, err := normalizeID(context.JobID)
+	if err != nil {
+		return BackgroundContext{}, err
+	}
+	status := strings.ToLower(strings.TrimSpace(context.Status))
+	if status == "" {
+		return BackgroundContext{}, fmt.Errorf("background status required")
+	}
+	updatedAt := context.UpdatedAt.UTC()
+	if updatedAt.IsZero() {
+		updatedAt = time.Now().UTC()
+	}
+	return BackgroundContext{
+		JobID:     jobID,
+		Status:    status,
+		Command:   strings.TrimSpace(context.Command),
+		Error:     strings.TrimSpace(context.Error),
+		UpdatedAt: updatedAt,
+	}, nil
+}
+
+func copyBackgroundContext(context *BackgroundContext) *BackgroundContext {
+	if context == nil {
+		return nil
+	}
+	copied := *context
+	return &copied
 }
 
 func normalizeID(id string) (string, error) {

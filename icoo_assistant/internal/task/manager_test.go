@@ -133,3 +133,30 @@ func TestUpdateRewritesTaskFields(t *testing.T) {
 		t.Fatalf("expected worktree wt-task-a, got %q", updated.Worktree)
 	}
 }
+
+func TestRecordBackgroundStoresLatestExecutionContext(t *testing.T) {
+	manager, err := task.NewManager(filepath.Join(t.TempDir(), ".tasks"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := manager.Create(task.CreateInput{
+		ID:    "task-a",
+		Title: "Track background run",
+	}); err != nil {
+		t.Fatal(err)
+	}
+	recorded, err := manager.RecordBackground("task-a", task.BackgroundContext{
+		JobID:   "job-1",
+		Status:  "running",
+		Command: "go test ./...",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if recorded.LastBackground == nil {
+		t.Fatal("expected last background context")
+	}
+	if recorded.LastBackground.JobID != "job-1" || recorded.LastBackground.Status != "running" {
+		t.Fatalf("unexpected background context: %#v", recorded.LastBackground)
+	}
+}
