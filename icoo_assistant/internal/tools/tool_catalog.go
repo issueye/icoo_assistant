@@ -21,10 +21,10 @@ func DefaultToolCatalogEntries(includeTask bool) []ToolCatalogEntry {
 		{
 			Name:        "agent_hook_audit",
 			Summary:     "Inspect recent agent hook events recorded on disk.",
-			UseWhen:     "Use when recent runs, tool calls, compact actions, or background notification injections should be reviewed for debugging.",
+			UseWhen:     "Use when recent runs, tool calls, compact actions, or background notification injections should be reviewed or summarized for debugging.",
 			AvoidWhen:   "Avoid for project task execution history; use task_audit instead.",
-			Example:     `{"action":"recent","limit":10,"name":"agent.tool.completed"}`,
-			Description: "Reads recorded events from .agent-hooks/events.jsonl and supports recent-event filtering.",
+			Example:     `{"action":"summary","limit":20}`,
+			Description: "Reads recorded events from .agent-hooks/events.jsonl and supports recent-event filtering plus compact summaries.",
 		},
 		{
 			Name:        "background",
@@ -85,10 +85,10 @@ func DefaultToolCatalogEntries(includeTask bool) []ToolCatalogEntry {
 		{
 			Name:        "task_audit",
 			Summary:     "Inspect project task execution history from an audit angle.",
-			UseWhen:     "Use when detailed task execution history should be reviewed or reported.",
+			UseWhen:     "Use when detailed task execution history should be reviewed, reported, or filtered by execution status.",
 			AvoidWhen:   "Avoid for normal task CRUD; use project_task instead.",
-			Example:     `{"action":"history","id":"task-1","limit":10}`,
-			Description: "Keeps audit queries separate from day-to-day project task operations.",
+			Example:     `{"action":"history","id":"task-1","status":"failed","limit":10}`,
+			Description: "Keeps audit queries separate from day-to-day project task operations and supports status-focused inspection.",
 		},
 		{
 			Name:        "todo",

@@ -44,6 +44,23 @@ func TestToolCatalogDescribeHighlightsBoundary(t *testing.T) {
 	}
 }
 
+func TestToolCatalogDescribeTaskAuditMentionsStatusFiltering(t *testing.T) {
+	def := tools.NewToolCatalogTool(tools.DefaultToolCatalogEntries(true))
+	result, err := def.Handler(tools.Call{
+		Name: "tool_catalog",
+		Input: map[string]interface{}{
+			"action": "describe",
+			"name":   "task_audit",
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(result, `"status":"failed"`) {
+		t.Fatalf("expected status-filter example, got %q", result)
+	}
+}
+
 func TestToolCatalogAuditPaths(t *testing.T) {
 	def := tools.NewToolCatalogTool(tools.DefaultToolCatalogEntries(true))
 	result, err := def.Handler(tools.Call{

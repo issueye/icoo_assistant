@@ -21,7 +21,7 @@ func NewAgentHookAuditTool(reader AgentHookAuditReader) Definition {
 			InputSchema: map[string]interface{}{
 				"type": "object",
 				"properties": map[string]interface{}{
-					"action": map[string]interface{}{"type": "string", "enum": []string{"recent"}},
+					"action": map[string]interface{}{"type": "string", "enum": []string{"recent", "summary"}},
 					"limit":  map[string]interface{}{"type": "integer"},
 					"name":   map[string]interface{}{"type": "string"},
 					"run_id": map[string]interface{}{"type": "string"},
@@ -43,6 +43,17 @@ func NewAgentHookAuditTool(reader AgentHookAuditReader) Definition {
 					return "", err
 				}
 				return renderAgentHookAuditRecent(events, query), nil
+			case "summary":
+				query := hookaudit.Query{
+					Limit: intFromInput(call.Input["limit"], 20),
+					Name:  strings.TrimSpace(stringFromInput(call.Input["name"])),
+					RunID: strings.TrimSpace(stringFromInput(call.Input["run_id"])),
+				}
+				events, err := reader.Recent(query)
+				if err != nil {
+					return "", err
+				}
+				return renderAgentHookAuditSummary(events, query), nil
 			default:
 				return "", fmt.Errorf("unsupported action %q", action)
 			}
@@ -83,6 +94,41 @@ func renderAgentHookAuditRecent(events []hookaudit.Event, query hookaudit.Query)
 	return strings.Join(lines, "\n")
 }
 
+func renderAgentHookAuditSummary(events []hookaudit.Event, query hookaudit.Query) string {
+	lines := []string{
+		fmt.Sprintf("matched_count: %d", len(events)),
+		fmt.Sprintf("limit: %d", query.Limit),
+	}
+	if query.Name != "" {
+		lines = append(lines, fmt.Sprintf("filter_name: %s", query.Name))
+	}
+	if query.RunID != "" {
+		lines = append(lines, fmt.Sprintf("filter_run_id: %s", query.RunID))
+	}
+	if len(events) == 0 {
+		lines = append(lines, "event_names: none")
+		lines = append(lines, `detail_hint: use agent_hook_audit action=recent once matching events exist`)
+		lines = append(lines, `task_history_hint: use task_audit action=history id=<task-id> for durable project task history`)
+		return strings.Join(lines, "\n")
+	}
+	nameCounts := map[string]int{}
+	runIDs := map[string]struct{}{}
+	for _, event := range events {
+		nameCounts[event.Name]++
+		if event.RunID != "" {
+			runIDs[event.RunID] = struct{}{}
+		}
+	}
+	lines = append(lines, fmt.Sprintf("unique_runs: %d", len(runIDs)))
+	lines = append(lines, "event_names:")
+	for _, item := range sortedCountLines(nameCounts) {
+		lines = append(lines, fmt.Sprintf("- %s", item))
+	}
+	lines = append(lines, `detail_hint: use agent_hook_audit action=recent with the same filters for full event details`)
+	lines = append(lines, `task_history_hint: use task_audit action=history id=<task-id> when you need durable task execution history`)
+	return strings.Join(lines, "\n")
+}
+
 func renderAgentHookFields(fields map[string]interface{}) string {
 	if len(fields) == 0 {
 		return ""
@@ -102,4 +148,17 @@ func renderAgentHookFields(fields map[string]interface{}) string {
 func stringFromInput(raw interface{}) string {
 	value, _ := raw.(string)
 	return value
+}
+
+func sortedCountLines(counts map[string]int) []string {
+	keys := make([]string, 0, len(counts))
+	for key := range counts {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	lines := make([]string, 0, len(keys))
+	for _, key := range keys {
+		lines = append(lines, fmt.Sprintf("%s=%d", key, counts[key]))
+	}
+	return lines
 }
