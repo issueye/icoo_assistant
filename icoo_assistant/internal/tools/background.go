@@ -12,6 +12,7 @@ type BackgroundManager interface {
 	Start(input background.StartInput) (background.Job, error)
 	Get(id string) (background.Job, error)
 	List() ([]background.Job, error)
+	ListByTaskID(taskID string) ([]background.Job, error)
 }
 
 func NewBackgroundTool(manager BackgroundManager) Definition {
@@ -54,6 +55,9 @@ func NewBackgroundTool(manager BackgroundManager) Definition {
 					}
 					return "", err
 				}
+				if job.TaskID != "" {
+					return fmt.Sprintf("Started background job %s for task %s: %s", job.ID, job.TaskID, job.Command), nil
+				}
 				return fmt.Sprintf("Started background job %s for command: %s", job.ID, job.Command), nil
 			case "get":
 				id, _ := call.Input["id"].(string)
@@ -66,16 +70,30 @@ func NewBackgroundTool(manager BackgroundManager) Definition {
 				}
 				return renderBackgroundJob(job), nil
 			case "list":
-				jobs, err := manager.List()
+				taskID, _ := call.Input["task_id"].(string)
+				var jobs []background.Job
+				var err error
+				if strings.TrimSpace(taskID) != "" {
+					jobs, err = manager.ListByTaskID(taskID)
+				} else {
+					jobs, err = manager.List()
+				}
 				if err != nil {
 					return "", err
 				}
 				if len(jobs) == 0 {
+					if strings.TrimSpace(taskID) != "" {
+						return fmt.Sprintf("No background jobs for task %s.", taskID), nil
+					}
 					return "No background jobs.", nil
 				}
 				lines := make([]string, 0, len(jobs))
 				for _, job := range jobs {
-					lines = append(lines, fmt.Sprintf("%s [%s] %s", job.ID, job.Status, job.Command))
+					line := fmt.Sprintf("%s [%s] %s", job.ID, job.Status, job.Command)
+					if job.TaskID != "" {
+						line = fmt.Sprintf("%s (task: %s)", line, job.TaskID)
+					}
+					lines = append(lines, line)
 				}
 				return strings.Join(lines, "\n"), nil
 			default:

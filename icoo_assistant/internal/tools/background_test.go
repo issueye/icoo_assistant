@@ -33,6 +33,9 @@ func TestBackgroundToolStartAndGet(t *testing.T) {
 	if !strings.Contains(startResult, "Started background job job-1") {
 		t.Fatalf("unexpected start result: %q", startResult)
 	}
+	if !strings.Contains(startResult, "task task-a") {
+		t.Fatalf("expected task association in start result, got %q", startResult)
+	}
 	deadline := time.Now().Add(5 * time.Second)
 	for time.Now().Before(deadline) {
 		getResult, err := tool.Handler(tools.Call{Input: map[string]interface{}{
@@ -65,5 +68,41 @@ func TestBackgroundToolListEmpty(t *testing.T) {
 	}
 	if result != "No background jobs." {
 		t.Fatalf("unexpected result: %q", result)
+	}
+}
+
+func TestBackgroundToolListByTaskID(t *testing.T) {
+	manager, err := background.NewManager(filepath.Join(t.TempDir(), ".background"), t.TempDir(), 5*time.Second)
+	if err != nil {
+		t.Fatal(err)
+	}
+	command := "printf hello"
+	if runtime.GOOS == "windows" {
+		command = "Write-Output hello"
+	}
+	if _, err := manager.Start(background.StartInput{
+		ID:      "job-1",
+		Command: command,
+		TaskID:  "task-a",
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := manager.Start(background.StartInput{
+		ID:      "job-2",
+		Command: command,
+		TaskID:  "task-b",
+	}); err != nil {
+		t.Fatal(err)
+	}
+	tool := tools.NewBackgroundTool(manager)
+	result, err := tool.Handler(tools.Call{Input: map[string]interface{}{
+		"action":  "list",
+		"task_id": "task-a",
+	}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(result, "job-1") || strings.Contains(result, "job-2") {
+		t.Fatalf("unexpected filtered list result: %q", result)
 	}
 }

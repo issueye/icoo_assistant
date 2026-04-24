@@ -119,6 +119,12 @@ func (m *Manager) List() ([]Job, error) {
 	return m.listLocked()
 }
 
+func (m *Manager) ListByTaskID(taskID string) ([]Job, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return m.listByTaskIDLocked(taskID)
+}
+
 func (m *Manager) PollNotifications() ([]Completion, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -247,6 +253,24 @@ func (m *Manager) listLocked() ([]Job, error) {
 		return jobs[i].StartedAt.Before(jobs[j].StartedAt)
 	})
 	return jobs, nil
+}
+
+func (m *Manager) listByTaskIDLocked(taskID string) ([]Job, error) {
+	taskID = strings.TrimSpace(taskID)
+	if taskID == "" {
+		return nil, nil
+	}
+	jobs, err := m.listLocked()
+	if err != nil {
+		return nil, err
+	}
+	filtered := make([]Job, 0, len(jobs))
+	for _, job := range jobs {
+		if job.TaskID == taskID {
+			filtered = append(filtered, job)
+		}
+	}
+	return filtered, nil
 }
 
 func (m *Manager) readJobLocked(id string) (Job, error) {

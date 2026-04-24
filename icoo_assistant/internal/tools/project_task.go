@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"icoo_assistant/internal/background"
 	"icoo_assistant/internal/llm"
 	"icoo_assistant/internal/task"
 )
@@ -16,7 +17,11 @@ type ProjectTaskManager interface {
 	UpdateStatus(id, status string) (task.Task, error)
 }
 
-func NewProjectTaskTool(manager ProjectTaskManager) Definition {
+type ProjectTaskBackgroundProvider interface {
+	ListByTaskID(taskID string) ([]background.Job, error)
+}
+
+func NewProjectTaskTool(manager ProjectTaskManager, backgrounds ProjectTaskBackgroundProvider) Definition {
 	return Definition{
 		Tool: llm.Tool{
 			Name:        "project_task",
@@ -62,7 +67,7 @@ func NewProjectTaskTool(manager ProjectTaskManager) Definition {
 				if err != nil {
 					return "", err
 				}
-				return renderProjectTask(item), nil
+				return renderProjectTask(item, nil), nil
 			case "get":
 				id, _ := call.Input["id"].(string)
 				if strings.TrimSpace(id) == "" {
@@ -72,7 +77,11 @@ func NewProjectTaskTool(manager ProjectTaskManager) Definition {
 				if err != nil {
 					return "", err
 				}
-				return renderProjectTask(item), nil
+				jobs, err := projectTaskJobs(backgrounds, item.ID)
+				if err != nil {
+					return "", err
+				}
+				return renderProjectTask(item, jobs), nil
 			case "list":
 				items, err := manager.List()
 				if err != nil {
@@ -83,7 +92,17 @@ func NewProjectTaskTool(manager ProjectTaskManager) Definition {
 				}
 				lines := make([]string, 0, len(items))
 				for _, item := range items {
-					lines = append(lines, fmt.Sprintf("%s [%s] %s", item.ID, item.Status, item.Title))
+					line := fmt.Sprintf("%s [%s] %s", item.ID, item.Status, item.Title)
+					if backgrounds != nil {
+						jobs, err := projectTaskJobs(backgrounds, item.ID)
+						if err != nil {
+							return "", err
+						}
+						if len(jobs) > 0 {
+							line = fmt.Sprintf("%s (background_jobs: %d)", line, len(jobs))
+						}
+					}
+					lines = append(lines, line)
 				}
 				return strings.Join(lines, "\n"), nil
 			case "update":
@@ -118,7 +137,11 @@ func NewProjectTaskTool(manager ProjectTaskManager) Definition {
 				if err != nil {
 					return "", err
 				}
-				return renderProjectTask(item), nil
+				jobs, err := projectTaskJobs(backgrounds, item.ID)
+				if err != nil {
+					return "", err
+				}
+				return renderProjectTask(item, jobs), nil
 			case "update_status":
 				id, _ := call.Input["id"].(string)
 				status, _ := call.Input["status"].(string)
@@ -132,7 +155,11 @@ func NewProjectTaskTool(manager ProjectTaskManager) Definition {
 				if err != nil {
 					return "", err
 				}
-				return renderProjectTask(item), nil
+				jobs, err := projectTaskJobs(backgrounds, item.ID)
+				if err != nil {
+					return "", err
+				}
+				return renderProjectTask(item, jobs), nil
 			default:
 				return "", fmt.Errorf("unsupported action %q", action)
 			}
@@ -159,7 +186,7 @@ func stringListFromInput(raw interface{}) ([]string, error) {
 	return result, nil
 }
 
-func renderProjectTask(item task.Task) string {
+func renderProjectTask(item task.Task, jobs []background.Job) string {
 	lines := []string{
 		fmt.Sprintf("id: %s", item.ID),
 		fmt.Sprintf("title: %s", item.Title),
@@ -176,5 +203,22 @@ func renderProjectTask(item task.Task) string {
 	}
 	lines = append(lines, fmt.Sprintf("created_at: %s", item.CreatedAt.UTC().Format("2006-01-02T15:04:05Z")))
 	lines = append(lines, fmt.Sprintf("updated_at: %s", item.UpdatedAt.UTC().Format("2006-01-02T15:04:05Z")))
+	if len(jobs) > 0 {
+		lines = append(lines, "background_jobs:")
+		for _, job := range jobs {
+			line := fmt.Sprintf("- %s [%s] %s", job.ID, job.Status, job.Command)
+			if job.Error != "" {
+				line = fmt.Sprintf("%s error=%s", line, job.Error)
+			}
+			lines = append(lines, line)
+		}
+	}
 	return strings.Join(lines, "\n")
+}
+
+func projectTaskJobs(provider ProjectTaskBackgroundProvider, taskID string) ([]background.Job, error) {
+	if provider == nil || strings.TrimSpace(taskID) == "" {
+		return nil, nil
+	}
+	return provider.ListByTaskID(taskID)
 }
