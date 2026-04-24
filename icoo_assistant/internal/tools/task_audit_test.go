@@ -381,11 +381,54 @@ func TestTaskAuditToolHistoryCanMarkPreviousAndLatestForReasonFilteredPair(t *te
 	if !strings.Contains(result, "filter_reason: timeout") || !strings.Contains(result, "returned_count: 2") {
 		t.Fatalf("expected reason-filtered pair counters, got %q", result)
 	}
+	if !strings.Contains(result, "pair_summary: compare=previous_vs_latest previous_job_id=job-2 latest_job_id=job-3 command=changed error_signature=same previous_signature=timeout after <duration> latest_signature=timeout after <duration>") {
+		t.Fatalf("expected timeout pair summary, got %q", result)
+	}
 	if !strings.Contains(result, "job_id=job-2 status=failed") || !strings.Contains(result, "role=previous") {
 		t.Fatalf("expected previous role on older timeout sample, got %q", result)
 	}
 	if !strings.Contains(result, "job_id=job-3 status=failed") || !strings.Contains(result, "role=latest") {
 		t.Fatalf("expected latest role on newest timeout sample, got %q", result)
+	}
+}
+
+func TestTaskAuditToolHistoryPairSummaryCanHighlightErrorOnlyChange(t *testing.T) {
+	manager, err := task.NewManager(filepath.Join(t.TempDir(), ".tasks"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := manager.Create(task.CreateInput{
+		ID:    "task-a",
+		Title: "Inspect command error pair summary",
+	}); err != nil {
+		t.Fatal(err)
+	}
+	for _, entry := range []task.BackgroundContext{
+		{JobID: "job-1", Status: "failed", Command: "cmd-build", Error: "boom"},
+		{JobID: "job-2", Status: "failed", Command: "cmd-build", Error: "boom again"},
+	} {
+		if _, err := manager.RecordBackground("task-a", entry); err != nil {
+			t.Fatal(err)
+		}
+	}
+	tool := tools.NewTaskAuditTool(manager)
+	result, err := tool.Handler(tools.Call{Input: map[string]interface{}{
+		"action": "history",
+		"id":     "task-a",
+		"reason": "command_error",
+		"limit":  float64(2),
+	}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(result, "pair_summary: compare=previous_vs_latest previous_job_id=job-1 latest_job_id=job-2 command=same error_signature=changed previous_signature=boom latest_signature=boom again") {
+		t.Fatalf("expected error-only pair summary, got %q", result)
+	}
+	if !strings.Contains(result, "job_id=job-1 status=failed") || !strings.Contains(result, "role=previous") {
+		t.Fatalf("expected previous role on first command_error sample, got %q", result)
+	}
+	if !strings.Contains(result, "job_id=job-2 status=failed") || !strings.Contains(result, "role=latest") {
+		t.Fatalf("expected latest role on second command_error sample, got %q", result)
 	}
 }
 

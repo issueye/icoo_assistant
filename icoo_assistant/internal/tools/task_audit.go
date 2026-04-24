@@ -114,6 +114,9 @@ func renderTaskAuditHistory(item task.Task, limit int, statusFilter, reasonFilte
 		lines = append(lines, `runtime_view_hint: use agent_hook_audit action=recent or action=summary for runtime-side investigation`)
 		return strings.Join(lines, "\n")
 	}
+	if pairSummary := renderTaskAuditHistoryPairSummary(recent, statusFilter, reasonFilter); pairSummary != "" {
+		lines = append(lines, fmt.Sprintf("pair_summary: %s", pairSummary))
+	}
 	lines = append(lines, "entries:")
 	for index, entry := range recent {
 		line := fmt.Sprintf("%d. job_id=%s status=%s updated_at=%s", index+1, entry.JobID, entry.Status, entry.UpdatedAt.UTC().Format("2006-01-02T15:04:05Z"))
@@ -131,6 +134,25 @@ func renderTaskAuditHistory(item task.Task, limit int, statusFilter, reasonFilte
 	lines = append(lines, fmt.Sprintf("latest_task_view: project_task action=get id=%s", item.ID))
 	lines = append(lines, `runtime_view_hint: use agent_hook_audit action=summary or action=recent name=agent.tool.completed to inspect runtime-side execution context`)
 	return strings.Join(lines, "\n")
+}
+
+func renderTaskAuditHistoryPairSummary(history []task.BackgroundContext, statusFilter, reasonFilter string) string {
+	if len(history) != 2 {
+		return ""
+	}
+	if reasonFilter == "" && statusFilter != "failed" {
+		return ""
+	}
+	comparison := buildBackgroundPairComparison(history)
+	commandCompare := "same"
+	if comparison.CommandChanged {
+		commandCompare = "changed"
+	}
+	errorCompare := "same"
+	if comparison.ErrorChanged {
+		errorCompare = "changed"
+	}
+	return fmt.Sprintf("compare=previous_vs_latest previous_job_id=%s latest_job_id=%s command=%s error_signature=%s previous_signature=%s latest_signature=%s", comparison.PreviousJobID, comparison.LatestJobID, commandCompare, errorCompare, comparison.PreviousSignature, comparison.LatestSignature)
 }
 
 func renderTaskAuditHistoryRole(index, total int, statusFilter, reasonFilter string) string {
@@ -445,14 +467,22 @@ func buildPriorityFailureSampleComparison(history []task.BackgroundContext, reas
 			LatestSignature: normalizeBackgroundFailurePattern(entry),
 		}
 	}
-	previous := reasonHistory[0]
-	latest := reasonHistory[1]
+	comparison := buildBackgroundPairComparison(reasonHistory)
+	comparison.SampleCount = 2
+	return comparison
+}
+
+func buildBackgroundPairComparison(history []task.BackgroundContext) priorityFailureSampleComparison {
+	if len(history) < 2 {
+		return priorityFailureSampleComparison{}
+	}
+	previous := history[len(history)-2]
+	latest := history[len(history)-1]
 	previousCommand := strings.TrimSpace(previous.Command)
 	latestCommand := strings.TrimSpace(latest.Command)
 	previousSignature := normalizeBackgroundFailurePattern(previous)
 	latestSignature := normalizeBackgroundFailurePattern(latest)
 	return priorityFailureSampleComparison{
-		SampleCount:       2,
 		LatestJobID:       latest.JobID,
 		PreviousJobID:     previous.JobID,
 		LatestCommand:     latestCommand,

@@ -84,6 +84,9 @@ func TestToolCatalogAuditPaths(t *testing.T) {
 	if !strings.Contains(result, "role=previous/latest") {
 		t.Fatalf("expected history role guidance, got %q", result)
 	}
+	if !strings.Contains(result, "pair_summary") {
+		t.Fatalf("expected history pair summary guidance, got %q", result)
+	}
 	if !strings.Contains(result, "priority_failure_basis") {
 		t.Fatalf("expected priority basis flow, got %q", result)
 	}
