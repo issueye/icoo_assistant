@@ -21,6 +21,9 @@ func TestNewManagerCreatesDefaultConfigAndRegistryDir(t *testing.T) {
 	if manager.RegistryDir == "" || !strings.HasSuffix(manager.RegistryDir, "teammates") {
 		t.Fatalf("expected teammates registry dir, got %q", manager.RegistryDir)
 	}
+	if manager.InboxDir == "" || !strings.HasSuffix(manager.InboxDir, "inbox") {
+		t.Fatalf("expected inbox dir, got %q", manager.InboxDir)
+	}
 }
 
 func TestManagerCreateListAndUpdateTeammate(t *testing.T) {
@@ -71,5 +74,37 @@ func TestManagerUpdateConfig(t *testing.T) {
 	}
 	if cfg.LeadID != "captain" || cfg.Mission != "Build a reviewer pair" {
 		t.Fatalf("unexpected config: %#v", cfg)
+	}
+}
+
+func TestManagerSendMessageAndListInbox(t *testing.T) {
+	manager, err := NewManager(filepath.Join(t.TempDir(), ".team"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := manager.Create(CreateInput{
+		ID:   "alice",
+		Role: "reviewer",
+	}); err != nil {
+		t.Fatal(err)
+	}
+	msg, err := manager.SendMessage(SendMessageInput{
+		FromID: "lead",
+		ToID:   "alice",
+		Kind:   "request",
+		Body:   "Please review the latest plan.",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if msg.ToID != "alice" || msg.FromID != "lead" || msg.Kind != "request" {
+		t.Fatalf("unexpected message: %#v", msg)
+	}
+	items, err := manager.ListInbox("alice", 10)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(items) != 1 || items[0].Body != "Please review the latest plan." {
+		t.Fatalf("unexpected inbox items: %#v", items)
 	}
 }

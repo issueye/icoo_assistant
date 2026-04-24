@@ -1,6 +1,7 @@
 package team
 
 import (
+	"bufio"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -45,9 +46,29 @@ type CreateInput struct {
 	Model  string
 }
 
+type Message struct {
+	ID        string    `json:"id"`
+	FromID    string    `json:"fromId"`
+	ToID      string    `json:"toId"`
+	Kind      string    `json:"kind"`
+	Body      string    `json:"body"`
+	RequestID string    `json:"requestId,omitempty"`
+	CreatedAt time.Time `json:"createdAt"`
+}
+
+type SendMessageInput struct {
+	ID        string
+	FromID    string
+	ToID      string
+	Kind      string
+	Body      string
+	RequestID string
+}
+
 type Manager struct {
 	Dir         string
 	RegistryDir string
+	InboxDir    string
 
 	mu  sync.Mutex
 	now func() time.Time
@@ -63,12 +84,17 @@ func NewManager(dir string) (*Manager, error) {
 		return nil, fmt.Errorf("team dir required")
 	}
 	registryDir := filepath.Join(dir, "teammates")
+	inboxDir := filepath.Join(dir, "inbox")
 	if err := os.MkdirAll(registryDir, 0o755); err != nil {
+		return nil, err
+	}
+	if err := os.MkdirAll(inboxDir, 0o755); err != nil {
 		return nil, err
 	}
 	manager := &Manager{
 		Dir:         dir,
 		RegistryDir: registryDir,
+		InboxDir:    inboxDir,
 		now:         time.Now,
 	}
 	manager.mu.Lock()
@@ -165,6 +191,47 @@ func (m *Manager) Update(item Teammate) (Teammate, error) {
 		return Teammate{}, err
 	}
 	return updated, nil
+}
+
+func (m *Manager) SendMessage(input SendMessageInput) (Message, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	msg, err := m.buildMessage(input)
+	if err != nil {
+		return Message{}, err
+	}
+	if err := m.ensureParticipantLocked(msg.FromID); err != nil {
+		return Message{}, err
+	}
+	if err := m.ensureParticipantLocked(msg.ToID); err != nil {
+		return Message{}, err
+	}
+	if err := m.appendMessageLocked(msg); err != nil {
+		return Message{}, err
+	}
+	return msg, nil
+}
+
+func (m *Manager) ListInbox(recipientID string, limit int) ([]Message, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	recipientID, err := normalizeID(recipientID)
+	if err != nil {
+		return nil, err
+	}
+	if err := m.ensureParticipantLocked(recipientID); err != nil {
+		return nil, err
+	}
+	items, err := m.readInboxLocked(recipientID)
+	if err != nil {
+		return nil, err
+	}
+	if limit <= 0 || len(items) <= limit {
+		return items, nil
+	}
+	return items[len(items)-limit:], nil
 }
 
 func defaultConfig(now time.Time) Config {
@@ -274,6 +341,60 @@ func fallbackTrimmed(value, fallback string) string {
 	return value
 }
 
+func (m *Manager) buildMessage(input SendMessageInput) (Message, error) {
+	now := m.now().UTC()
+	id := strings.TrimSpace(input.ID)
+	if id == "" {
+		id = fmt.Sprintf("msg-%d", now.UnixNano())
+	}
+	id, err := normalizeID(id)
+	if err != nil {
+		return Message{}, err
+	}
+	fromID, err := normalizeID(strings.TrimSpace(input.FromID))
+	if err != nil {
+		return Message{}, fmt.Errorf("invalid from id: %w", err)
+	}
+	toID, err := normalizeID(strings.TrimSpace(input.ToID))
+	if err != nil {
+		return Message{}, fmt.Errorf("invalid to id: %w", err)
+	}
+	kind := strings.ToLower(strings.TrimSpace(input.Kind))
+	if kind == "" {
+		kind = "note"
+	}
+	body := strings.TrimSpace(input.Body)
+	if body == "" {
+		return Message{}, fmt.Errorf("body required")
+	}
+	return Message{
+		ID:        id,
+		FromID:    fromID,
+		ToID:      toID,
+		Kind:      kind,
+		Body:      body,
+		RequestID: strings.TrimSpace(input.RequestID),
+		CreatedAt: now,
+	}, nil
+}
+
+func (m *Manager) ensureParticipantLocked(id string) error {
+	cfg, err := m.readConfigLocked()
+	if err != nil {
+		return err
+	}
+	if id == cfg.LeadID {
+		return nil
+	}
+	if _, err := m.readTeammateLocked(id); err != nil {
+		if os.IsNotExist(err) {
+			return fmt.Errorf("unknown teammate %s", id)
+		}
+		return err
+	}
+	return nil
+}
+
 func (m *Manager) listLocked() ([]Teammate, error) {
 	entries, err := os.ReadDir(m.RegistryDir)
 	if err != nil {
@@ -307,6 +428,34 @@ func (m *Manager) listLocked() ([]Teammate, error) {
 	return items, nil
 }
 
+func (m *Manager) readInboxLocked(recipientID string) ([]Message, error) {
+	path := m.inboxPath(recipientID)
+	data, err := os.ReadFile(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	scanner := bufio.NewScanner(strings.NewReader(string(data)))
+	items := make([]Message, 0)
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+		if line == "" {
+			continue
+		}
+		var item Message
+		if err := json.Unmarshal([]byte(line), &item); err != nil {
+			return nil, err
+		}
+		items = append(items, item)
+	}
+	if err := scanner.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 func (m *Manager) readConfigLocked() (Config, error) {
 	data, err := os.ReadFile(m.configPath())
 	if err != nil {
@@ -335,6 +484,22 @@ func (m *Manager) readTeammateLocked(id string) (Teammate, error) {
 	return item, nil
 }
 
+func (m *Manager) appendMessageLocked(item Message) error {
+	data, err := json.Marshal(item)
+	if err != nil {
+		return err
+	}
+	file, err := os.OpenFile(m.inboxPath(item.ToID), os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o644)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+	if _, err := file.Write(append(data, '\n')); err != nil {
+		return err
+	}
+	return nil
+}
+
 func (m *Manager) writeConfigLocked(cfg Config) error {
 	data, err := json.MarshalIndent(cfg, "", "  ")
 	if err != nil {
@@ -357,4 +522,8 @@ func (m *Manager) configPath() string {
 
 func (m *Manager) pathForID(id string) string {
 	return filepath.Join(m.RegistryDir, fmt.Sprintf("teammate_%s.json", id))
+}
+
+func (m *Manager) inboxPath(recipientID string) string {
+	return filepath.Join(m.InboxDir, fmt.Sprintf("%s.jsonl", recipientID))
 }

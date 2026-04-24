@@ -61,6 +61,7 @@ func TestBuildSelfCheckReportCreatesRuntimeDirs(t *testing.T) {
 		"task_dir: ready",
 		"team_dir: ready",
 		"teammate_registry_dir: ready",
+		"team_inbox_dir: ready",
 		"team_config: ready lead_id=lead teammate_count=0",
 		"background_dir: ready",
 		"agent_hook_dir: ready",
@@ -74,6 +75,7 @@ func TestBuildSelfCheckReportCreatesRuntimeDirs(t *testing.T) {
 		task.DefaultDir(root),
 		team.DefaultDir(root),
 		filepath.Join(team.DefaultDir(root), "teammates"),
+		filepath.Join(team.DefaultDir(root), "inbox"),
 		background.DefaultDir(root),
 		agent.DefaultHookDir(root),
 	} {

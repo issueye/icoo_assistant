@@ -83,6 +83,14 @@ func DefaultToolCatalogEntries(includeTask bool) []ToolCatalogEntry {
 			Description: "This is the initial Team-stage storage entry point and persists data under .team.",
 		},
 		{
+			Name:        "team_message",
+			Summary:     "Write to and inspect persistent team inbox files.",
+			UseWhen:     "Use to send a lead/teammate message, inspect one recipient inbox, or verify that the message store is working before live teammate loops exist.",
+			AvoidWhen:   "Avoid for roster management or task history; use team_registry or task_audit instead.",
+			Example:     `{"action":"send","to":"alice","kind":"request","body":"Review the patch"}`,
+			Description: "This is the Stage-B message-store entry point and persists JSONL inbox files under .team/inbox.",
+		},
+		{
 			Name:        "read_file",
 			Summary:     "Read file contents from the workspace.",
 			UseWhen:     "Use to inspect source files, docs, or generated artifacts before making changes.",

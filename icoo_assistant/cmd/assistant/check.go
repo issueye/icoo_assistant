@@ -107,6 +107,7 @@ func buildSelfCheckReport(cfg config.Config) (string, error) {
 		taskLine,
 		fmt.Sprintf("team_dir: ready path=%s", teamManager.Dir),
 		fmt.Sprintf("teammate_registry_dir: ready path=%s", teamManager.RegistryDir),
+		fmt.Sprintf("team_inbox_dir: ready path=%s", teamManager.InboxDir),
 		fmt.Sprintf("team_config: ready lead_id=%s teammate_count=%d", teamConfig.LeadID, len(teammates)),
 		backgroundLine,
 		hookLine,
