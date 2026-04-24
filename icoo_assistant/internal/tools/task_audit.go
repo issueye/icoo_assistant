@@ -24,6 +24,7 @@ func NewTaskAuditTool(manager TaskAuditManager) Definition {
 					"action": map[string]interface{}{"type": "string", "enum": []string{"history", "summary"}},
 					"id":     map[string]interface{}{"type": "string"},
 					"limit":  map[string]interface{}{"type": "integer"},
+					"reason": map[string]interface{}{"type": "string"},
 					"status": map[string]interface{}{"type": "string"},
 				},
 				"required": []string{"action", "id"},
@@ -43,7 +44,8 @@ func NewTaskAuditTool(manager TaskAuditManager) Definition {
 				}
 				limit := intFromInput(call.Input["limit"], 10)
 				statusFilter := normalizeAuditStatusFilter(call.Input["status"])
-				return renderTaskAuditHistory(item, limit, statusFilter), nil
+				reasonFilter := normalizeAuditReasonFilter(call.Input["reason"])
+				return renderTaskAuditHistory(item, limit, statusFilter, reasonFilter), nil
 			case "summary":
 				id, _ := call.Input["id"].(string)
 				if strings.TrimSpace(id) == "" {
@@ -54,7 +56,8 @@ func NewTaskAuditTool(manager TaskAuditManager) Definition {
 					return "", err
 				}
 				statusFilter := normalizeAuditStatusFilter(call.Input["status"])
-				return renderTaskAuditSummary(item, statusFilter), nil
+				reasonFilter := normalizeAuditReasonFilter(call.Input["reason"])
+				return renderTaskAuditSummary(item, statusFilter, reasonFilter), nil
 			default:
 				return "", fmt.Errorf("unsupported action %q", action)
 			}
@@ -62,8 +65,8 @@ func NewTaskAuditTool(manager TaskAuditManager) Definition {
 	}
 }
 
-func renderTaskAuditHistory(item task.Task, limit int, statusFilter string) string {
-	filtered := filterBackgroundHistoryByStatus(item.BackgroundHistory, statusFilter)
+func renderTaskAuditHistory(item task.Task, limit int, statusFilter, reasonFilter string) string {
+	filtered := applyTaskAuditFilters(item.BackgroundHistory, statusFilter, reasonFilter)
 	recent := recentBackgroundHistory(filtered, limit)
 	lines := []string{
 		fmt.Sprintf("task_id: %s", item.ID),
@@ -74,6 +77,9 @@ func renderTaskAuditHistory(item task.Task, limit int, statusFilter string) stri
 	}
 	if statusFilter != "" {
 		lines = append(lines, fmt.Sprintf("filter_status: %s", statusFilter))
+	}
+	if reasonFilter != "" {
+		lines = append(lines, fmt.Sprintf("filter_reason: %s", reasonFilter))
 	}
 	if len(filtered) == 0 {
 		lines = append(lines, "entries: none")
@@ -97,10 +103,10 @@ func renderTaskAuditHistory(item task.Task, limit int, statusFilter string) stri
 	return strings.Join(lines, "\n")
 }
 
-func renderTaskAuditSummary(item task.Task, statusFilter string) string {
-	filtered := filterBackgroundHistoryByStatus(item.BackgroundHistory, statusFilter)
+func renderTaskAuditSummary(item task.Task, statusFilter, reasonFilter string) string {
+	filtered := applyTaskAuditFilters(item.BackgroundHistory, statusFilter, reasonFilter)
 	failureSource := item.BackgroundHistory
-	if statusFilter != "" {
+	if statusFilter != "" || reasonFilter != "" {
 		failureSource = filtered
 	}
 	failures := filterBackgroundHistoryByStatus(failureSource, "failed")
@@ -112,6 +118,9 @@ func renderTaskAuditSummary(item task.Task, statusFilter string) string {
 	}
 	if statusFilter != "" {
 		lines = append(lines, fmt.Sprintf("filter_status: %s", statusFilter))
+	}
+	if reasonFilter != "" {
+		lines = append(lines, fmt.Sprintf("filter_reason: %s", reasonFilter))
 	}
 	if len(item.BackgroundHistory) == 0 {
 		lines = append(lines, "status_counts: none")
@@ -162,13 +171,19 @@ func renderTaskAuditSummary(item task.Task, statusFilter string) string {
 		lines = append(lines, fmt.Sprintf("matched_latest_entry: %s", renderBackgroundContextSummary(filtered[len(filtered)-1])))
 	}
 	lines = append(lines, fmt.Sprintf("history_hint: use task_audit action=history id=%s", item.ID))
-	if statusFilter != "" {
-		lines = append(lines, fmt.Sprintf("filtered_history_hint: use task_audit action=history id=%s status=%s", item.ID, statusFilter))
+	filterSuffix := renderTaskAuditFilterSuffix(statusFilter, reasonFilter)
+	if filterSuffix != "" {
+		lines = append(lines, fmt.Sprintf("filtered_history_hint: use task_audit action=history id=%s%s", item.ID, filterSuffix))
 	} else {
 		lines = append(lines, fmt.Sprintf("failure_history_hint: use task_audit action=history id=%s status=failed", item.ID))
 	}
 	lines = append(lines, `runtime_view_hint: use agent_hook_audit action=summary or action=recent for runtime-side troubleshooting`)
 	return strings.Join(lines, "\n")
+}
+
+func applyTaskAuditFilters(history []task.BackgroundContext, statusFilter, reasonFilter string) []task.BackgroundContext {
+	filtered := filterBackgroundHistoryByStatus(history, statusFilter)
+	return filterBackgroundHistoryByReason(filtered, reasonFilter)
 }
 
 func filterBackgroundHistoryByStatus(history []task.BackgroundContext, status string) []task.BackgroundContext {
@@ -184,9 +199,44 @@ func filterBackgroundHistoryByStatus(history []task.BackgroundContext, status st
 	return filtered
 }
 
+func filterBackgroundHistoryByReason(history []task.BackgroundContext, reason string) []task.BackgroundContext {
+	if reason == "" {
+		return history
+	}
+	filtered := make([]task.BackgroundContext, 0, len(history))
+	for _, entry := range history {
+		if !strings.EqualFold(strings.TrimSpace(entry.Status), "failed") {
+			continue
+		}
+		if classifyBackgroundFailureReason(entry) == reason {
+			filtered = append(filtered, entry)
+		}
+	}
+	return filtered
+}
+
 func normalizeAuditStatusFilter(raw interface{}) string {
 	value, _ := raw.(string)
 	return strings.ToLower(strings.TrimSpace(value))
+}
+
+func normalizeAuditReasonFilter(raw interface{}) string {
+	value, _ := raw.(string)
+	return strings.ToLower(strings.TrimSpace(value))
+}
+
+func renderTaskAuditFilterSuffix(statusFilter, reasonFilter string) string {
+	parts := make([]string, 0, 2)
+	if statusFilter != "" {
+		parts = append(parts, fmt.Sprintf("status=%s", statusFilter))
+	}
+	if reasonFilter != "" {
+		parts = append(parts, fmt.Sprintf("reason=%s", reasonFilter))
+	}
+	if len(parts) == 0 {
+		return ""
+	}
+	return " " + strings.Join(parts, " ")
 }
 
 func backgroundStatusCounts(history []task.BackgroundContext) map[string]int {

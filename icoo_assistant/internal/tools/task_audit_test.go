@@ -244,3 +244,96 @@ func TestTaskAuditToolSummaryCanFilterByStatus(t *testing.T) {
 		t.Fatalf("expected filtered history hint, got %q", result)
 	}
 }
+
+func TestTaskAuditToolHistoryCanFilterByFailureReason(t *testing.T) {
+	manager, err := task.NewManager(filepath.Join(t.TempDir(), ".tasks"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := manager.Create(task.CreateInput{
+		ID:    "task-a",
+		Title: "Inspect timeout failures",
+	}); err != nil {
+		t.Fatal(err)
+	}
+	for _, entry := range []task.BackgroundContext{
+		{JobID: "job-1", Status: "completed", Command: "cmd-1"},
+		{JobID: "job-2", Status: "failed", Command: "cmd-2", Error: "boom"},
+		{JobID: "job-3", Status: "failed", Command: "cmd-3", Error: "timeout after 5s"},
+	} {
+		if _, err := manager.RecordBackground("task-a", entry); err != nil {
+			t.Fatal(err)
+		}
+	}
+	tool := tools.NewTaskAuditTool(manager)
+	result, err := tool.Handler(tools.Call{Input: map[string]interface{}{
+		"action": "history",
+		"id":     "task-a",
+		"reason": "timeout",
+	}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(result, "filter_reason: timeout") {
+		t.Fatalf("expected reason filter, got %q", result)
+	}
+	if !strings.Contains(result, "filtered_count: 1") || !strings.Contains(result, "returned_count: 1") {
+		t.Fatalf("expected filtered counters, got %q", result)
+	}
+	if !strings.Contains(result, "job_id=job-3 status=failed") {
+		t.Fatalf("expected timeout failure in result, got %q", result)
+	}
+	if strings.Contains(result, "job_id=job-1") || strings.Contains(result, "job_id=job-2") {
+		t.Fatalf("expected only matching reason in result, got %q", result)
+	}
+}
+
+func TestTaskAuditToolSummaryCanFilterByFailureReason(t *testing.T) {
+	manager, err := task.NewManager(filepath.Join(t.TempDir(), ".tasks"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := manager.Create(task.CreateInput{
+		ID:    "task-a",
+		Title: "Summarize timeout failures",
+	}); err != nil {
+		t.Fatal(err)
+	}
+	for _, entry := range []task.BackgroundContext{
+		{JobID: "job-1", Status: "completed", Command: "cmd-1"},
+		{JobID: "job-2", Status: "failed", Command: "cmd-2", Error: "boom"},
+		{JobID: "job-3", Status: "failed", Command: "cmd-3", Error: "timeout after 5s"},
+		{JobID: "job-4", Status: "failed", Command: "cmd-4", Error: "timeout after 8s"},
+	} {
+		if _, err := manager.RecordBackground("task-a", entry); err != nil {
+			t.Fatal(err)
+		}
+	}
+	tool := tools.NewTaskAuditTool(manager)
+	result, err := tool.Handler(tools.Call{Input: map[string]interface{}{
+		"action": "summary",
+		"id":     "task-a",
+		"reason": "timeout",
+	}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(result, "filter_reason: timeout") || !strings.Contains(result, "filtered_count: 2") {
+		t.Fatalf("expected reason-filtered summary counters, got %q", result)
+	}
+	if !strings.Contains(result, "- timeout=2") || strings.Contains(result, "- command_error=") {
+		t.Fatalf("expected only timeout reason counts, got %q", result)
+	}
+	if !strings.Contains(result, "- timeout => job_id=job-4 status=failed") {
+		t.Fatalf("expected latest timeout sample, got %q", result)
+	}
+	if !strings.Contains(result, "- reason=timeout job_id=job-3 status=failed") || !strings.Contains(result, "- reason=timeout job_id=job-4 status=failed") {
+		t.Fatalf("expected timeout trend lines, got %q", result)
+	}
+	if !strings.Contains(result, "matched_latest_entry: job_id=job-4 status=failed") {
+		t.Fatalf("expected matched latest entry, got %q", result)
+	}
+	if !strings.Contains(result, "filtered_history_hint: use task_audit action=history id=task-a reason=timeout") {
+		t.Fatalf("expected reason-filtered history hint, got %q", result)
+	}
+}
