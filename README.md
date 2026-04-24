@@ -370,3 +370,4 @@ go run ./cmd/assistant check
 - `0.1.30` 开发计划与完成度评估见 [docs/v0.1.30-开发计划.md](E:\codes\icoo_assistant\docs\v0.1.30-开发计划.md)
 - 下一轮 `v0.1.31` 版本计划见 [docs/v0.1.31-开发计划.md](E:\codes\icoo_assistant\docs\v0.1.31-开发计划.md)
 - `v0.1.30` 初代可用版交付路线见 [docs/v0.1.30-初代可用版路线图.md](E:\codes\icoo_assistant\docs\v0.1.30-初代可用版路线图.md)
+- `v0.1.31+` 后续迭代路线见 [docs/v0.1.31+-推荐版本路线图.md](E:\codes\icoo_assistant\docs\v0.1.31+-推荐版本路线图.md)
