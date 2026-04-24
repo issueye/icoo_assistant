@@ -65,6 +65,13 @@ type SendMessageInput struct {
 	RequestID string
 }
 
+type ReplyInput struct {
+	ID        string
+	FromID    string
+	RequestID string
+	Body      string
+}
+
 type Manager struct {
 	Dir         string
 	RegistryDir string
@@ -225,6 +232,70 @@ func (m *Manager) ListInbox(recipientID string, limit int) ([]Message, error) {
 		return nil, err
 	}
 	items, err := m.readInboxLocked(recipientID)
+	if err != nil {
+		return nil, err
+	}
+	if limit <= 0 || len(items) <= limit {
+		return items, nil
+	}
+	return items[len(items)-limit:], nil
+}
+
+func (m *Manager) ReplyToRequest(input ReplyInput) (Message, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	fromID, err := normalizeID(strings.TrimSpace(input.FromID))
+	if err != nil {
+		return Message{}, fmt.Errorf("invalid from id: %w", err)
+	}
+	requestID := strings.TrimSpace(input.RequestID)
+	if requestID == "" {
+		return Message{}, fmt.Errorf("request id required")
+	}
+	if err := m.ensureParticipantLocked(fromID); err != nil {
+		return Message{}, err
+	}
+	thread, err := m.listThreadLocked(requestID)
+	if err != nil {
+		return Message{}, err
+	}
+	if len(thread) == 0 {
+		return Message{}, fmt.Errorf("request %s not found", requestID)
+	}
+	root := thread[0]
+	if root.Kind != "request" {
+		return Message{}, fmt.Errorf("request %s does not start with a request message", requestID)
+	}
+	if root.ToID != fromID {
+		return Message{}, fmt.Errorf("request %s is not addressed to %s", requestID, fromID)
+	}
+	msg, err := m.buildMessage(SendMessageInput{
+		ID:        input.ID,
+		FromID:    fromID,
+		ToID:      root.FromID,
+		Kind:      "response",
+		Body:      input.Body,
+		RequestID: requestID,
+	})
+	if err != nil {
+		return Message{}, err
+	}
+	if err := m.appendMessageLocked(msg); err != nil {
+		return Message{}, err
+	}
+	return msg, nil
+}
+
+func (m *Manager) ListThread(requestID string, limit int) ([]Message, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	requestID = strings.TrimSpace(requestID)
+	if requestID == "" {
+		return nil, fmt.Errorf("request id required")
+	}
+	items, err := m.listThreadLocked(requestID)
 	if err != nil {
 		return nil, err
 	}
@@ -453,6 +524,65 @@ func (m *Manager) readInboxLocked(recipientID string) ([]Message, error) {
 	if err := scanner.Err(); err != nil {
 		return nil, err
 	}
+	return items, nil
+}
+
+func (m *Manager) listThreadLocked(requestID string) ([]Message, error) {
+	all, err := m.listAllMessagesLocked()
+	if err != nil {
+		return nil, err
+	}
+	filtered := make([]Message, 0)
+	for _, item := range all {
+		if item.RequestID == requestID {
+			filtered = append(filtered, item)
+		}
+	}
+	sort.Slice(filtered, func(i, j int) bool {
+		if filtered[i].CreatedAt.Equal(filtered[j].CreatedAt) {
+			return filtered[i].ID < filtered[j].ID
+		}
+		return filtered[i].CreatedAt.Before(filtered[j].CreatedAt)
+	})
+	return filtered, nil
+}
+
+func (m *Manager) listAllMessagesLocked() ([]Message, error) {
+	entries, err := os.ReadDir(m.InboxDir)
+	if err != nil {
+		return nil, err
+	}
+	items := make([]Message, 0)
+	for _, entry := range entries {
+		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".jsonl") {
+			continue
+		}
+		data, err := os.ReadFile(filepath.Join(m.InboxDir, entry.Name()))
+		if err != nil {
+			return nil, err
+		}
+		scanner := bufio.NewScanner(strings.NewReader(string(data)))
+		for scanner.Scan() {
+			line := strings.TrimSpace(scanner.Text())
+			if line == "" {
+				continue
+			}
+			var item Message
+			if err := json.Unmarshal([]byte(line), &item); err != nil {
+				return nil, err
+			}
+			items = append(items, item)
+		}
+		if err := scanner.Err(); err != nil {
+			return nil, err
+		}
+	}
+	sort.Slice(items, func(i, j int) bool {
+		if items[i].CreatedAt.Equal(items[j].CreatedAt) {
+			return items[i].ID < items[j].ID
+		}
+		return items[i].CreatedAt.Before(items[j].CreatedAt)
+	})
 	return items, nil
 }
 

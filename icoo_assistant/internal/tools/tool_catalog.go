@@ -84,11 +84,11 @@ func DefaultToolCatalogEntries(includeTask bool) []ToolCatalogEntry {
 		},
 		{
 			Name:        "team_message",
-			Summary:     "Write to and inspect persistent team inbox files.",
-			UseWhen:     "Use to send a lead/teammate message, inspect one recipient inbox, or verify that the message store is working before live teammate loops exist.",
+			Summary:     "Write to and inspect persistent team inbox files and minimal request/response threads.",
+			UseWhen:     "Use to send a lead/teammate message, start a request, reply to a request, inspect one recipient inbox, or review one minimal communication thread before live teammate loops exist.",
 			AvoidWhen:   "Avoid for roster management or task history; use team_registry or task_audit instead.",
-			Example:     `{"action":"send","to":"alice","kind":"request","body":"Review the patch"}`,
-			Description: "This is the Stage-B message-store entry point and persists JSONL inbox files under .team/inbox.",
+			Example:     `{"action":"request","to":"alice","body":"Review the patch","request_id":"req-1"}`,
+			Description: "This is the Stage-B message-store entry point and persists JSONL inbox files under .team/inbox, including minimal request/reply threads.",
 		},
 		{
 			Name:        "read_file",

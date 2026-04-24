@@ -108,3 +108,47 @@ func TestManagerSendMessageAndListInbox(t *testing.T) {
 		t.Fatalf("unexpected inbox items: %#v", items)
 	}
 }
+
+func TestManagerReplyToRequestAndListThread(t *testing.T) {
+	manager, err := NewManager(filepath.Join(t.TempDir(), ".team"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := manager.Create(CreateInput{
+		ID:   "alice",
+		Role: "reviewer",
+	}); err != nil {
+		t.Fatal(err)
+	}
+	request, err := manager.SendMessage(SendMessageInput{
+		FromID:    "lead",
+		ToID:      "alice",
+		Kind:      "request",
+		Body:      "Please review the patch.",
+		RequestID: "req-1",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	reply, err := manager.ReplyToRequest(ReplyInput{
+		FromID:    "alice",
+		RequestID: request.RequestID,
+		Body:      "Reviewed. Looks good.",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if reply.ToID != "lead" || reply.Kind != "response" {
+		t.Fatalf("unexpected reply: %#v", reply)
+	}
+	thread, err := manager.ListThread("req-1", 10)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(thread) != 2 {
+		t.Fatalf("expected two thread messages, got %#v", thread)
+	}
+	if thread[0].Kind != "request" || thread[1].Kind != "response" {
+		t.Fatalf("unexpected thread order: %#v", thread)
+	}
+}
