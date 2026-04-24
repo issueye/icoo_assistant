@@ -29,11 +29,12 @@ func NewProjectTaskTool(manager ProjectTaskManager, backgrounds ProjectTaskBackg
 			InputSchema: map[string]interface{}{
 				"type": "object",
 				"properties": map[string]interface{}{
-					"action":     map[string]interface{}{"type": "string", "enum": []string{"create", "get", "list", "update", "update_status"}},
+					"action":     map[string]interface{}{"type": "string", "enum": []string{"create", "get", "list", "update", "update_status", "history"}},
 					"id":         map[string]interface{}{"type": "string"},
 					"title":      map[string]interface{}{"type": "string"},
 					"status":     map[string]interface{}{"type": "string"},
 					"blocked_by": map[string]interface{}{"type": "array", "items": map[string]interface{}{"type": "string"}},
+					"limit":      map[string]interface{}{"type": "integer"},
 					"owner":      map[string]interface{}{"type": "string"},
 					"worktree":   map[string]interface{}{"type": "string"},
 				},
@@ -82,6 +83,17 @@ func NewProjectTaskTool(manager ProjectTaskManager, backgrounds ProjectTaskBackg
 					return "", err
 				}
 				return renderProjectTask(item, jobs), nil
+			case "history":
+				id, _ := call.Input["id"].(string)
+				if strings.TrimSpace(id) == "" {
+					return "", fmt.Errorf("id required for history")
+				}
+				item, err := manager.Get(id)
+				if err != nil {
+					return "", err
+				}
+				limit := intFromInput(call.Input["limit"], 5)
+				return renderProjectTaskHistory(item, limit), nil
 			case "list":
 				items, err := manager.List()
 				if err != nil {
@@ -217,17 +229,7 @@ func renderProjectTask(item task.Task, jobs []background.Job) string {
 	}
 	if len(item.BackgroundHistory) > 0 {
 		lines = append(lines, fmt.Sprintf("background_history_count: %d", len(item.BackgroundHistory)))
-		lines = append(lines, "background_history_recent:")
-		for _, entry := range recentBackgroundHistory(item.BackgroundHistory, 3) {
-			line := fmt.Sprintf("- %s [%s]", entry.JobID, entry.Status)
-			if entry.Command != "" {
-				line = fmt.Sprintf("%s %s", line, entry.Command)
-			}
-			if entry.Error != "" {
-				line = fmt.Sprintf("%s error=%s", line, entry.Error)
-			}
-			lines = append(lines, line)
-		}
+		lines = append(lines, "history_hint: use action=history for detailed execution history")
 	}
 	if len(jobs) > 0 {
 		lines = append(lines, "background_jobs:")
@@ -238,6 +240,31 @@ func renderProjectTask(item task.Task, jobs []background.Job) string {
 			}
 			lines = append(lines, line)
 		}
+	}
+	return strings.Join(lines, "\n")
+}
+
+func renderProjectTaskHistory(item task.Task, limit int) string {
+	lines := []string{
+		fmt.Sprintf("id: %s", item.ID),
+		fmt.Sprintf("title: %s", item.Title),
+		fmt.Sprintf("history_count: %d", len(item.BackgroundHistory)),
+	}
+	if len(item.BackgroundHistory) == 0 {
+		lines = append(lines, "No background history.")
+		return strings.Join(lines, "\n")
+	}
+	lines = append(lines, "history:")
+	for _, entry := range recentBackgroundHistory(item.BackgroundHistory, limit) {
+		line := fmt.Sprintf("- %s [%s]", entry.JobID, entry.Status)
+		if entry.Command != "" {
+			line = fmt.Sprintf("%s %s", line, entry.Command)
+		}
+		if entry.Error != "" {
+			line = fmt.Sprintf("%s error=%s", line, entry.Error)
+		}
+		line = fmt.Sprintf("%s updated_at=%s", line, entry.UpdatedAt.UTC().Format("2006-01-02T15:04:05Z"))
+		lines = append(lines, line)
 	}
 	return strings.Join(lines, "\n")
 }
@@ -257,4 +284,18 @@ func recentBackgroundHistory(history []task.BackgroundContext, limit int) []task
 		return history
 	}
 	return history[len(history)-limit:]
+}
+
+func intFromInput(raw interface{}, fallback int) int {
+	switch value := raw.(type) {
+	case float64:
+		if int(value) > 0 {
+			return int(value)
+		}
+	case int:
+		if value > 0 {
+			return value
+		}
+	}
+	return fallback
 }

@@ -2,7 +2,7 @@
 
 `icoo_assistant` 是一个基于 Go 的本地编码 Agent 原型，当前代码主体位于 [icoo_assistant](E:\codes\icoo_assistant\icoo_assistant)。
 
-当前仓库已经完成 `0.0.7` 基线，能力范围包括：
+当前仓库已经完成 `0.0.8` 基线，能力范围包括：
 
 - LLM 对话循环
 - 工具注册与调用分发
@@ -17,6 +17,7 @@
 - 项目任务与后台执行关联展示
 - 项目任务与后台执行基础状态联动
 - 项目任务有限执行历史
+- 项目任务历史查看入口
 - 后台命令执行与结果回流
 
 ## 仓库结构
@@ -90,7 +91,7 @@ Go 模块目录 [icoo_assistant/.env.example](E:\codes\icoo_assistant\icoo_assis
 
 ## Task 持久化
 
-`0.0.7` 已经把项目任务和后台执行推进到了“基础状态联动 + 有限历史记录”。核心代码位于 [internal/task](E:\codes\icoo_assistant\icoo_assistant\internal\task)、[internal/tools/project_task.go](E:\codes\icoo_assistant\icoo_assistant\internal\tools\project_task.go) 和 [internal/background](E:\codes\icoo_assistant\icoo_assistant\internal\background)。当前支持：
+`0.0.8` 已经把项目任务历史查看做成了“默认紧凑 + 明确入口”的形态。核心代码位于 [internal/task](E:\codes\icoo_assistant\icoo_assistant\internal\task)、[internal/tools/project_task.go](E:\codes\icoo_assistant\icoo_assistant\internal\tools\project_task.go) 和 [internal/background](E:\codes\icoo_assistant\icoo_assistant\internal\background)。当前支持：
 
 - 初始化 `.tasks/` 目录
 - 创建、读取、列出、更新任务
@@ -101,6 +102,8 @@ Go 模块目录 [icoo_assistant/.env.example](E:\codes\icoo_assistant\icoo_assis
 - 查询项目任务时展示关联后台执行上下文
 - 记录最近一次后台执行结果
 - 保留有限条数的后台执行历史摘要
+- 默认 `get` 输出保持紧凑
+- 使用 `project_task action=history` 查看详细历史
 - 后台启动时将关联任务推进到 `in_progress`
 - 后台失败时将 `in_progress` 任务退回 `pending`
 
@@ -115,4 +118,5 @@ Go 模块目录 [icoo_assistant/.env.example](E:\codes\icoo_assistant\icoo_assis
 - `0.0.5` 开发计划与完成度评估见 [docs/v0.0.5-开发计划.md](E:\codes\icoo_assistant\docs\v0.0.5-开发计划.md)
 - `0.0.6` 开发计划与完成度评估见 [docs/v0.0.6-开发计划.md](E:\codes\icoo_assistant\docs\v0.0.6-开发计划.md)
 - `0.0.7` 开发计划与完成度评估见 [docs/v0.0.7-开发计划.md](E:\codes\icoo_assistant\docs\v0.0.7-开发计划.md)
-- 下一轮 `0.0.8` 版本计划见 [docs/v0.0.8-开发计划.md](E:\codes\icoo_assistant\docs\v0.0.8-开发计划.md)
+- `0.0.8` 开发计划与完成度评估见 [docs/v0.0.8-开发计划.md](E:\codes\icoo_assistant\docs\v0.0.8-开发计划.md)
+- 下一轮 `0.0.9` 版本计划见 [docs/v0.0.9-开发计划.md](E:\codes\icoo_assistant\docs\v0.0.9-开发计划.md)

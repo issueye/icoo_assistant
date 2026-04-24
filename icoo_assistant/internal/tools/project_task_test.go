@@ -1,6 +1,7 @@
 package tools_test
 
 import (
+	"fmt"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -150,6 +151,52 @@ func TestProjectTaskToolShowsAssociatedBackgroundJobs(t *testing.T) {
 	}
 	if !strings.Contains(result, "background_history_count: 2") {
 		t.Fatalf("expected background history count, got %q", result)
+	}
+	if !strings.Contains(result, "history_hint: use action=history") {
+		t.Fatalf("expected compact history hint, got %q", result)
+	}
+	if strings.Contains(result, "background_history_recent:") {
+		t.Fatalf("expected get output to stay compact, got %q", result)
+	}
+}
+
+func TestProjectTaskToolHistoryActionShowsDetailedEntries(t *testing.T) {
+	manager, err := task.NewManager(filepath.Join(t.TempDir(), ".tasks"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := manager.Create(task.CreateInput{
+		ID:    "task-a",
+		Title: "Inspect execution history",
+	}); err != nil {
+		t.Fatal(err)
+	}
+	for i := 0; i < 4; i++ {
+		if _, err := manager.RecordBackground("task-a", task.BackgroundContext{
+			JobID:   fmt.Sprintf("job-%d", i),
+			Status:  "completed",
+			Command: fmt.Sprintf("cmd-%d", i),
+		}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	tool := tools.NewProjectTaskTool(manager, nil)
+	result, err := tool.Handler(tools.Call{Input: map[string]interface{}{
+		"action": "history",
+		"id":     "task-a",
+		"limit":  float64(2),
+	}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(result, "history_count: 4") {
+		t.Fatalf("expected history count, got %q", result)
+	}
+	if !strings.Contains(result, "job-2 [completed] cmd-2") || !strings.Contains(result, "job-3 [completed] cmd-3") {
+		t.Fatalf("expected recent history entries, got %q", result)
+	}
+	if strings.Contains(result, "job-0 [completed]") || strings.Contains(result, "job-1 [completed]") {
+		t.Fatalf("expected limited history output, got %q", result)
 	}
 }
 
