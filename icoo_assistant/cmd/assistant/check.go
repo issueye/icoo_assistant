@@ -107,12 +107,29 @@ func buildSelfCheckReport(cfg config.Config) (string, error) {
 			lines = append(lines, "- "+advisory)
 		}
 	}
+	lines = append(lines, "minimal_happy_path:")
+	for _, step := range minimalHappyPathLines(mode) {
+		lines = append(lines, step)
+	}
 	if mode == "fake" {
-		lines = append(lines, `next_step: run assistant "summarize this repository" for a local smoke test, or set ANTHROPIC_API_KEY first for real model calls`)
+		lines = append(lines, "next_step: if you want the full happy path, set ANTHROPIC_API_KEY and rerun assistant check; otherwise follow minimal_happy_path for a local dry run")
 	} else {
-		lines = append(lines, `next_step: run assistant "summarize this repository" or assistant to start the REPL`)
+		lines = append(lines, `next_step: start with minimal_happy_path step=1 command=assistant "先用 tool_catalog 总结当前可用工具，再说明 project_task、task_audit 和 agent_hook_audit 的边界"`)
 	}
 	return strings.Join(lines, "\n") + "\n", nil
+}
+
+func minimalHappyPathLines(mode string) []string {
+	lines := make([]string, 0, 4)
+	if mode == "fake" {
+		lines = append(lines, "0. optional: set ANTHROPIC_API_KEY in .env or shell and rerun assistant check if you want real model calls")
+	}
+	lines = append(lines,
+		`1. assistant "先用 tool_catalog 总结当前可用工具，再说明 project_task、task_audit 和 agent_hook_audit 的边界"`,
+		`2. assistant "创建一个项目任务，用于验证后台测试"`,
+		`3. assistant "使用 tool_catalog action=audit_paths 说明审计入口，再给出 task_audit 和 agent_hook_audit 的查询示例"`,
+	)
+	return lines
 }
 
 func resolveConfigPath(workdir, path string) string {
