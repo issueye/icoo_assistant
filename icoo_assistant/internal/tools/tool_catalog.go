@@ -19,6 +19,14 @@ type ToolCatalogEntry struct {
 func DefaultToolCatalogEntries(includeTask bool) []ToolCatalogEntry {
 	entries := []ToolCatalogEntry{
 		{
+			Name:        "agent_hook_audit",
+			Summary:     "Inspect recent agent hook events recorded on disk.",
+			UseWhen:     "Use when recent runs, tool calls, compact actions, or background notification injections should be reviewed for debugging.",
+			AvoidWhen:   "Avoid for project task execution history; use task_audit instead.",
+			Example:     `{"action":"recent","limit":10,"name":"agent.tool.completed"}`,
+			Description: "Reads recorded events from .agent-hooks/events.jsonl and supports recent-event filtering.",
+		},
+		{
 			Name:        "background",
 			Summary:     "Start or inspect long-running shell commands.",
 			UseWhen:     "Use for commands that may take a while or should continue outside the current round.",

@@ -10,6 +10,7 @@ import (
 	"icoo_assistant/internal/background"
 	"icoo_assistant/internal/compact"
 	"icoo_assistant/internal/config"
+	"icoo_assistant/internal/hookaudit"
 	"icoo_assistant/internal/llm"
 	"icoo_assistant/internal/skill"
 	"icoo_assistant/internal/subagent"
@@ -53,6 +54,7 @@ func newApp(cfg config.Config) (*app, error) {
 		return nil, err
 	}
 	hooks := []agent.Hook{hookWriter}
+	eventReader := hookaudit.NewReader(agent.DefaultHookDir(cfg.Workdir))
 	skillLoader, err := skill.Load(cfg.SkillsDir)
 	if err != nil {
 		return nil, err
@@ -65,6 +67,7 @@ func newApp(cfg config.Config) (*app, error) {
 		tools.NewWriteFileTool(ws),
 		tools.NewEditFileTool(ws),
 		tools.NewBackgroundTool(backgroundManager),
+		tools.NewAgentHookAuditTool(eventReader),
 		tools.NewProjectTaskTool(taskManager, backgroundManager),
 		tools.NewTaskAuditTool(taskManager),
 		tools.NewToolCatalogTool(baseCatalog),
@@ -94,6 +97,7 @@ func newApp(cfg config.Config) (*app, error) {
 		tools.NewWriteFileTool(ws),
 		tools.NewEditFileTool(ws),
 		tools.NewBackgroundTool(backgroundManager),
+		tools.NewAgentHookAuditTool(eventReader),
 		tools.NewProjectTaskTool(taskManager, backgroundManager),
 		tools.NewTaskAuditTool(taskManager),
 		tools.NewToolCatalogTool(tools.DefaultToolCatalogEntries(true)),

@@ -2,7 +2,7 @@
 
 `icoo_assistant` 是一个基于 Go 的本地编码 Agent 原型，当前代码主体位于 [icoo_assistant](E:\codes\icoo_assistant\icoo_assistant)。
 
-当前仓库已经完成 `0.1.0` 基线，能力范围包括：
+当前仓库已经完成 `0.1.1` 基线，能力范围包括：
 
 - LLM 对话循环
 - 工具注册与调用分发
@@ -20,6 +20,7 @@
 - 项目任务历史查看入口
 - 独立任务审计查询入口
 - 工具职责目录与边界说明入口
+- Agent Hook 审计查询入口
 - 后台命令执行与结果回流
 
 ## 仓库结构
@@ -46,7 +47,7 @@ go run ./cmd/assistant
 
 ```bash
 go run ./cmd/assistant --version
-go run ./cmd/assistant "先用 tool_catalog 总结当前可用工具，再说明 project_task 和 task_audit 的边界"
+go run ./cmd/assistant "先用 tool_catalog 总结当前可用工具，再说明 project_task、task_audit 和 agent_hook_audit 的边界"
 go run ./cmd/assistant "创建一个项目任务，用于验证后台测试"
 ```
 
@@ -88,7 +89,7 @@ Go 模块目录 [icoo_assistant/.env.example](E:\codes\icoo_assistant\icoo_assis
 
 ## Agent Hook
 
-当前已经为 Agent 主循环补上基础 hook 埋点，默认会把事件写入工作区的 `.agent-hooks/events.jsonl`。这批埋点覆盖了：
+当前已经为 Agent 主循环补上基础 hook 埋点，默认会把事件写入工作区的 `.agent-hooks/events.jsonl`。`0.1.1` 进一步补上了独立的 `agent_hook_audit` 查询入口，用来回看最近运行事件。当前埋点覆盖了：
 
 - run started / completed / failed
 - round started
@@ -99,9 +100,16 @@ Go 模块目录 [icoo_assistant/.env.example](E:\codes\icoo_assistant\icoo_assis
 - background notifications injected
 - todo reminder injected
 
+当前支持：
+
+- 使用 `agent_hook_audit action=recent` 查看最近 hook 事件
+- 使用 `name` 过滤特定事件名
+- 使用 `run_id` 聚焦某一次运行
+- 使用 `limit` 控制返回条数
+
 ## Task 持久化
 
-`0.1.0` 继续把任务历史查询和工具边界做了收口。核心代码位于 [internal/task](E:\codes\icoo_assistant\icoo_assistant\internal\task)、[internal/tools/project_task.go](E:\codes\icoo_assistant\icoo_assistant\internal\tools\project_task.go)、[internal/tools/task_audit.go](E:\codes\icoo_assistant\icoo_assistant\internal\tools\task_audit.go)、[internal/tools/tool_catalog.go](E:\codes\icoo_assistant\icoo_assistant\internal\tools\tool_catalog.go) 和 [internal/background](E:\codes\icoo_assistant\icoo_assistant\internal\background)。当前支持：
+`0.1.1` 继续把任务历史查询和工具边界做了收口。核心代码位于 [internal/task](E:\codes\icoo_assistant\icoo_assistant\internal\task)、[internal/tools/project_task.go](E:\codes\icoo_assistant\icoo_assistant\internal\tools\project_task.go)、[internal/tools/task_audit.go](E:\codes\icoo_assistant\icoo_assistant\internal\tools\task_audit.go)、[internal/tools/tool_catalog.go](E:\codes\icoo_assistant\icoo_assistant\internal\tools\tool_catalog.go)、[internal/tools/agent_hook_audit.go](E:\codes\icoo_assistant\icoo_assistant\internal\tools\agent_hook_audit.go) 和 [internal/background](E:\codes\icoo_assistant\icoo_assistant\internal\background)。当前支持：
 
 - 初始化 `.tasks/` 目录
 - 创建、读取、列出、更新任务
@@ -123,11 +131,12 @@ Go 模块目录 [icoo_assistant/.env.example](E:\codes\icoo_assistant\icoo_assis
 
 ## Tool 边界
 
-为了让演示和上手路径更顺滑，`0.1.0` 新增了 `tool_catalog` 工具。当前推荐的职责边界可以简单记成：
+为了让演示和上手路径更顺滑，`0.1.1` 延续了 `tool_catalog` 作为统一工具说明入口。当前推荐的职责边界可以简单记成：
 
 - `todo`：当前会话内的轻量步骤跟踪
 - `project_task`：项目级持久化任务管理
 - `task_audit`：项目任务执行历史审计
+- `agent_hook_audit`：Agent 运行事件与排障审计
 - `task`：子代理委托
 - `background`：长时间运行命令
 - `bash`：当前轮内应完成的快速命令
@@ -146,4 +155,5 @@ Go 模块目录 [icoo_assistant/.env.example](E:\codes\icoo_assistant\icoo_assis
 - `0.0.8` 开发计划与完成度评估见 [docs/v0.0.8-开发计划.md](E:\codes\icoo_assistant\docs\v0.0.8-开发计划.md)
 - `0.0.9` 开发计划与完成度评估见 [docs/v0.0.9-开发计划.md](E:\codes\icoo_assistant\docs\v0.0.9-开发计划.md)
 - `0.1.0` 开发计划与完成度评估见 [docs/v0.1.0-开发计划.md](E:\codes\icoo_assistant\docs\v0.1.0-开发计划.md)
-- 下一轮 `v0.1.1` 版本计划见 [docs/v0.1.1-开发计划.md](E:\codes\icoo_assistant\docs\v0.1.1-开发计划.md)
+- `0.1.1` 开发计划与完成度评估见 [docs/v0.1.1-开发计划.md](E:\codes\icoo_assistant\docs\v0.1.1-开发计划.md)
+- 下一轮 `v0.1.2` 版本计划见 [docs/v0.1.2-开发计划.md](E:\codes\icoo_assistant\docs\v0.1.2-开发计划.md)
