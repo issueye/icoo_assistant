@@ -18,6 +18,7 @@ type priorityFailureSelection struct {
 	Count    int
 	Basis    string
 	Context  string
+	Pattern  string
 	Latest   *task.BackgroundContext
 	LatestAt int
 }
@@ -137,6 +138,7 @@ func renderTaskAuditSummary(item task.Task, statusFilter, reasonFilter string) s
 		lines = append(lines, "priority_failure_reason: none")
 		lines = append(lines, "priority_failure_basis: none")
 		lines = append(lines, "priority_failure_context: none")
+		lines = append(lines, "priority_failure_pattern_hint: none")
 		lines = append(lines, "priority_failure_hint: none")
 		lines = append(lines, "latest_failure_by_reason: none")
 		lines = append(lines, "recent_failure_trend: none")
@@ -156,6 +158,7 @@ func renderTaskAuditSummary(item task.Task, statusFilter, reasonFilter string) s
 		lines = append(lines, "priority_failure_reason: none")
 		lines = append(lines, "priority_failure_basis: none")
 		lines = append(lines, "priority_failure_context: none")
+		lines = append(lines, "priority_failure_pattern_hint: none")
 		lines = append(lines, "priority_failure_hint: none")
 		lines = append(lines, "latest_failure_by_reason: none")
 		lines = append(lines, "recent_failure_trend: none")
@@ -168,6 +171,7 @@ func renderTaskAuditSummary(item task.Task, statusFilter, reasonFilter string) s
 		lines = append(lines, fmt.Sprintf("priority_failure_reason: %s count=%d", selection.Reason, selection.Count))
 		lines = append(lines, fmt.Sprintf("priority_failure_basis: %s", selection.Basis))
 		lines = append(lines, fmt.Sprintf("priority_failure_context: %s", selection.Context))
+		lines = append(lines, fmt.Sprintf("priority_failure_pattern_hint: %s", selection.Pattern))
 		lines = append(lines, fmt.Sprintf("priority_failure_hint: use task_audit action=summary id=%s reason=%s, then task_audit action=history id=%s reason=%s", item.ID, selection.Reason, item.ID, selection.Reason))
 		lines = append(lines, "latest_failure_by_reason:")
 		for _, line := range renderLatestFailureByReasonLines(failures) {
@@ -219,6 +223,7 @@ func selectPriorityFailureReason(history []task.BackgroundContext) priorityFailu
 	}
 	selection.Basis = renderPriorityFailureBasis(selection, counts)
 	selection.Context = renderPriorityFailureContext(selection)
+	selection.Pattern = renderPriorityFailurePatternHint(history, selection.Reason)
 	return selection
 }
 
@@ -250,6 +255,38 @@ func renderPriorityFailureContext(selection priorityFailureSelection) string {
 		return "none"
 	}
 	return renderBackgroundContextSummary(*selection.Latest)
+}
+
+func renderPriorityFailurePatternHint(history []task.BackgroundContext, reason string) string {
+	reasonHistory := recentBackgroundHistory(filterBackgroundHistoryByReason(history, reason), 3)
+	if len(reasonHistory) == 0 {
+		return "none"
+	}
+	type patternCandidate struct {
+		signature string
+		count     int
+		latestAt  int
+	}
+	candidates := map[string]patternCandidate{}
+	for index, entry := range reasonHistory {
+		signature := normalizeBackgroundFailurePattern(entry)
+		candidate := candidates[signature]
+		candidate.signature = signature
+		candidate.count++
+		candidate.latestAt = index
+		candidates[signature] = candidate
+	}
+	best := patternCandidate{}
+	for _, candidate := range candidates {
+		if candidate.count > best.count || (candidate.count == best.count && candidate.latestAt > best.latestAt) || (candidate.count == best.count && candidate.latestAt == best.latestAt && (best.signature == "" || candidate.signature < best.signature)) {
+			best = candidate
+		}
+	}
+	patternType := "single"
+	if best.count >= 2 {
+		patternType = "repeat"
+	}
+	return fmt.Sprintf("pattern=%s count=%d signature=%s", patternType, best.count, best.signature)
 }
 
 func applyTaskAuditFilters(history []task.BackgroundContext, statusFilter, reasonFilter string) []task.BackgroundContext {
@@ -362,6 +399,18 @@ func classifyBackgroundFailureReason(entry task.BackgroundContext) string {
 		return "timeout"
 	default:
 		return "command_error"
+	}
+}
+
+func normalizeBackgroundFailurePattern(entry task.BackgroundContext) string {
+	errorText := strings.ToLower(strings.Join(strings.Fields(strings.TrimSpace(entry.Error)), " "))
+	switch {
+	case errorText == "":
+		return "unknown"
+	case strings.HasPrefix(errorText, "timeout after"):
+		return "timeout after <duration>"
+	default:
+		return errorText
 	}
 }
 
