@@ -118,6 +118,9 @@ func TestTaskAuditToolSummary(t *testing.T) {
 	if !strings.Contains(result, "priority_failure_sample_compare: sample_count=1 latest_job_id=job-4 comparison=insufficient_samples") {
 		t.Fatalf("expected priority failure sample compare, got %q", result)
 	}
+	if !strings.Contains(result, "priority_failure_compare_target: sample_count=1 compare=insufficient_samples latest_job_id=job-4 history_command=task_audit action=history id=task-a reason=timeout limit=1") {
+		t.Fatalf("expected priority failure compare target, got %q", result)
+	}
 	if !strings.Contains(result, "priority_failure_change_hint: sample_count=1 change=insufficient_samples focus=collect_more_samples latest_job_id=job-4") {
 		t.Fatalf("expected priority failure change hint, got %q", result)
 	}
@@ -273,6 +276,9 @@ func TestTaskAuditToolSummaryCanFilterByStatus(t *testing.T) {
 	if !strings.Contains(result, "priority_failure_sample_compare: sample_count=1 latest_job_id=job-3 comparison=insufficient_samples") {
 		t.Fatalf("expected filtered priority failure sample compare, got %q", result)
 	}
+	if !strings.Contains(result, "priority_failure_compare_target: sample_count=1 compare=insufficient_samples latest_job_id=job-3 history_command=task_audit action=history id=task-a reason=timeout limit=1") {
+		t.Fatalf("expected filtered priority failure compare target, got %q", result)
+	}
 	if !strings.Contains(result, "priority_failure_change_hint: sample_count=1 change=insufficient_samples focus=collect_more_samples latest_job_id=job-3") {
 		t.Fatalf("expected filtered priority failure change hint, got %q", result)
 	}
@@ -393,6 +399,9 @@ func TestTaskAuditToolSummaryCanFilterByFailureReason(t *testing.T) {
 	if !strings.Contains(result, "priority_failure_sample_compare: latest_job_id=job-4 previous_job_id=job-3 command=changed error_signature=same latest_signature=timeout after <duration> previous_signature=timeout after <duration>") {
 		t.Fatalf("expected reason-filtered priority failure sample compare, got %q", result)
 	}
+	if !strings.Contains(result, "priority_failure_compare_target: sample_count=2 compare=latest_vs_previous latest_job_id=job-4 previous_job_id=job-3 history_command=task_audit action=history id=task-a reason=timeout limit=2 history_focus=job-3->job-4") {
+		t.Fatalf("expected reason-filtered priority failure compare target, got %q", result)
+	}
 	if !strings.Contains(result, "priority_failure_change_hint: sample_count=2 change=command_only focus=command latest_job_id=job-4 previous_job_id=job-3 signature=timeout after <duration> latest_command=cmd-4 previous_command=cmd-3") {
 		t.Fatalf("expected reason-filtered priority failure change hint, got %q", result)
 	}
@@ -459,6 +468,9 @@ func TestTaskAuditToolSummaryPriorityReasonPrefersHigherCount(t *testing.T) {
 	if !strings.Contains(result, "priority_failure_sample_compare: latest_job_id=job-3 previous_job_id=job-1 command=changed error_signature=changed latest_signature=boom again previous_signature=boom") {
 		t.Fatalf("expected highest-count sample compare, got %q", result)
 	}
+	if !strings.Contains(result, "priority_failure_compare_target: sample_count=2 compare=latest_vs_previous latest_job_id=job-3 previous_job_id=job-1 history_command=task_audit action=history id=task-a reason=command_error limit=2 history_focus=job-1->job-3") {
+		t.Fatalf("expected highest-count compare target, got %q", result)
+	}
 	if !strings.Contains(result, "priority_failure_change_hint: sample_count=2 change=command_and_error_signature focus=command,error_signature latest_job_id=job-3 previous_job_id=job-1 latest_signature=boom again previous_signature=boom latest_command=cmd-3 previous_command=cmd-1") {
 		t.Fatalf("expected highest-count change hint, got %q", result)
 	}
@@ -502,6 +514,9 @@ func TestTaskAuditToolSummaryPriorityChangeHintCanHighlightErrorOnlyChange(t *te
 	}
 	if !strings.Contains(result, "priority_failure_sample_compare: latest_job_id=job-2 previous_job_id=job-1 command=same error_signature=changed latest_signature=boom again previous_signature=boom") {
 		t.Fatalf("expected error-only sample compare, got %q", result)
+	}
+	if !strings.Contains(result, "priority_failure_compare_target: sample_count=2 compare=latest_vs_previous latest_job_id=job-2 previous_job_id=job-1 history_command=task_audit action=history id=task-a reason=command_error limit=2 history_focus=job-1->job-2") {
+		t.Fatalf("expected error-only compare target, got %q", result)
 	}
 	if !strings.Contains(result, "priority_failure_change_hint: sample_count=2 change=error_signature_only focus=error_signature latest_job_id=job-2 previous_job_id=job-1 latest_signature=boom again previous_signature=boom") {
 		t.Fatalf("expected error-only change hint, got %q", result)

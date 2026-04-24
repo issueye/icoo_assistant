@@ -21,6 +21,7 @@ type priorityFailureSelection struct {
 	Pattern  string
 	Target   string
 	Compare  string
+	Pair     string
 	Change   string
 	Trend    string
 	Latest   *task.BackgroundContext
@@ -157,6 +158,7 @@ func renderTaskAuditSummary(item task.Task, statusFilter, reasonFilter string) s
 		lines = append(lines, "priority_failure_pattern_hint: none")
 		lines = append(lines, "priority_failure_sample_target: none")
 		lines = append(lines, "priority_failure_sample_compare: none")
+		lines = append(lines, "priority_failure_compare_target: none")
 		lines = append(lines, "priority_failure_change_hint: none")
 		lines = append(lines, "priority_failure_trend_hint: none")
 		lines = append(lines, "priority_failure_hint: none")
@@ -181,13 +183,14 @@ func renderTaskAuditSummary(item task.Task, statusFilter, reasonFilter string) s
 		lines = append(lines, "priority_failure_pattern_hint: none")
 		lines = append(lines, "priority_failure_sample_target: none")
 		lines = append(lines, "priority_failure_sample_compare: none")
+		lines = append(lines, "priority_failure_compare_target: none")
 		lines = append(lines, "priority_failure_change_hint: none")
 		lines = append(lines, "priority_failure_trend_hint: none")
 		lines = append(lines, "priority_failure_hint: none")
 		lines = append(lines, "latest_failure_by_reason: none")
 		lines = append(lines, "recent_failure_trend: none")
 	} else {
-		selection := selectPriorityFailureReason(failures)
+		selection := selectPriorityFailureReason(item.ID, failures)
 		lines = append(lines, "failure_reason_counts:")
 		for _, line := range sortedCountLines(backgroundFailureReasonCounts(failures)) {
 			lines = append(lines, fmt.Sprintf("- %s", line))
@@ -198,6 +201,7 @@ func renderTaskAuditSummary(item task.Task, statusFilter, reasonFilter string) s
 		lines = append(lines, fmt.Sprintf("priority_failure_pattern_hint: %s", selection.Pattern))
 		lines = append(lines, fmt.Sprintf("priority_failure_sample_target: %s", selection.Target))
 		lines = append(lines, fmt.Sprintf("priority_failure_sample_compare: %s", selection.Compare))
+		lines = append(lines, fmt.Sprintf("priority_failure_compare_target: %s", selection.Pair))
 		lines = append(lines, fmt.Sprintf("priority_failure_change_hint: %s", selection.Change))
 		lines = append(lines, fmt.Sprintf("priority_failure_trend_hint: %s", selection.Trend))
 		lines = append(lines, fmt.Sprintf("priority_failure_hint: use task_audit action=summary id=%s reason=%s, then task_audit action=history id=%s reason=%s limit=1", item.ID, selection.Reason, item.ID, selection.Reason))
@@ -235,7 +239,7 @@ func renderTaskAuditSummary(item task.Task, statusFilter, reasonFilter string) s
 	return strings.Join(lines, "\n")
 }
 
-func selectPriorityFailureReason(history []task.BackgroundContext) priorityFailureSelection {
+func selectPriorityFailureReason(taskID string, history []task.BackgroundContext) priorityFailureSelection {
 	counts := backgroundFailureReasonCounts(history)
 	selection := priorityFailureSelection{
 		LatestAt: -1,
@@ -254,6 +258,7 @@ func selectPriorityFailureReason(history []task.BackgroundContext) priorityFailu
 	selection.Pattern = renderPriorityFailurePatternHint(history, selection.Reason)
 	selection.Target = renderPriorityFailureSampleTarget(selection)
 	selection.Compare = renderPriorityFailureSampleCompare(history, selection.Reason)
+	selection.Pair = renderPriorityFailureCompareTarget(taskID, history, selection.Reason)
 	selection.Change = renderPriorityFailureChangeHint(history, selection.Reason)
 	selection.Trend = renderPriorityFailureTrendHint(history, selection.Reason)
 	return selection
@@ -345,6 +350,17 @@ func renderPriorityFailureSampleCompare(history []task.BackgroundContext, reason
 		errorCompare = "changed"
 	}
 	return fmt.Sprintf("latest_job_id=%s previous_job_id=%s command=%s error_signature=%s latest_signature=%s previous_signature=%s", comparison.LatestJobID, comparison.PreviousJobID, commandCompare, errorCompare, comparison.LatestSignature, comparison.PreviousSignature)
+}
+
+func renderPriorityFailureCompareTarget(taskID string, history []task.BackgroundContext, reason string) string {
+	comparison := buildPriorityFailureSampleComparison(history, reason)
+	if comparison.SampleCount == 0 {
+		return "none"
+	}
+	if comparison.SampleCount == 1 {
+		return fmt.Sprintf("sample_count=1 compare=insufficient_samples latest_job_id=%s history_command=task_audit action=history id=%s reason=%s limit=1", comparison.LatestJobID, taskID, reason)
+	}
+	return fmt.Sprintf("sample_count=2 compare=latest_vs_previous latest_job_id=%s previous_job_id=%s history_command=task_audit action=history id=%s reason=%s limit=2 history_focus=%s->%s", comparison.LatestJobID, comparison.PreviousJobID, taskID, reason, comparison.PreviousJobID, comparison.LatestJobID)
 }
 
 func renderPriorityFailureChangeHint(history []task.BackgroundContext, reason string) string {

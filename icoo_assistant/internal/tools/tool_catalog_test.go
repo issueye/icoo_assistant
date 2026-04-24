@@ -78,7 +78,7 @@ func TestToolCatalogAuditPaths(t *testing.T) {
 	if !strings.Contains(result, "recent failure trend") {
 		t.Fatalf("expected task audit trend path, got %q", result)
 	}
-	if !strings.Contains(result, "priority failure hints with basis, recent context, repeat-pattern hints, sample-target guidance, recent sample comparison hints, focused change-point hints, recent failure trend, and lightweight stability-vs-change trend hints") {
+	if !strings.Contains(result, "priority failure hints with basis, recent context, repeat-pattern hints, sample-target guidance, recent sample comparison hints, direct latest-vs-previous compare targets, focused change-point hints, recent failure trend, and lightweight stability-vs-change trend hints") {
 		t.Fatalf("expected priority hint path, got %q", result)
 	}
 	if !strings.Contains(result, "priority_failure_basis") {
@@ -95,6 +95,9 @@ func TestToolCatalogAuditPaths(t *testing.T) {
 	}
 	if !strings.Contains(result, "priority_failure_sample_compare") {
 		t.Fatalf("expected priority sample-compare flow, got %q", result)
+	}
+	if !strings.Contains(result, "priority_failure_compare_target") {
+		t.Fatalf("expected priority compare-target flow, got %q", result)
 	}
 	if !strings.Contains(result, "priority_failure_change_hint") {
 		t.Fatalf("expected priority change flow, got %q", result)
