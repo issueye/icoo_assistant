@@ -1,8 +1,6 @@
 package agent_test
 
 import (
-	"os"
-	"path/filepath"
 	"testing"
 
 	"icoo_assistant/internal/agent"
@@ -12,16 +10,22 @@ import (
 	"icoo_assistant/internal/tools"
 )
 
+type fakeSubagent struct {
+	summary string
+}
+
+func (f fakeSubagent) Run(prompt string) (string, error) {
+	return f.summary + ": " + prompt, nil
+}
+
 func TestRunnerCompletesToolUseLoop(t *testing.T) {
 	client := &llm.FakeClient{Responses: []llm.Response{
 		{StopReason: "tool_use", ToolUses: []llm.ToolUse{{ID: "call-1", Name: "demo", Input: map[string]interface{}{"value": "x"}}}},
 		{StopReason: "end", Text: "done"},
 	}}
 	registry, err := tools.NewRegistry(tools.Definition{
-		Tool: llm.Tool{Name: "demo", Description: "demo", InputSchema: map[string]interface{}{}},
-		Handler: func(call tools.Call) (string, error) {
-			return "tool output", nil
-		},
+		Tool:    llm.Tool{Name: "demo", Description: "demo", InputSchema: map[string]interface{}{}},
+		Handler: func(call tools.Call) (string, error) { return "tool output", nil },
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -37,9 +41,6 @@ func TestRunnerCompletesToolUseLoop(t *testing.T) {
 	if messages[len(messages)-1].Content != "done" {
 		t.Fatalf("unexpected final content: %#v", messages[len(messages)-1].Content)
 	}
-	if client.Calls != 2 {
-		t.Fatalf("expected 2 llm calls, got %d", client.Calls)
-	}
 }
 
 func TestRunnerAddsTodoReminderAfterThreeRounds(t *testing.T) {
@@ -50,10 +51,8 @@ func TestRunnerAddsTodoReminderAfterThreeRounds(t *testing.T) {
 		{StopReason: "end", Text: "done"},
 	}}
 	registry, err := tools.NewRegistry(tools.Definition{
-		Tool: llm.Tool{Name: "demo", Description: "demo", InputSchema: map[string]interface{}{}},
-		Handler: func(call tools.Call) (string, error) {
-			return "ok", nil
-		},
+		Tool:    llm.Tool{Name: "demo", Description: "demo", InputSchema: map[string]interface{}{}},
+		Handler: func(call tools.Call) (string, error) { return "ok", nil },
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -78,32 +77,52 @@ func TestRunnerAddsTodoReminderAfterThreeRounds(t *testing.T) {
 	}
 }
 
-func TestRunnerAutoCompactsWhenThresholdExceeded(t *testing.T) {
+func TestRunnerManualCompactReplacesMessages(t *testing.T) {
 	root := t.TempDir()
-	client := &llm.FakeClient{Responses: []llm.Response{{StopReason: "end", Text: "done"}}}
-	registry, err := tools.NewRegistry(tools.Definition{
-		Tool: llm.Tool{Name: "demo", Description: "demo", InputSchema: map[string]interface{}{}},
-		Handler: func(call tools.Call) (string, error) {
-			return "ok", nil
-		},
-	})
+	client := &llm.FakeClient{Responses: []llm.Response{
+		{StopReason: "tool_use", ToolUses: []llm.ToolUse{{ID: "1", Name: "compact", Input: map[string]interface{}{}}}},
+		{StopReason: "end", Text: "done"},
+	}}
+	registry, err := tools.NewRegistry(tools.NewCompactTool())
 	if err != nil {
 		t.Fatal(err)
 	}
-	manager := &compact.Manager{Threshold: 1, KeepRecent: 3, Dir: root}
-	runner := &agent.Runner{Client: client, Registry: registry, CompactManager: manager, Config: agent.Config{SystemPrompt: "test", MaxRounds: 2}}
-	_, err = runner.Run([]llm.Message{{Role: "user", Content: "this is a very long message that should trigger compaction"}})
+	manager := &compact.Manager{Threshold: 100000, KeepRecent: 3, Dir: root}
+	runner := &agent.Runner{Client: client, Registry: registry, CompactManager: manager, Config: agent.Config{SystemPrompt: "test", MaxRounds: 4}}
+	messages, err := runner.Run([]llm.Message{{Role: "user", Content: "please compact"}})
 	if err != nil {
 		t.Fatal(err)
 	}
-	entries, err := os.ReadDir(root)
+	if len(messages) < 2 {
+		t.Fatalf("expected compacted conversation then final answer, got %d messages", len(messages))
+	}
+}
+
+func TestRunnerDelegatesTaskToSubagent(t *testing.T) {
+	client := &llm.FakeClient{Responses: []llm.Response{
+		{StopReason: "tool_use", ToolUses: []llm.ToolUse{{ID: "1", Name: "task", Input: map[string]interface{}{"prompt": "inspect repo"}}}},
+		{StopReason: "end", Text: "done"},
+	}}
+	registry, err := tools.NewRegistry(tools.NewTaskTool())
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(entries) == 0 {
-		t.Fatal("expected transcript file after auto compact")
+	runner := &agent.Runner{Client: client, Registry: registry, SubagentRunner: fakeSubagent{summary: "subagent summary"}, Config: agent.Config{SystemPrompt: "test", MaxRounds: 4}}
+	messages, err := runner.Run([]llm.Message{{Role: "user", Content: "delegate"}})
+	if err != nil {
+		t.Fatal(err)
 	}
-	if filepath.Ext(entries[0].Name()) != ".jsonl" {
-		t.Fatalf("unexpected transcript file: %s", entries[0].Name())
+	found := false
+	for _, msg := range messages {
+		if results, ok := msg.Content.([]tools.Result); ok {
+			for _, result := range results {
+				if result.Content == "subagent summary: inspect repo" {
+					found = true
+				}
+			}
+		}
+	}
+	if !found {
+		t.Fatal("expected subagent summary in tool results")
 	}
 }

@@ -12,6 +12,7 @@ import (
 type Config struct {
 	Workdir            string
 	SystemPrompt       string
+	SkillsDir          string
 	MaxRounds          int
 	CommandTimeout     time.Duration
 	AnthropicAPIKey    string
@@ -30,6 +31,7 @@ func Load(workdir string) (Config, error) {
 	cfg := Config{
 		Workdir:            workdir,
 		SystemPrompt:       strings.TrimSpace(os.Getenv("AGENT_SYSTEM_PROMPT")),
+		SkillsDir:          strings.TrimSpace(os.Getenv("AGENT_SKILLS_DIR")),
 		AnthropicAPIKey:    strings.TrimSpace(os.Getenv("ANTHROPIC_API_KEY")),
 		AnthropicModel:     strings.TrimSpace(os.Getenv("ANTHROPIC_MODEL")),
 		EnablePromptCache:  boolFromEnv("ANTHROPIC_ENABLE_PROMPT_CACHE", false),
@@ -42,6 +44,9 @@ func Load(workdir string) (Config, error) {
 	}
 	if cfg.SystemPrompt == "" {
 		cfg.SystemPrompt = fmt.Sprintf("You are a coding agent at %s. Use tools to solve tasks.", workdir)
+	}
+	if cfg.SkillsDir == "" {
+		cfg.SkillsDir = filepath.Join(workdir, "skills")
 	}
 	if cfg.AnthropicModel == "" {
 		cfg.AnthropicModel = "claude-opus-4-7"

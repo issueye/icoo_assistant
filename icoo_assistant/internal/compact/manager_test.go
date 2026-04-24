@@ -28,7 +28,7 @@ func TestAutoCompactWritesTranscript(t *testing.T) {
 	root := t.TempDir()
 	mgr := compact.Manager{Dir: root}
 	messages := []llm.Message{{Role: "user", Content: "hello"}}
-	compressed, err := mgr.AutoCompact(messages)
+	compressed, err := mgr.AutoCompact(nil, messages)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -44,5 +44,26 @@ func TestAutoCompactWritesTranscript(t *testing.T) {
 	}
 	if filepath.Ext(entries[0].Name()) != ".jsonl" {
 		t.Fatalf("unexpected transcript file: %s", entries[0].Name())
+	}
+}
+
+func TestAutoCompactUsesLLMSummaryWhenAvailable(t *testing.T) {
+	root := t.TempDir()
+	mgr := compact.Manager{Dir: root}
+	client := &llm.FakeClient{Responses: []llm.Response{{StopReason: "end", Text: "summary text"}}}
+	messages := []llm.Message{{Role: "user", Content: "hello"}}
+	compressed, err := mgr.AutoCompact(client, messages)
+	if err != nil {
+		t.Fatal(err)
+	}
+	content, ok := compressed[0].Content.(string)
+	if !ok {
+		t.Fatalf("unexpected content type: %T", compressed[0].Content)
+	}
+	if !strings.Contains(content, "summary text") {
+		t.Fatalf("expected LLM summary in compressed content, got %q", content)
+	}
+	if client.Calls != 1 {
+		t.Fatalf("expected one summary call, got %d", client.Calls)
 	}
 }

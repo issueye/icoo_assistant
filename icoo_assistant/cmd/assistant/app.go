@@ -10,6 +10,8 @@ import (
 	"icoo_assistant/internal/compact"
 	"icoo_assistant/internal/config"
 	"icoo_assistant/internal/llm"
+	"icoo_assistant/internal/skill"
+	"icoo_assistant/internal/subagent"
 	"icoo_assistant/internal/todo"
 	"icoo_assistant/internal/tools"
 	"icoo_assistant/internal/workspace"
@@ -31,17 +33,45 @@ func newApp(cfg config.Config) (*app, error) {
 		KeepRecent: 3,
 		Dir:        cfg.TranscriptDir,
 	}
+	skillLoader, err := skill.Load(cfg.SkillsDir)
+	if err != nil {
+		return nil, err
+	}
+	systemPrompt := cfg.SystemPrompt + "\n\nSkills available:\n" + skillLoader.Descriptions()
+	baseRegistry, err := tools.NewRegistry(
+		tools.NewBashTool(tools.CommandRunner{Workdir: cfg.Workdir, Timeout: cfg.CommandTimeout}),
+		tools.NewReadFileTool(ws),
+		tools.NewWriteFileTool(ws),
+		tools.NewEditFileTool(ws),
+		tools.NewTodoTool(todoManager),
+		tools.NewCompactTool(),
+		tools.NewLoadSkillTool(skillLoader),
+	)
+	if err != nil {
+		return nil, err
+	}
+	client, mode, err := llm.NewClientFromConfig(cfg)
+	if err != nil {
+		return nil, err
+	}
+	subRunner := &subagent.Runner{
+		Client:   client,
+		Registry: baseRegistry,
+		Config: agent.Config{
+			SystemPrompt: systemPrompt,
+			MaxRounds:    cfg.MaxRounds,
+		},
+	}
 	registry, err := tools.NewRegistry(
 		tools.NewBashTool(tools.CommandRunner{Workdir: cfg.Workdir, Timeout: cfg.CommandTimeout}),
 		tools.NewReadFileTool(ws),
 		tools.NewWriteFileTool(ws),
 		tools.NewEditFileTool(ws),
 		tools.NewTodoTool(todoManager),
+		tools.NewCompactTool(),
+		tools.NewTaskTool(),
+		tools.NewLoadSkillTool(skillLoader),
 	)
-	if err != nil {
-		return nil, err
-	}
-	client, mode, err := llm.NewClientFromConfig(cfg)
 	if err != nil {
 		return nil, err
 	}
@@ -51,8 +81,9 @@ func newApp(cfg config.Config) (*app, error) {
 			Registry:       registry,
 			TodoManager:    todoManager,
 			CompactManager: compactManager,
+			SubagentRunner: subRunner,
 			Config: agent.Config{
-				SystemPrompt: cfg.SystemPrompt,
+				SystemPrompt: systemPrompt,
 				MaxRounds:    cfg.MaxRounds,
 			},
 		},

@@ -59,7 +59,7 @@ func (m Manager) MicroCompact(messages []llm.Message) {
 	}
 }
 
-func (m Manager) AutoCompact(messages []llm.Message) ([]llm.Message, error) {
+func (m Manager) AutoCompact(client llm.Client, messages []llm.Message) ([]llm.Message, error) {
 	if err := os.MkdirAll(m.Dir, 0o755); err != nil {
 		return nil, err
 	}
@@ -78,6 +78,19 @@ func (m Manager) AutoCompact(messages []llm.Message) ([]llm.Message, error) {
 			return nil, err
 		}
 	}
-	summary := fmt.Sprintf("[Compressed. Transcript: %s]", path)
+	summary := fmt.Sprintf("Compressed transcript saved at %s.", path)
+	if client != nil {
+		transcript, err := json.Marshal(messages)
+		if err != nil {
+			return nil, err
+		}
+		prompt := fmt.Sprintf("Summarize this conversation for continuity. Focus on user intent, completed work, remaining work, and important runtime state. Keep it concise.\n\nTranscript path: %s\n\nConversation:\n%s", path, string(transcript))
+		resp, err := client.CreateMessage("You summarize coding-agent conversations for continuity.", []llm.Message{{Role: "user", Content: prompt}}, nil)
+		if err == nil && resp.Text != "" {
+			summary = fmt.Sprintf("[Compressed. Transcript: %s]\n%s", path, resp.Text)
+		} else {
+			summary = fmt.Sprintf("[Compressed. Transcript: %s]", path)
+		}
+	}
 	return []llm.Message{{Role: "user", Content: summary}}, nil
 }
