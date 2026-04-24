@@ -25,6 +25,26 @@ type app struct {
 	mode   string
 }
 
+func (a *app) isFakeMode() bool {
+	return strings.EqualFold(strings.TrimSpace(a.mode), "fake")
+}
+
+func (a *app) writeDegradedModeHint(out io.Writer) {
+	if !a.isFakeMode() {
+		return
+	}
+	_, _ = fmt.Fprintln(out, "warning: assistant is running in fake mode; set ANTHROPIC_API_KEY in .env or shell for real model calls.")
+	_, _ = fmt.Fprintln(out, "hint: run `assistant check` to confirm the current mode and follow the reported minimal_happy_path.")
+}
+
+func (a *app) writeFakeModeNoOutputHint(out io.Writer) {
+	if !a.isFakeMode() {
+		return
+	}
+	_, _ = fmt.Fprintln(out, "warning: no model output was produced because the fake client returns empty responses by design.")
+	_, _ = fmt.Fprintln(out, "hint: this is expected in fake mode; set ANTHROPIC_API_KEY for real answers, or keep following the minimal_happy_path as a local dry run.")
+}
+
 func newApp(cfg config.Config) (*app, error) {
 	ws, err := workspace.New(cfg.Workdir)
 	if err != nil {
@@ -135,24 +155,35 @@ func (a *app) execute(query string) (string, error) {
 	if len(messages) == 0 {
 		return "", nil
 	}
-	return fmt.Sprintf("%v", messages[len(messages)-1].Content), nil
+	content := messages[len(messages)-1].Content
+	if content == nil {
+		return "", nil
+	}
+	if text, ok := content.(string); ok {
+		return text, nil
+	}
+	return fmt.Sprintf("%v", content), nil
 }
 
 func (a *app) runOnce(out io.Writer, query string) error {
+	a.writeDegradedModeHint(out)
 	result, err := a.execute(strings.TrimSpace(query))
 	if err != nil {
 		return err
 	}
 	if result != "" {
 		_, _ = fmt.Fprintln(out, result)
+		return nil
 	}
+	a.writeFakeModeNoOutputHint(out)
 	return nil
 }
 
 func (a *app) runREPL(in io.Reader, out io.Writer) error {
 	_, _ = fmt.Fprintf(out, "assistant REPL started (%s client). Type exit to quit.\n", a.mode)
-	if a.mode == "fake" {
-		_, _ = fmt.Fprintln(out, "Set ANTHROPIC_API_KEY in env or .env to use the real Anthropic client.")
+	if a.isFakeMode() {
+		_, _ = fmt.Fprintln(out, "warning: REPL is running in fake mode; model-generated answers are disabled until ANTHROPIC_API_KEY is set.")
+		_, _ = fmt.Fprintln(out, "hint: run `assistant check` outside the REPL if you want the current minimal_happy_path and setup guidance.")
 	}
 	scanner := bufio.NewScanner(in)
 	for {
@@ -171,7 +202,9 @@ func (a *app) runREPL(in io.Reader, out io.Writer) error {
 		}
 		if result != "" {
 			_, _ = fmt.Fprintln(out, result)
+			continue
 		}
+		a.writeFakeModeNoOutputHint(out)
 	}
 	return scanner.Err()
 }
