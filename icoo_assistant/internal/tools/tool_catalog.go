@@ -88,7 +88,7 @@ func DefaultToolCatalogEntries(includeTask bool) []ToolCatalogEntry {
 			UseWhen:     "Use when task execution history should be summarized, reviewed, reported, or filtered by execution status.",
 			AvoidWhen:   "Avoid for normal task CRUD; use project_task instead.",
 			Example:     `{"action":"summary","id":"task-1","status":"failed"}`,
-			Description: "Keeps audit queries separate from day-to-day project task operations and supports failure-focused summaries, basic reason classification, plus status-filtered inspection.",
+			Description: "Keeps audit queries separate from day-to-day project task operations and supports failure-focused summaries, reason classification, latest samples per reason, plus status-filtered inspection.",
 		},
 		{
 			Name:        "todo",
@@ -197,7 +197,7 @@ func renderToolCatalogAuditPaths() string {
 		"audit_paths:",
 		`- project_task action=get: inspect the latest durable task snapshot and most recent background context`,
 		`- project_task action=history: inspect a compact task-centric execution history`,
-		`- task_audit action=summary: inspect status counts, failure reason counts, and latest failure before drilling into detailed history`,
+		`- task_audit action=summary: inspect status counts, failure reason counts, and the latest sample for each failure reason before drilling into detailed history`,
 		`- task_audit action=history: inspect stable project task history for reporting or review`,
 		`- agent_hook_audit action=recent: inspect agent runtime events such as model calls, tool use, compact, and notifications`,
 		"recommended_flows:",

@@ -2,6 +2,7 @@ package tools
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 
 	"icoo_assistant/internal/llm"
@@ -115,6 +116,7 @@ func renderTaskAuditSummary(item task.Task, statusFilter string) string {
 	if len(item.BackgroundHistory) == 0 {
 		lines = append(lines, "status_counts: none")
 		lines = append(lines, "failure_reason_counts: none")
+		lines = append(lines, "latest_failure_by_reason: none")
 		lines = append(lines, "latest_entry: none")
 		lines = append(lines, "latest_failure: none")
 		lines = append(lines, "latest_failure_reason: none")
@@ -128,9 +130,14 @@ func renderTaskAuditSummary(item task.Task, statusFilter string) string {
 	}
 	if len(failures) == 0 {
 		lines = append(lines, "failure_reason_counts: none")
+		lines = append(lines, "latest_failure_by_reason: none")
 	} else {
 		lines = append(lines, "failure_reason_counts:")
 		for _, line := range sortedCountLines(backgroundFailureReasonCounts(failures)) {
+			lines = append(lines, fmt.Sprintf("- %s", line))
+		}
+		lines = append(lines, "latest_failure_by_reason:")
+		for _, line := range renderLatestFailureByReasonLines(failures) {
 			lines = append(lines, fmt.Sprintf("- %s", line))
 		}
 	}
@@ -229,4 +236,34 @@ func classifyBackgroundFailureReason(entry task.BackgroundContext) string {
 	default:
 		return "command_error"
 	}
+}
+
+func latestBackgroundByReason(history []task.BackgroundContext, reason string) *task.BackgroundContext {
+	reason = strings.ToLower(strings.TrimSpace(reason))
+	for index := len(history) - 1; index >= 0; index-- {
+		entry := history[index]
+		if classifyBackgroundFailureReason(entry) == reason {
+			copied := entry
+			return &copied
+		}
+	}
+	return nil
+}
+
+func renderLatestFailureByReasonLines(history []task.BackgroundContext) []string {
+	counts := backgroundFailureReasonCounts(history)
+	keys := make([]string, 0, len(counts))
+	for key := range counts {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	lines := make([]string, 0, len(keys))
+	for _, key := range keys {
+		entry := latestBackgroundByReason(history, key)
+		if entry == nil {
+			continue
+		}
+		lines = append(lines, fmt.Sprintf("%s => %s", key, renderBackgroundContextSummary(*entry)))
+	}
+	return lines
 }

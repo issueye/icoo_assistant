@@ -75,8 +75,8 @@ func TestToolCatalogAuditPaths(t *testing.T) {
 	if !strings.Contains(result, "task_first:") {
 		t.Fatalf("expected task-first audit flow, got %q", result)
 	}
-	if !strings.Contains(result, "failure reason counts") {
-		t.Fatalf("expected task audit summary path, got %q", result)
+	if !strings.Contains(result, "latest sample for each failure reason") {
+		t.Fatalf("expected task audit comparison path, got %q", result)
 	}
 	if !strings.Contains(result, "agent_hook_audit action=recent") {
 		t.Fatalf("expected agent hook audit path, got %q", result)
