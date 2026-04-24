@@ -20,6 +20,7 @@ type priorityFailureSelection struct {
 	Context  string
 	Pattern  string
 	Target   string
+	Compare  string
 	Latest   *task.BackgroundContext
 	LatestAt int
 }
@@ -141,6 +142,7 @@ func renderTaskAuditSummary(item task.Task, statusFilter, reasonFilter string) s
 		lines = append(lines, "priority_failure_context: none")
 		lines = append(lines, "priority_failure_pattern_hint: none")
 		lines = append(lines, "priority_failure_sample_target: none")
+		lines = append(lines, "priority_failure_sample_compare: none")
 		lines = append(lines, "priority_failure_hint: none")
 		lines = append(lines, "latest_failure_by_reason: none")
 		lines = append(lines, "recent_failure_trend: none")
@@ -162,6 +164,7 @@ func renderTaskAuditSummary(item task.Task, statusFilter, reasonFilter string) s
 		lines = append(lines, "priority_failure_context: none")
 		lines = append(lines, "priority_failure_pattern_hint: none")
 		lines = append(lines, "priority_failure_sample_target: none")
+		lines = append(lines, "priority_failure_sample_compare: none")
 		lines = append(lines, "priority_failure_hint: none")
 		lines = append(lines, "latest_failure_by_reason: none")
 		lines = append(lines, "recent_failure_trend: none")
@@ -176,6 +179,7 @@ func renderTaskAuditSummary(item task.Task, statusFilter, reasonFilter string) s
 		lines = append(lines, fmt.Sprintf("priority_failure_context: %s", selection.Context))
 		lines = append(lines, fmt.Sprintf("priority_failure_pattern_hint: %s", selection.Pattern))
 		lines = append(lines, fmt.Sprintf("priority_failure_sample_target: %s", selection.Target))
+		lines = append(lines, fmt.Sprintf("priority_failure_sample_compare: %s", selection.Compare))
 		lines = append(lines, fmt.Sprintf("priority_failure_hint: use task_audit action=summary id=%s reason=%s, then task_audit action=history id=%s reason=%s limit=1", item.ID, selection.Reason, item.ID, selection.Reason))
 		lines = append(lines, "latest_failure_by_reason:")
 		for _, line := range renderLatestFailureByReasonLines(failures) {
@@ -229,6 +233,7 @@ func selectPriorityFailureReason(history []task.BackgroundContext) priorityFailu
 	selection.Context = renderPriorityFailureContext(selection)
 	selection.Pattern = renderPriorityFailurePatternHint(history, selection.Reason)
 	selection.Target = renderPriorityFailureSampleTarget(selection)
+	selection.Compare = renderPriorityFailureSampleCompare(history, selection.Reason)
 	return selection
 }
 
@@ -299,6 +304,30 @@ func renderPriorityFailureSampleTarget(selection priorityFailureSelection) strin
 		return "none"
 	}
 	return fmt.Sprintf("job_id=%s updated_at=%s history_command=task_audit action=history id=<task-id> reason=%s limit=1", selection.Latest.JobID, selection.Latest.UpdatedAt.UTC().Format("2006-01-02T15:04:05Z"), selection.Reason)
+}
+
+func renderPriorityFailureSampleCompare(history []task.BackgroundContext, reason string) string {
+	reasonHistory := recentBackgroundHistory(filterBackgroundHistoryByReason(history, reason), 2)
+	if len(reasonHistory) == 0 {
+		return "none"
+	}
+	if len(reasonHistory) == 1 {
+		entry := reasonHistory[0]
+		return fmt.Sprintf("sample_count=1 latest_job_id=%s comparison=insufficient_samples", entry.JobID)
+	}
+	previous := reasonHistory[0]
+	latest := reasonHistory[1]
+	commandCompare := "same"
+	if strings.TrimSpace(previous.Command) != strings.TrimSpace(latest.Command) {
+		commandCompare = "changed"
+	}
+	errorCompare := "same"
+	previousSignature := normalizeBackgroundFailurePattern(previous)
+	latestSignature := normalizeBackgroundFailurePattern(latest)
+	if previousSignature != latestSignature {
+		errorCompare = "changed"
+	}
+	return fmt.Sprintf("latest_job_id=%s previous_job_id=%s command=%s error_signature=%s latest_signature=%s previous_signature=%s", latest.JobID, previous.JobID, commandCompare, errorCompare, latestSignature, previousSignature)
 }
 
 func applyTaskAuditFilters(history []task.BackgroundContext, statusFilter, reasonFilter string) []task.BackgroundContext {

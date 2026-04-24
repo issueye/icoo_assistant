@@ -78,7 +78,7 @@ func TestToolCatalogAuditPaths(t *testing.T) {
 	if !strings.Contains(result, "recent failure trend") {
 		t.Fatalf("expected task audit trend path, got %q", result)
 	}
-	if !strings.Contains(result, "priority failure hints with basis, recent context, repeat-pattern hints, and sample-target guidance") {
+	if !strings.Contains(result, "priority failure hints with basis, recent context, repeat-pattern hints, sample-target guidance, and recent sample comparison hints") {
 		t.Fatalf("expected priority hint path, got %q", result)
 	}
 	if !strings.Contains(result, "priority_failure_basis") {
@@ -92,6 +92,9 @@ func TestToolCatalogAuditPaths(t *testing.T) {
 	}
 	if !strings.Contains(result, "priority_failure_sample_target") {
 		t.Fatalf("expected priority sample-target flow, got %q", result)
+	}
+	if !strings.Contains(result, "priority_failure_sample_compare") {
+		t.Fatalf("expected priority sample-compare flow, got %q", result)
 	}
 	if !strings.Contains(result, "agent_hook_audit action=recent") {
 		t.Fatalf("expected agent hook audit path, got %q", result)
