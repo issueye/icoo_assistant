@@ -2,7 +2,7 @@
 
 `icoo_assistant` 是一个基于 Go 的本地编码 Agent 原型，当前代码主体位于 [icoo_assistant](E:\codes\icoo_assistant\icoo_assistant)。
 
-当前仓库已经完成 `0.0.8` 基线，能力范围包括：
+当前仓库已经完成 `0.0.9` 基线，能力范围包括：
 
 - LLM 对话循环
 - 工具注册与调用分发
@@ -18,6 +18,7 @@
 - 项目任务与后台执行基础状态联动
 - 项目任务有限执行历史
 - 项目任务历史查看入口
+- 独立任务审计查询入口
 - 后台命令执行与结果回流
 
 ## 仓库结构
@@ -91,7 +92,7 @@ Go 模块目录 [icoo_assistant/.env.example](E:\codes\icoo_assistant\icoo_assis
 
 ## Task 持久化
 
-`0.0.8` 已经把项目任务历史查看做成了“默认紧凑 + 明确入口”的形态。核心代码位于 [internal/task](E:\codes\icoo_assistant\icoo_assistant\internal\task)、[internal/tools/project_task.go](E:\codes\icoo_assistant\icoo_assistant\internal\tools\project_task.go) 和 [internal/background](E:\codes\icoo_assistant\icoo_assistant\internal\background)。当前支持：
+`0.0.9` 已经把任务历史查询进一步推进到“项目任务操作”和“审计查询”分工更清晰的形态。核心代码位于 [internal/task](E:\codes\icoo_assistant\icoo_assistant\internal\task)、[internal/tools/project_task.go](E:\codes\icoo_assistant\icoo_assistant\internal\tools\project_task.go)、[internal/tools/task_audit.go](E:\codes\icoo_assistant\icoo_assistant\internal\tools\task_audit.go) 和 [internal/background](E:\codes\icoo_assistant\icoo_assistant\internal\background)。当前支持：
 
 - 初始化 `.tasks/` 目录
 - 创建、读取、列出、更新任务
@@ -104,6 +105,7 @@ Go 模块目录 [icoo_assistant/.env.example](E:\codes\icoo_assistant\icoo_assis
 - 保留有限条数的后台执行历史摘要
 - 默认 `get` 输出保持紧凑
 - 使用 `project_task action=history` 查看详细历史
+- 使用 `task_audit action=history` 进行更独立的历史审计查询
 - 后台启动时将关联任务推进到 `in_progress`
 - 后台失败时将 `in_progress` 任务退回 `pending`
 
@@ -119,4 +121,5 @@ Go 模块目录 [icoo_assistant/.env.example](E:\codes\icoo_assistant\icoo_assis
 - `0.0.6` 开发计划与完成度评估见 [docs/v0.0.6-开发计划.md](E:\codes\icoo_assistant\docs\v0.0.6-开发计划.md)
 - `0.0.7` 开发计划与完成度评估见 [docs/v0.0.7-开发计划.md](E:\codes\icoo_assistant\docs\v0.0.7-开发计划.md)
 - `0.0.8` 开发计划与完成度评估见 [docs/v0.0.8-开发计划.md](E:\codes\icoo_assistant\docs\v0.0.8-开发计划.md)
-- 下一轮 `0.0.9` 版本计划见 [docs/v0.0.9-开发计划.md](E:\codes\icoo_assistant\docs\v0.0.9-开发计划.md)
+- `0.0.9` 开发计划与完成度评估见 [docs/v0.0.9-开发计划.md](E:\codes\icoo_assistant\docs\v0.0.9-开发计划.md)
+- 下一轮 `v0.1.0` 版本计划见 [docs/v0.1.0-开发计划.md](E:\codes\icoo_assistant\docs\v0.1.0-开发计划.md)
