@@ -148,6 +148,9 @@ func TestProjectTaskToolShowsAssociatedBackgroundJobs(t *testing.T) {
 	if !strings.Contains(result, "last_background:") {
 		t.Fatalf("expected last_background section, got %q", result)
 	}
+	if !strings.Contains(result, "background_history_count: 2") {
+		t.Fatalf("expected background history count, got %q", result)
+	}
 }
 
 func waitForBackgroundJob(t *testing.T, manager *background.Manager, id string) background.Job {

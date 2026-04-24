@@ -1,6 +1,7 @@
 package task_test
 
 import (
+	"fmt"
 	"path/filepath"
 	"testing"
 
@@ -158,5 +159,44 @@ func TestRecordBackgroundStoresLatestExecutionContext(t *testing.T) {
 	}
 	if recorded.LastBackground.JobID != "job-1" || recorded.LastBackground.Status != "running" {
 		t.Fatalf("unexpected background context: %#v", recorded.LastBackground)
+	}
+	if len(recorded.BackgroundHistory) != 1 {
+		t.Fatalf("expected one history entry, got %d", len(recorded.BackgroundHistory))
+	}
+}
+
+func TestRecordBackgroundKeepsBoundedHistory(t *testing.T) {
+	manager, err := task.NewManager(filepath.Join(t.TempDir(), ".tasks"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := manager.Create(task.CreateInput{
+		ID:    "task-a",
+		Title: "Track repeated runs",
+	}); err != nil {
+		t.Fatal(err)
+	}
+	for i := 0; i < task.MaxBackgroundHistory+2; i++ {
+		_, err := manager.RecordBackground("task-a", task.BackgroundContext{
+			JobID:   fmt.Sprintf("job-%d", i),
+			Status:  "completed",
+			Command: "go test ./...",
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+	item, err := manager.Get("task-a")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(item.BackgroundHistory) != task.MaxBackgroundHistory {
+		t.Fatalf("expected history length %d, got %d", task.MaxBackgroundHistory, len(item.BackgroundHistory))
+	}
+	if item.BackgroundHistory[0].JobID != "job-2" {
+		t.Fatalf("expected oldest retained job to be job-2, got %q", item.BackgroundHistory[0].JobID)
+	}
+	if item.BackgroundHistory[len(item.BackgroundHistory)-1].JobID != "job-6" {
+		t.Fatalf("expected newest retained job to be job-6, got %q", item.BackgroundHistory[len(item.BackgroundHistory)-1].JobID)
 	}
 }

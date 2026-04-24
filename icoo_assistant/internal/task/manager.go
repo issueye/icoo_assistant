@@ -12,22 +12,24 @@ import (
 )
 
 const (
-	StatusPending    = "pending"
-	StatusInProgress = "in_progress"
-	StatusCompleted  = "completed"
-	StatusBlocked    = "blocked"
+	StatusPending        = "pending"
+	StatusInProgress     = "in_progress"
+	StatusCompleted      = "completed"
+	StatusBlocked        = "blocked"
+	MaxBackgroundHistory = 5
 )
 
 type Task struct {
-	ID             string             `json:"id"`
-	Title          string             `json:"title"`
-	Status         string             `json:"status"`
-	BlockedBy      []string           `json:"blockedBy,omitempty"`
-	Owner          string             `json:"owner,omitempty"`
-	Worktree       string             `json:"worktree,omitempty"`
-	LastBackground *BackgroundContext `json:"lastBackground,omitempty"`
-	CreatedAt      time.Time          `json:"createdAt"`
-	UpdatedAt      time.Time          `json:"updatedAt"`
+	ID                string              `json:"id"`
+	Title             string              `json:"title"`
+	Status            string              `json:"status"`
+	BlockedBy         []string            `json:"blockedBy,omitempty"`
+	Owner             string              `json:"owner,omitempty"`
+	Worktree          string              `json:"worktree,omitempty"`
+	LastBackground    *BackgroundContext  `json:"lastBackground,omitempty"`
+	BackgroundHistory []BackgroundContext `json:"backgroundHistory,omitempty"`
+	CreatedAt         time.Time           `json:"createdAt"`
+	UpdatedAt         time.Time           `json:"updatedAt"`
 }
 
 type BackgroundContext struct {
@@ -166,6 +168,7 @@ func (m *Manager) RecordBackground(id string, context BackgroundContext) (Task, 
 		return Task{}, err
 	}
 	item.LastBackground = &normalized
+	item.BackgroundHistory = appendBackgroundHistory(item.BackgroundHistory, normalized)
 	item.UpdatedAt = m.now().UTC()
 	if err := m.writeTaskLocked(item); err != nil {
 		return Task{}, err
@@ -214,15 +217,16 @@ func (m *Manager) normalizeTask(task Task, createdAt time.Time) (Task, error) {
 		createdAt = now
 	}
 	return Task{
-		ID:             id,
-		Title:          title,
-		Status:         status,
-		BlockedBy:      blockedBy,
-		Owner:          strings.TrimSpace(task.Owner),
-		Worktree:       strings.TrimSpace(task.Worktree),
-		LastBackground: copyBackgroundContext(task.LastBackground),
-		CreatedAt:      createdAt.UTC(),
-		UpdatedAt:      now,
+		ID:                id,
+		Title:             title,
+		Status:            status,
+		BlockedBy:         blockedBy,
+		Owner:             strings.TrimSpace(task.Owner),
+		Worktree:          strings.TrimSpace(task.Worktree),
+		LastBackground:    copyBackgroundContext(task.LastBackground),
+		BackgroundHistory: copyBackgroundHistory(task.BackgroundHistory),
+		CreatedAt:         createdAt.UTC(),
+		UpdatedAt:         now,
 	}, nil
 }
 
@@ -254,6 +258,23 @@ func copyBackgroundContext(context *BackgroundContext) *BackgroundContext {
 	}
 	copied := *context
 	return &copied
+}
+
+func copyBackgroundHistory(history []BackgroundContext) []BackgroundContext {
+	if len(history) == 0 {
+		return nil
+	}
+	copied := make([]BackgroundContext, len(history))
+	copy(copied, history)
+	return copied
+}
+
+func appendBackgroundHistory(history []BackgroundContext, entry BackgroundContext) []BackgroundContext {
+	updated := append(copyBackgroundHistory(history), entry)
+	if len(updated) <= MaxBackgroundHistory {
+		return updated
+	}
+	return updated[len(updated)-MaxBackgroundHistory:]
 }
 
 func normalizeID(id string) (string, error) {

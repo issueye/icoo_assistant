@@ -215,6 +215,20 @@ func renderProjectTask(item task.Task, jobs []background.Job) string {
 		}
 		lines = append(lines, fmt.Sprintf("- updated_at: %s", item.LastBackground.UpdatedAt.UTC().Format("2006-01-02T15:04:05Z")))
 	}
+	if len(item.BackgroundHistory) > 0 {
+		lines = append(lines, fmt.Sprintf("background_history_count: %d", len(item.BackgroundHistory)))
+		lines = append(lines, "background_history_recent:")
+		for _, entry := range recentBackgroundHistory(item.BackgroundHistory, 3) {
+			line := fmt.Sprintf("- %s [%s]", entry.JobID, entry.Status)
+			if entry.Command != "" {
+				line = fmt.Sprintf("%s %s", line, entry.Command)
+			}
+			if entry.Error != "" {
+				line = fmt.Sprintf("%s error=%s", line, entry.Error)
+			}
+			lines = append(lines, line)
+		}
+	}
 	if len(jobs) > 0 {
 		lines = append(lines, "background_jobs:")
 		for _, job := range jobs {
@@ -233,4 +247,14 @@ func projectTaskJobs(provider ProjectTaskBackgroundProvider, taskID string) ([]b
 		return nil, nil
 	}
 	return provider.ListByTaskID(taskID)
+}
+
+func recentBackgroundHistory(history []task.BackgroundContext, limit int) []task.BackgroundContext {
+	if len(history) == 0 {
+		return nil
+	}
+	if limit <= 0 || len(history) <= limit {
+		return history
+	}
+	return history[len(history)-limit:]
 }
