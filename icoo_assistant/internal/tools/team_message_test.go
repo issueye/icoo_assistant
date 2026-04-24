@@ -73,6 +73,9 @@ func TestTeamMessageToolRequestReplyAndThread(t *testing.T) {
 	if !strings.Contains(requestResult, "kind: request") || !strings.Contains(requestResult, "request_id: req-42") {
 		t.Fatalf("unexpected request result: %q", requestResult)
 	}
+	if !strings.Contains(requestResult, "request_status: pending") {
+		t.Fatalf("expected pending request status, got %q", requestResult)
+	}
 	replyResult, err := tool.Handler(tools.Call{Input: map[string]interface{}{
 		"action":     "reply",
 		"from":       "alice",
@@ -84,6 +87,9 @@ func TestTeamMessageToolRequestReplyAndThread(t *testing.T) {
 	}
 	if !strings.Contains(replyResult, "kind: response") || !strings.Contains(replyResult, "to: lead") {
 		t.Fatalf("unexpected reply result: %q", replyResult)
+	}
+	if !strings.Contains(replyResult, "request_status: responded") {
+		t.Fatalf("expected responded request status, got %q", replyResult)
 	}
 	threadResult, err := tool.Handler(tools.Call{Input: map[string]interface{}{
 		"action":     "thread",

@@ -29,4 +29,5 @@ learn-claude-code/*
 .agent-hooks/
 .background/
 .tasks/
+.team/
 .transcripts/

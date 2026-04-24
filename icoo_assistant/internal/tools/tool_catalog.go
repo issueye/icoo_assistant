@@ -88,7 +88,15 @@ func DefaultToolCatalogEntries(includeTask bool) []ToolCatalogEntry {
 			UseWhen:     "Use to send a lead/teammate message, start a request, reply to a request, inspect one recipient inbox, or review one minimal communication thread before live teammate loops exist.",
 			AvoidWhen:   "Avoid for roster management or task history; use team_registry or task_audit instead.",
 			Example:     `{"action":"request","to":"alice","body":"Review the patch","request_id":"req-1"}`,
-			Description: "This is the Stage-B message-store entry point and persists JSONL inbox files under .team/inbox, including minimal request/reply threads.",
+			Description: "This is the Stage-B/C message-store entry point and persists JSONL inbox files under .team/inbox, including minimal request/reply threads that feed durable protocol state.",
+		},
+		{
+			Name:        "team_protocol",
+			Summary:     "Inspect durable request lifecycle records for team collaboration.",
+			UseWhen:     "Use to review request status, list pending or responded requests, or summarize protocol state after team_message request/reply calls.",
+			AvoidWhen:   "Avoid for writing inbox messages or editing the teammate roster; use team_message or team_registry instead.",
+			Example:     `{"action":"summary","status":"pending"}`,
+			Description: "Persists request lifecycle records under .team/requests so request/response work can be queried without scanning raw inbox threads.",
 		},
 		{
 			Name:        "read_file",

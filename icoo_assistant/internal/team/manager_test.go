@@ -24,6 +24,9 @@ func TestNewManagerCreatesDefaultConfigAndRegistryDir(t *testing.T) {
 	if manager.InboxDir == "" || !strings.HasSuffix(manager.InboxDir, "inbox") {
 		t.Fatalf("expected inbox dir, got %q", manager.InboxDir)
 	}
+	if manager.RequestsDir == "" || !strings.HasSuffix(manager.RequestsDir, "requests") {
+		t.Fatalf("expected requests dir, got %q", manager.RequestsDir)
+	}
 }
 
 func TestManagerCreateListAndUpdateTeammate(t *testing.T) {
@@ -150,5 +153,64 @@ func TestManagerReplyToRequestAndListThread(t *testing.T) {
 	}
 	if thread[0].Kind != "request" || thread[1].Kind != "response" {
 		t.Fatalf("unexpected thread order: %#v", thread)
+	}
+	record, err := manager.GetRequest("req-1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if record.Status != RequestStatusResponded || record.ResponseMessageID != reply.ID {
+		t.Fatalf("unexpected request record: %#v", record)
+	}
+}
+
+func TestManagerListRequestsSupportsStatusFilter(t *testing.T) {
+	manager, err := NewManager(filepath.Join(t.TempDir(), ".team"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := manager.Create(CreateInput{ID: "alice", Role: "reviewer"}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := manager.Create(CreateInput{ID: "bob", Role: "implementer"}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := manager.SendMessage(SendMessageInput{
+		FromID:    "lead",
+		ToID:      "alice",
+		Kind:      "request",
+		Body:      "Please review the patch.",
+		RequestID: "req-pending",
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := manager.SendMessage(SendMessageInput{
+		FromID:    "lead",
+		ToID:      "bob",
+		Kind:      "request",
+		Body:      "Please implement the fix.",
+		RequestID: "req-done",
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := manager.ReplyToRequest(ReplyInput{
+		FromID:    "bob",
+		RequestID: "req-done",
+		Body:      "Implemented.",
+	}); err != nil {
+		t.Fatal(err)
+	}
+	pending, err := manager.ListRequests(RequestFilter{Status: RequestStatusPending}, 10)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(pending) != 1 || pending[0].RequestID != "req-pending" {
+		t.Fatalf("unexpected pending requests: %#v", pending)
+	}
+	responded, err := manager.ListRequests(RequestFilter{Status: RequestStatusResponded, ToID: "bob"}, 10)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(responded) != 1 || responded[0].RequestID != "req-done" {
+		t.Fatalf("unexpected responded requests: %#v", responded)
 	}
 }

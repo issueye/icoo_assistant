@@ -14,6 +14,7 @@ type TeamMessageManager interface {
 	ListInbox(recipientID string, limit int) ([]team.Message, error)
 	ReplyToRequest(input team.ReplyInput) (team.Message, error)
 	ListThread(requestID string, limit int) ([]team.Message, error)
+	GetRequest(requestID string) (team.RequestRecord, error)
 }
 
 func NewTeamMessageTool(manager TeamMessageManager) Definition {
@@ -91,7 +92,7 @@ func NewTeamMessageTool(manager TeamMessageManager) Definition {
 				if err != nil {
 					return "", err
 				}
-				return renderTeamMessage(item), nil
+				return renderTeamMessageWithProtocol(manager, item), nil
 			case "reply":
 				fromID, _ := call.Input["from"].(string)
 				requestID, _ := call.Input["request_id"].(string)
@@ -109,7 +110,7 @@ func NewTeamMessageTool(manager TeamMessageManager) Definition {
 				if err != nil {
 					return "", err
 				}
-				return renderTeamMessage(item), nil
+				return renderTeamMessageWithProtocol(manager, item), nil
 			case "inbox":
 				recipient, _ := call.Input["recipient"].(string)
 				if strings.TrimSpace(recipient) == "" {
@@ -172,6 +173,18 @@ func renderTeamMessage(item team.Message) string {
 	}
 	lines = append(lines, fmt.Sprintf("created_at: %s", item.CreatedAt.UTC().Format("2006-01-02T15:04:05Z")))
 	return strings.Join(lines, "\n")
+}
+
+func renderTeamMessageWithProtocol(manager TeamMessageManager, item team.Message) string {
+	result := renderTeamMessage(item)
+	if strings.TrimSpace(item.RequestID) == "" {
+		return result
+	}
+	record, err := manager.GetRequest(item.RequestID)
+	if err != nil {
+		return result
+	}
+	return result + "\n" + fmt.Sprintf("request_status: %s", record.Status)
 }
 
 func renderTeamMessageLine(item team.Message) string {

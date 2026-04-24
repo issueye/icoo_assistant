@@ -76,6 +76,7 @@ type Manager struct {
 	Dir         string
 	RegistryDir string
 	InboxDir    string
+	RequestsDir string
 
 	mu  sync.Mutex
 	now func() time.Time
@@ -92,16 +93,21 @@ func NewManager(dir string) (*Manager, error) {
 	}
 	registryDir := filepath.Join(dir, "teammates")
 	inboxDir := filepath.Join(dir, "inbox")
+	requestsDir := filepath.Join(dir, "requests")
 	if err := os.MkdirAll(registryDir, 0o755); err != nil {
 		return nil, err
 	}
 	if err := os.MkdirAll(inboxDir, 0o755); err != nil {
 		return nil, err
 	}
+	if err := os.MkdirAll(requestsDir, 0o755); err != nil {
+		return nil, err
+	}
 	manager := &Manager{
 		Dir:         dir,
 		RegistryDir: registryDir,
 		InboxDir:    inboxDir,
+		RequestsDir: requestsDir,
 		now:         time.Now,
 	}
 	manager.mu.Lock()
@@ -217,6 +223,9 @@ func (m *Manager) SendMessage(input SendMessageInput) (Message, error) {
 	if err := m.appendMessageLocked(msg); err != nil {
 		return Message{}, err
 	}
+	if err := m.syncRequestFromMessageLocked(msg); err != nil {
+		return Message{}, err
+	}
 	return msg, nil
 }
 
@@ -282,6 +291,9 @@ func (m *Manager) ReplyToRequest(input ReplyInput) (Message, error) {
 		return Message{}, err
 	}
 	if err := m.appendMessageLocked(msg); err != nil {
+		return Message{}, err
+	}
+	if err := m.markRequestRespondedLocked(root, msg); err != nil {
 		return Message{}, err
 	}
 	return msg, nil
