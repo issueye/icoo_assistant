@@ -117,6 +117,7 @@ func renderTaskAuditSummary(item task.Task, statusFilter string) string {
 		lines = append(lines, "status_counts: none")
 		lines = append(lines, "failure_reason_counts: none")
 		lines = append(lines, "latest_failure_by_reason: none")
+		lines = append(lines, "recent_failure_trend: none")
 		lines = append(lines, "latest_entry: none")
 		lines = append(lines, "latest_failure: none")
 		lines = append(lines, "latest_failure_reason: none")
@@ -131,6 +132,7 @@ func renderTaskAuditSummary(item task.Task, statusFilter string) string {
 	if len(failures) == 0 {
 		lines = append(lines, "failure_reason_counts: none")
 		lines = append(lines, "latest_failure_by_reason: none")
+		lines = append(lines, "recent_failure_trend: none")
 	} else {
 		lines = append(lines, "failure_reason_counts:")
 		for _, line := range sortedCountLines(backgroundFailureReasonCounts(failures)) {
@@ -138,6 +140,10 @@ func renderTaskAuditSummary(item task.Task, statusFilter string) string {
 		}
 		lines = append(lines, "latest_failure_by_reason:")
 		for _, line := range renderLatestFailureByReasonLines(failures) {
+			lines = append(lines, fmt.Sprintf("- %s", line))
+		}
+		lines = append(lines, "recent_failure_trend:")
+		for _, line := range renderRecentFailureTrendLines(failures, 3) {
 			lines = append(lines, fmt.Sprintf("- %s", line))
 		}
 	}
@@ -264,6 +270,18 @@ func renderLatestFailureByReasonLines(history []task.BackgroundContext) []string
 			continue
 		}
 		lines = append(lines, fmt.Sprintf("%s => %s", key, renderBackgroundContextSummary(*entry)))
+	}
+	return lines
+}
+
+func renderRecentFailureTrendLines(history []task.BackgroundContext, limit int) []string {
+	recent := recentBackgroundHistory(history, limit)
+	if len(recent) == 0 {
+		return []string{"none"}
+	}
+	lines := make([]string, 0, len(recent))
+	for _, entry := range recent {
+		lines = append(lines, fmt.Sprintf("reason=%s %s", classifyBackgroundFailureReason(entry), renderBackgroundContextSummary(entry)))
 	}
 	return lines
 }

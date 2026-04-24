@@ -106,6 +106,12 @@ func TestTaskAuditToolSummary(t *testing.T) {
 	if !strings.Contains(result, "- command_error => job_id=job-2 status=failed") || !strings.Contains(result, "- timeout => job_id=job-4 status=failed") {
 		t.Fatalf("expected latest sample for each failure reason, got %q", result)
 	}
+	if !strings.Contains(result, "recent_failure_trend:") {
+		t.Fatalf("expected failure trend section, got %q", result)
+	}
+	if !strings.Contains(result, "- reason=command_error job_id=job-2 status=failed") || !strings.Contains(result, "- reason=timeout job_id=job-4 status=failed") {
+		t.Fatalf("expected recent failure trend lines, got %q", result)
+	}
 	if !strings.Contains(result, "latest_failure: job_id=job-4 status=failed") {
 		t.Fatalf("expected latest failure summary, got %q", result)
 	}
@@ -224,6 +230,9 @@ func TestTaskAuditToolSummaryCanFilterByStatus(t *testing.T) {
 	}
 	if !strings.Contains(result, "- timeout => job_id=job-3 status=failed") {
 		t.Fatalf("expected filtered latest sample per reason, got %q", result)
+	}
+	if !strings.Contains(result, "- reason=timeout job_id=job-3 status=failed") {
+		t.Fatalf("expected filtered failure trend line, got %q", result)
 	}
 	if !strings.Contains(result, "matched_latest_entry: job_id=job-3 status=failed") {
 		t.Fatalf("expected filtered latest entry, got %q", result)
