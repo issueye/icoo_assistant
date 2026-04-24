@@ -123,6 +123,9 @@ func renderTaskAuditHistory(item task.Task, limit int, statusFilter, reasonFilte
 		if role := renderTaskAuditHistoryRole(index, len(recent), statusFilter, reasonFilter); role != "" {
 			line = fmt.Sprintf("%s role=%s", line, role)
 		}
+		if strings.EqualFold(strings.TrimSpace(entry.Status), "failed") {
+			line = fmt.Sprintf("%s reason=%s", line, classifyBackgroundFailureReason(entry))
+		}
 		if entry.Command != "" {
 			line = fmt.Sprintf("%s command=%s", line, entry.Command)
 		}

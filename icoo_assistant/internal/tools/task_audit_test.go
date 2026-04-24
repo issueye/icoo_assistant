@@ -51,6 +51,9 @@ func TestTaskAuditToolHistory(t *testing.T) {
 	if !strings.Contains(result, "job_id=job-1") || !strings.Contains(result, "job_id=job-2") {
 		t.Fatalf("expected recent entries, got %q", result)
 	}
+	if strings.Contains(result, "reason=") {
+		t.Fatalf("did not expect reason label on completed-only history, got %q", result)
+	}
 	if strings.Contains(result, "job_id=job-0") {
 		t.Fatalf("expected limited audit history, got %q", result)
 	}
@@ -218,6 +221,9 @@ func TestTaskAuditToolHistoryCanFilterByStatus(t *testing.T) {
 	if !strings.Contains(result, "job_id=job-2 status=failed") {
 		t.Fatalf("expected failed job in result, got %q", result)
 	}
+	if !strings.Contains(result, "job_id=job-2 status=failed") || !strings.Contains(result, "reason=command_error") {
+		t.Fatalf("expected failure reason on failed history entry, got %q", result)
+	}
 	if strings.Contains(result, "job_id=job-1") || strings.Contains(result, "job_id=job-3") {
 		t.Fatalf("expected only failed jobs, got %q", result)
 	}
@@ -343,6 +349,9 @@ func TestTaskAuditToolHistoryCanFilterByFailureReason(t *testing.T) {
 	if !strings.Contains(result, "job_id=job-3 status=failed") || !strings.Contains(result, "role=latest") {
 		t.Fatalf("expected latest role on single timeout failure, got %q", result)
 	}
+	if !strings.Contains(result, "job_id=job-3 status=failed") || !strings.Contains(result, "reason=timeout") {
+		t.Fatalf("expected timeout reason on single filtered history entry, got %q", result)
+	}
 	if strings.Contains(result, "job_id=job-1") || strings.Contains(result, "job_id=job-2") {
 		t.Fatalf("expected only matching reason in result, got %q", result)
 	}
@@ -387,8 +396,14 @@ func TestTaskAuditToolHistoryCanMarkPreviousAndLatestForReasonFilteredPair(t *te
 	if !strings.Contains(result, "job_id=job-2 status=failed") || !strings.Contains(result, "role=previous") {
 		t.Fatalf("expected previous role on older timeout sample, got %q", result)
 	}
+	if !strings.Contains(result, "job_id=job-2 status=failed") || !strings.Contains(result, "reason=timeout") {
+		t.Fatalf("expected timeout reason on previous sample, got %q", result)
+	}
 	if !strings.Contains(result, "job_id=job-3 status=failed") || !strings.Contains(result, "role=latest") {
 		t.Fatalf("expected latest role on newest timeout sample, got %q", result)
+	}
+	if !strings.Contains(result, "job_id=job-3 status=failed") || !strings.Contains(result, "reason=timeout") {
+		t.Fatalf("expected timeout reason on latest sample, got %q", result)
 	}
 }
 
@@ -427,8 +442,14 @@ func TestTaskAuditToolHistoryPairSummaryCanHighlightErrorOnlyChange(t *testing.T
 	if !strings.Contains(result, "job_id=job-1 status=failed") || !strings.Contains(result, "role=previous") {
 		t.Fatalf("expected previous role on first command_error sample, got %q", result)
 	}
+	if !strings.Contains(result, "job_id=job-1 status=failed") || !strings.Contains(result, "reason=command_error") {
+		t.Fatalf("expected command_error reason on previous sample, got %q", result)
+	}
 	if !strings.Contains(result, "job_id=job-2 status=failed") || !strings.Contains(result, "role=latest") {
 		t.Fatalf("expected latest role on second command_error sample, got %q", result)
+	}
+	if !strings.Contains(result, "job_id=job-2 status=failed") || !strings.Contains(result, "reason=command_error") {
+		t.Fatalf("expected command_error reason on latest sample, got %q", result)
 	}
 }
 
