@@ -21,9 +21,9 @@ type Dependencies struct {
 	Skills         *skill.Service
 	AgentProfiles  *agentprofile.Service
 	AgentInstances *agentinstance.Service
-	Teams          *team.Service
-	Conversations  *conversation.Service
-	Runs           *run.Service
+	Teams          team.Store
+	Conversations  conversation.Store
+	Runs           run.Store
 	Close          func() error
 }
 
@@ -55,6 +55,9 @@ func BuildDependencies(cfg config.Config) (Dependencies, error) {
 		}
 		deps := NewMemoryDependencies()
 		deps.Audits = audit.NewGormStore(db)
+		deps.Teams = team.NewGormStore(db)
+		deps.Conversations = conversation.NewGormStore(db)
+		deps.Runs = run.NewGormStore(db)
 		deps.Close = sqlDB.Close
 		return deps, nil
 	}

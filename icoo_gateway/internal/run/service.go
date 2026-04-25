@@ -36,6 +36,16 @@ type CompleteInput struct {
 	ErrorMessage string
 }
 
+type Store interface {
+	storage.Creator[Run, CreateInput]
+	storage.ListerByParent[Run]
+	Completer
+}
+
+type Completer interface {
+	Complete(id string, input CompleteInput) (Run, error)
+}
+
 type Service struct {
 	mu      sync.RWMutex
 	nextID  int
@@ -46,6 +56,8 @@ type Service struct {
 
 var _ storage.Creator[Run, CreateInput] = (*Service)(nil)
 var _ storage.ListerByParent[Run] = (*Service)(nil)
+var _ Completer = (*Service)(nil)
+var _ Store = (*Service)(nil)
 
 func NewService() *Service {
 	return &Service{

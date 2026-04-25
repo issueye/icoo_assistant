@@ -12,11 +12,11 @@
 - `agent_profile` 资源的内存版 `create / list / get / patch` API
 - `team` 资源的内存版 `create / list / get / patch` API
 - `agent_instance` 资源的内存版 `create / list / get / heartbeat / disable` API
-- `conversation` 单对话资源与消息追加 API
-- `Run` 最小运行历史骨架，支持按 conversation 查询运行记录
+- `conversation` 单对话资源与消息追加 API；在 `sqlite` 模式下已支持 conversation/message 持久化
+- `Run` 最小运行历史骨架，支持按 conversation 查询运行记录；在 `sqlite` 模式下已支持持久化
 - `team conversation` 骨架：支持 `mode=team`、`internal/external/system` 消息 scope 与按 scope 查询
 - 最小 `routing` 骨架：team 外部消息会自动生成入口分派和汇总占位事件
-- `team member` 关系骨架：支持成员写入、更新、删除与查询，成员必须绑定已注册 `agent_instance`，routing 会校验 `entry_agent_id` 是否属于活跃 team member
+- `team` 与 `team member` 关系骨架：支持成员写入、更新、删除与查询；在 `sqlite` 模式下已支持持久化
 - `audit-events` 最小查询 API，可查看关键资源变更的审计记录；在 `sqlite` 模式下已支持持久化
 - `storage` 泛型仓储接口骨架，作为后续 PostgreSQL 持久化替换的边界准备
 - `bootstrap` 内存依赖提供器，已把 `App` 初始化与具体内存实现解耦
@@ -117,6 +117,17 @@ GET  /api/v1/audit-events/{id}
 - 对话收到 `external` 消息后，会生成一条最小 `run` 记录
 - `conversation.last_run_id` 会更新到最近一次运行
 - 可以通过 `GET /api/v1/conversations/{id}/runs` 查询运行历史
+- 当 `GATEWAY_STORAGE_DRIVER=sqlite` 时，运行记录会持久化到 SQLite
+
+当前会话持久化能力：
+
+- 当 `GATEWAY_STORAGE_DRIVER=sqlite` 时，`conversations` 与 `conversation_messages` 会持久化到 SQLite
+- 这使 `conversation -> message -> run` 最小链路在 SQLite 模式下已具备落库能力
+
+当前 Team 持久化能力：
+
+- 当 `GATEWAY_STORAGE_DRIVER=sqlite` 时，`teams` 与 `team_members` 会持久化到 SQLite
+- Team 成员活跃状态仍会影响 routing 对 `entry_agent_id` 的校验结果
 
 当前存储抽象状态：
 
@@ -124,7 +135,7 @@ GET  /api/v1/audit-events/{id}
 - 当前各领域服务仍然使用内存实现，但已开始对齐统一仓储边界
 - 已新增 `internal/bootstrap` 依赖提供器，`api.NewApp()` 默认走内存依赖装配
 - 已新增 `GATEWAY_STORAGE_DRIVER`、`GATEWAY_SQLITE_PATH` 与 `GATEWAY_DATABASE_URL` 配置项
-- `sqlite` 模式当前已通过 GORM 接入纯 Go SQLite，并持久化 `audit-events`
+- `sqlite` 模式当前已通过 GORM 接入纯 Go SQLite，并持久化 `audit-events`、`runs`、`conversations`、`conversation_messages`、`teams`、`team_members`
 - 当 `GATEWAY_STORAGE_DRIVER=postgres` 时，当前会进入 PostgreSQL provider 骨架并明确提示“尚未实现”
 - 后续接 PostgreSQL 时，可以按仓储接口逐步替换，而不必先重写 API 层
 

@@ -17,9 +17,9 @@ type App struct {
 	Skills         *skill.Service
 	AgentProfiles  *agentprofile.Service
 	AgentInstances *agentinstance.Service
-	Teams          *team.Service
-	Conversations  *conversation.Service
-	Runs           *run.Service
+	Teams          team.Store
+	Conversations  conversation.Store
+	Runs           run.Store
 	Router         routing.Router
 }
 

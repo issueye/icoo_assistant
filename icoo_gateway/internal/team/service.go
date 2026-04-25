@@ -60,6 +60,17 @@ type UpdateMemberInput struct {
 	Responsibility *string `json:"responsibility"`
 }
 
+type Store interface {
+	storage.Creator[Team, CreateInput]
+	storage.Reader[Team]
+	storage.Updater[Team, UpdateInput]
+	storage.MemberAdder[Member, AddMemberInput]
+	storage.MemberReader[Member]
+	storage.MemberUpdater[Member, UpdateMemberInput]
+	storage.MemberDeleter[Member]
+	HasMember(teamID, agentID string) bool
+}
+
 type Service struct {
 	mu           sync.RWMutex
 	nextID       int
@@ -76,6 +87,7 @@ var _ storage.MemberAdder[Member, AddMemberInput] = (*Service)(nil)
 var _ storage.MemberReader[Member] = (*Service)(nil)
 var _ storage.MemberUpdater[Member, UpdateMemberInput] = (*Service)(nil)
 var _ storage.MemberDeleter[Member] = (*Service)(nil)
+var _ Store = (*Service)(nil)
 
 func NewService() *Service {
 	return &Service{

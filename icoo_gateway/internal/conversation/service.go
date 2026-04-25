@@ -56,6 +56,14 @@ type AddMessageInput struct {
 	Content      string `json:"content"`
 }
 
+type Store interface {
+	storage.Creator[Conversation, CreateInput]
+	storage.Reader[Conversation]
+	storage.Appender[Message, AddMessageInput]
+	storage.MessageScopeReader[Message]
+	storage.Setter[Conversation]
+}
+
 type Service struct {
 	mu            sync.RWMutex
 	nextConvID    int
@@ -70,6 +78,7 @@ var _ storage.Reader[Conversation] = (*Service)(nil)
 var _ storage.Appender[Message, AddMessageInput] = (*Service)(nil)
 var _ storage.MessageScopeReader[Message] = (*Service)(nil)
 var _ storage.Setter[Conversation] = (*Service)(nil)
+var _ Store = (*Service)(nil)
 
 func NewService() *Service {
 	return &Service{

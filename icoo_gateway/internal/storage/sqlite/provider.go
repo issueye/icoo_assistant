@@ -11,6 +11,9 @@ import (
 
 	"icoo_gateway/internal/audit"
 	"icoo_gateway/internal/config"
+	"icoo_gateway/internal/conversation"
+	"icoo_gateway/internal/run"
+	"icoo_gateway/internal/team"
 )
 
 func Open(cfg config.Config) (*gorm.DB, error) {
@@ -26,6 +29,15 @@ func Open(cfg config.Config) (*gorm.DB, error) {
 		return nil, err
 	}
 	if err := db.AutoMigrate(&audit.GormModel{}); err != nil {
+		return nil, err
+	}
+	if err := db.AutoMigrate(&run.GormModel{}); err != nil {
+		return nil, err
+	}
+	if err := db.AutoMigrate(&conversation.GormConversationModel{}, &conversation.GormMessageModel{}); err != nil {
+		return nil, err
+	}
+	if err := db.AutoMigrate(&team.GormTeamModel{}, &team.GormMemberModel{}); err != nil {
 		return nil, err
 	}
 	return db, nil
