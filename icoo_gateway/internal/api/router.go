@@ -8,7 +8,9 @@ import (
 
 	"icoo_gateway/internal/agentinstance"
 	"icoo_gateway/internal/agentprofile"
+	"icoo_gateway/internal/audit"
 	"icoo_gateway/internal/conversation"
+	"icoo_gateway/internal/run"
 	"icoo_gateway/internal/skill"
 	"icoo_gateway/internal/team"
 )
@@ -30,6 +32,8 @@ func NewMux(app *App) http.Handler {
 	mux.HandleFunc("/api/v1/teams/", app.handleTeamRoutes)
 	mux.HandleFunc("/api/v1/conversations", app.handleConversations)
 	mux.HandleFunc("/api/v1/conversations/", app.handleConversationRoutes)
+	mux.HandleFunc("/api/v1/audit-events", app.handleAuditEvents)
+	mux.HandleFunc("/api/v1/audit-events/", app.handleAuditEventByID)
 	return mux
 }
 
@@ -45,6 +49,7 @@ func handleRoot(w http.ResponseWriter, r *http.Request) {
 			"/api/v1/agent-instances",
 			"/api/v1/teams",
 			"/api/v1/conversations",
+			"/api/v1/audit-events",
 		},
 	})
 }
@@ -80,6 +85,27 @@ func pathID(path, prefix string) string {
 	return strings.TrimSpace(strings.TrimPrefix(path, prefix))
 }
 
+func operatorFromRequest(r *http.Request) string {
+	operator := strings.TrimSpace(r.Header.Get("X-Operator"))
+	if operator == "" {
+		operator = "system"
+	}
+	return operator
+}
+
+func (a *App) recordAudit(r *http.Request, resourceType, resourceID, eventName string, payload interface{}) {
+	if a == nil || a.Audits == nil {
+		return
+	}
+	a.Audits.Record(audit.RecordInput{
+		ResourceType: resourceType,
+		ResourceID:   resourceID,
+		EventName:    eventName,
+		Operator:     operatorFromRequest(r),
+		Payload:      payload,
+	})
+}
+
 func (a *App) handleSkills(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodGet:
@@ -97,6 +123,7 @@ func (a *App) handleSkills(w http.ResponseWriter, r *http.Request) {
 			writeError(w, http.StatusBadRequest, err.Error())
 			return
 		}
+		a.recordAudit(r, "skill", record.ID, "skill.created", record)
 		writeJSON(w, http.StatusCreated, record)
 	default:
 		writeError(w, http.StatusMethodNotAllowed, "method not allowed")
@@ -104,16 +131,87 @@ func (a *App) handleSkills(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *App) handleSkillByID(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		writeError(w, http.StatusMethodNotAllowed, "method not allowed")
-		return
-	}
-	id := pathID(r.URL.Path, "/api/v1/skills/")
-	record, ok := a.Skills.Get(id)
-	if !ok {
+	path := pathID(r.URL.Path, "/api/v1/skills/")
+	if path == "" {
 		writeError(w, http.StatusNotFound, "skill not found")
 		return
 	}
+	if strings.HasSuffix(path, "/activate") {
+		id := strings.TrimSuffix(path, "/activate")
+		id = strings.TrimSuffix(id, "/")
+		a.handleSkillActivate(w, r, id)
+		return
+	}
+	if strings.HasSuffix(path, "/deactivate") {
+		id := strings.TrimSuffix(path, "/deactivate")
+		id = strings.TrimSuffix(id, "/")
+		a.handleSkillDeactivate(w, r, id)
+		return
+	}
+	id := strings.TrimSuffix(path, "/")
+	switch r.Method {
+	case http.MethodGet:
+		record, ok := a.Skills.Get(id)
+		if !ok {
+			writeError(w, http.StatusNotFound, "skill not found")
+			return
+		}
+		writeJSON(w, http.StatusOK, record)
+	case http.MethodPatch:
+		var input skill.UpdateInput
+		if err := decodeJSON(r, &input); err != nil {
+			writeError(w, http.StatusBadRequest, err.Error())
+			return
+		}
+		record, err := a.Skills.Update(id, input)
+		if err != nil {
+			if err.Error() == "skill not found" {
+				writeError(w, http.StatusNotFound, err.Error())
+				return
+			}
+			writeError(w, http.StatusBadRequest, err.Error())
+			return
+		}
+		a.recordAudit(r, "skill", record.ID, "skill.updated", record)
+		writeJSON(w, http.StatusOK, record)
+	default:
+		writeError(w, http.StatusMethodNotAllowed, "method not allowed")
+	}
+}
+
+func (a *App) handleSkillActivate(w http.ResponseWriter, r *http.Request, id string) {
+	if r.Method != http.MethodPost {
+		writeError(w, http.StatusMethodNotAllowed, "method not allowed")
+		return
+	}
+	record, err := a.Skills.Activate(id)
+	if err != nil {
+		if err.Error() == "skill not found" {
+			writeError(w, http.StatusNotFound, err.Error())
+			return
+		}
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	a.recordAudit(r, "skill", record.ID, "skill.activated", record)
+	writeJSON(w, http.StatusOK, record)
+}
+
+func (a *App) handleSkillDeactivate(w http.ResponseWriter, r *http.Request, id string) {
+	if r.Method != http.MethodPost {
+		writeError(w, http.StatusMethodNotAllowed, "method not allowed")
+		return
+	}
+	record, err := a.Skills.Deactivate(id)
+	if err != nil {
+		if err.Error() == "skill not found" {
+			writeError(w, http.StatusNotFound, err.Error())
+			return
+		}
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	a.recordAudit(r, "skill", record.ID, "skill.deactivated", record)
 	writeJSON(w, http.StatusOK, record)
 }
 
@@ -134,6 +232,7 @@ func (a *App) handleAgentProfiles(w http.ResponseWriter, r *http.Request) {
 			writeError(w, http.StatusBadRequest, err.Error())
 			return
 		}
+		a.recordAudit(r, "agent_profile", record.ID, "agent_profile.created", record)
 		writeJSON(w, http.StatusCreated, record)
 	default:
 		writeError(w, http.StatusMethodNotAllowed, "method not allowed")
@@ -141,17 +240,35 @@ func (a *App) handleAgentProfiles(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *App) handleAgentProfileByID(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		writeError(w, http.StatusMethodNotAllowed, "method not allowed")
-		return
-	}
 	id := pathID(r.URL.Path, "/api/v1/agent-profiles/")
-	record, ok := a.AgentProfiles.Get(id)
-	if !ok {
-		writeError(w, http.StatusNotFound, "agent profile not found")
-		return
+	switch r.Method {
+	case http.MethodGet:
+		record, ok := a.AgentProfiles.Get(id)
+		if !ok {
+			writeError(w, http.StatusNotFound, "agent profile not found")
+			return
+		}
+		writeJSON(w, http.StatusOK, record)
+	case http.MethodPatch:
+		var input agentprofile.UpdateInput
+		if err := decodeJSON(r, &input); err != nil {
+			writeError(w, http.StatusBadRequest, err.Error())
+			return
+		}
+		record, err := a.AgentProfiles.Update(id, input)
+		if err != nil {
+			if err.Error() == "agent profile not found" {
+				writeError(w, http.StatusNotFound, err.Error())
+				return
+			}
+			writeError(w, http.StatusBadRequest, err.Error())
+			return
+		}
+		a.recordAudit(r, "agent_profile", record.ID, "agent_profile.updated", record)
+		writeJSON(w, http.StatusOK, record)
+	default:
+		writeError(w, http.StatusMethodNotAllowed, "method not allowed")
 	}
-	writeJSON(w, http.StatusOK, record)
 }
 
 func (a *App) handleAgentInstances(w http.ResponseWriter, r *http.Request) {
@@ -171,6 +288,7 @@ func (a *App) handleAgentInstances(w http.ResponseWriter, r *http.Request) {
 			writeError(w, http.StatusBadRequest, err.Error())
 			return
 		}
+		a.recordAudit(r, "agent_instance", record.ID, "agent_instance.created", record)
 		writeJSON(w, http.StatusCreated, record)
 	default:
 		writeError(w, http.StatusMethodNotAllowed, "method not allowed")
@@ -203,6 +321,12 @@ func (a *App) handleAgentInstanceRoutes(w http.ResponseWriter, r *http.Request) 
 		a.handleAgentInstanceHeartbeat(w, r, id)
 		return
 	}
+	if strings.HasSuffix(path, "/disable") {
+		id := strings.TrimSuffix(path, "/disable")
+		id = strings.TrimSuffix(id, "/")
+		a.handleAgentInstanceDisable(w, r, id)
+		return
+	}
 	a.handleAgentInstanceByID(w, r)
 }
 
@@ -220,6 +344,25 @@ func (a *App) handleAgentInstanceHeartbeat(w http.ResponseWriter, r *http.Reques
 		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
+	a.recordAudit(r, "agent_instance", record.ID, "agent_instance.heartbeat", record)
+	writeJSON(w, http.StatusOK, record)
+}
+
+func (a *App) handleAgentInstanceDisable(w http.ResponseWriter, r *http.Request, id string) {
+	if r.Method != http.MethodPost {
+		writeError(w, http.StatusMethodNotAllowed, "method not allowed")
+		return
+	}
+	record, err := a.AgentInstances.Disable(id)
+	if err != nil {
+		if err.Error() == "agent instance not found" {
+			writeError(w, http.StatusNotFound, err.Error())
+			return
+		}
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	a.recordAudit(r, "agent_instance", record.ID, "agent_instance.disabled", record)
 	writeJSON(w, http.StatusOK, record)
 }
 
@@ -240,6 +383,7 @@ func (a *App) handleTeams(w http.ResponseWriter, r *http.Request) {
 			writeError(w, http.StatusBadRequest, err.Error())
 			return
 		}
+		a.recordAudit(r, "team", record.ID, "team.created", record)
 		writeJSON(w, http.StatusCreated, record)
 	default:
 		writeError(w, http.StatusMethodNotAllowed, "method not allowed")
@@ -247,17 +391,35 @@ func (a *App) handleTeams(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *App) handleTeamByID(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		writeError(w, http.StatusMethodNotAllowed, "method not allowed")
-		return
-	}
 	id := pathID(r.URL.Path, "/api/v1/teams/")
-	record, ok := a.Teams.Get(id)
-	if !ok {
-		writeError(w, http.StatusNotFound, "team not found")
-		return
+	switch r.Method {
+	case http.MethodGet:
+		record, ok := a.Teams.Get(id)
+		if !ok {
+			writeError(w, http.StatusNotFound, "team not found")
+			return
+		}
+		writeJSON(w, http.StatusOK, record)
+	case http.MethodPatch:
+		var input team.UpdateInput
+		if err := decodeJSON(r, &input); err != nil {
+			writeError(w, http.StatusBadRequest, err.Error())
+			return
+		}
+		record, err := a.Teams.Update(id, input)
+		if err != nil {
+			if err.Error() == "team not found" {
+				writeError(w, http.StatusNotFound, err.Error())
+				return
+			}
+			writeError(w, http.StatusBadRequest, err.Error())
+			return
+		}
+		a.recordAudit(r, "team", record.ID, "team.updated", record)
+		writeJSON(w, http.StatusOK, record)
+	default:
+		writeError(w, http.StatusMethodNotAllowed, "method not allowed")
 	}
-	writeJSON(w, http.StatusOK, record)
 }
 
 func (a *App) handleTeamRoutes(w http.ResponseWriter, r *http.Request) {
@@ -270,6 +432,16 @@ func (a *App) handleTeamRoutes(w http.ResponseWriter, r *http.Request) {
 		id := strings.TrimSuffix(path, "/members")
 		id = strings.TrimSuffix(id, "/")
 		a.handleTeamMembers(w, r, id)
+		return
+	}
+	if strings.Contains(path, "/members/") {
+		parts := strings.SplitN(path, "/members/", 2)
+		teamID := strings.TrimSuffix(strings.TrimSpace(parts[0]), "/")
+		memberID := ""
+		if len(parts) > 1 {
+			memberID = strings.TrimSuffix(strings.TrimSpace(parts[1]), "/")
+		}
+		a.handleTeamMemberByID(w, r, teamID, memberID)
 		return
 	}
 	a.handleTeamByID(w, r)
@@ -305,7 +477,48 @@ func (a *App) handleTeamMembers(w http.ResponseWriter, r *http.Request, teamID s
 			writeError(w, http.StatusBadRequest, err.Error())
 			return
 		}
+		a.recordAudit(r, "team_member", record.ID, "team_member.created", record)
 		writeJSON(w, http.StatusCreated, record)
+	default:
+		writeError(w, http.StatusMethodNotAllowed, "method not allowed")
+	}
+}
+
+func (a *App) handleTeamMemberByID(w http.ResponseWriter, r *http.Request, teamID, memberID string) {
+	if teamID == "" || memberID == "" {
+		writeError(w, http.StatusNotFound, "team member not found")
+		return
+	}
+	switch r.Method {
+	case http.MethodPatch:
+		var input team.UpdateMemberInput
+		if err := decodeJSON(r, &input); err != nil {
+			writeError(w, http.StatusBadRequest, err.Error())
+			return
+		}
+		record, err := a.Teams.UpdateMember(teamID, memberID, input)
+		if err != nil {
+			if err.Error() == "team not found" || err.Error() == "team member not found" {
+				writeError(w, http.StatusNotFound, err.Error())
+				return
+			}
+			writeError(w, http.StatusBadRequest, err.Error())
+			return
+		}
+		a.recordAudit(r, "team_member", record.ID, "team_member.updated", record)
+		writeJSON(w, http.StatusOK, record)
+	case http.MethodDelete:
+		record, err := a.Teams.DeleteMember(teamID, memberID)
+		if err != nil {
+			if err.Error() == "team not found" || err.Error() == "team member not found" {
+				writeError(w, http.StatusNotFound, err.Error())
+				return
+			}
+			writeError(w, http.StatusBadRequest, err.Error())
+			return
+		}
+		a.recordAudit(r, "team_member", record.ID, "team_member.deleted", record)
+		writeJSON(w, http.StatusOK, record)
 	default:
 		writeError(w, http.StatusMethodNotAllowed, "method not allowed")
 	}
@@ -328,6 +541,7 @@ func (a *App) handleConversations(w http.ResponseWriter, r *http.Request) {
 			writeError(w, http.StatusBadRequest, err.Error())
 			return
 		}
+		a.recordAudit(r, "conversation", record.ID, "conversation.created", record)
 		writeJSON(w, http.StatusCreated, record)
 	default:
 		writeError(w, http.StatusMethodNotAllowed, "method not allowed")
@@ -344,6 +558,12 @@ func (a *App) handleConversationRoutes(w http.ResponseWriter, r *http.Request) {
 		id := strings.TrimSuffix(path, "/messages")
 		id = strings.TrimSuffix(id, "/")
 		a.handleConversationMessages(w, r, id)
+		return
+	}
+	if strings.HasSuffix(path, "/runs") {
+		id := strings.TrimSuffix(path, "/runs")
+		id = strings.TrimSuffix(id, "/")
+		a.handleConversationRuns(w, r, id)
 		return
 	}
 	a.handleConversationByID(w, r, path)
@@ -389,6 +609,35 @@ func (a *App) handleConversationMessages(w http.ResponseWriter, r *http.Request,
 			writeError(w, http.StatusBadRequest, err.Error())
 			return
 		}
+		if record.Scope == "external" {
+			createdRun, err := a.Runs.Create(run.CreateInput{
+				ConversationID:   id,
+				TriggerType:      "message",
+				TriggerMessageID: record.ID,
+			})
+			if err != nil {
+				writeError(w, http.StatusInternalServerError, err.Error())
+				return
+			}
+			if _, err := a.Conversations.SetLastRunID(id, createdRun.ID); err != nil {
+				writeError(w, http.StatusInternalServerError, err.Error())
+				return
+			}
+			recordConversation, ok := a.Conversations.Get(id)
+			summary := "external message accepted"
+			if ok && recordConversation.Mode == "team" {
+				summary = "team external message accepted and routed"
+			}
+			finishedRun, err := a.Runs.Complete(createdRun.ID, run.CompleteInput{
+				Status:  "completed",
+				Summary: summary,
+			})
+			if err != nil {
+				writeError(w, http.StatusInternalServerError, err.Error())
+				return
+			}
+			a.recordAudit(r, "run", finishedRun.ID, "run.completed", finishedRun)
+		}
 		recordConversation, ok := a.Conversations.Get(id)
 		if ok && recordConversation.Mode == "team" && record.Scope == "external" {
 			if err := a.Router.RouteExternalMessage(id, record); err != nil {
@@ -396,8 +645,47 @@ func (a *App) handleConversationMessages(w http.ResponseWriter, r *http.Request,
 				return
 			}
 		}
+		a.recordAudit(r, "conversation_message", record.ID, "conversation_message.created", record)
 		writeJSON(w, http.StatusCreated, record)
 	default:
 		writeError(w, http.StatusMethodNotAllowed, "method not allowed")
 	}
+}
+
+func (a *App) handleConversationRuns(w http.ResponseWriter, r *http.Request, id string) {
+	if r.Method != http.MethodGet {
+		writeError(w, http.StatusMethodNotAllowed, "method not allowed")
+		return
+	}
+	if _, ok := a.Conversations.Get(id); !ok {
+		writeError(w, http.StatusNotFound, "conversation not found")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]interface{}{
+		"items": a.Runs.ListByConversation(id),
+	})
+}
+
+func (a *App) handleAuditEvents(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		writeError(w, http.StatusMethodNotAllowed, "method not allowed")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]interface{}{
+		"items": a.Audits.List(),
+	})
+}
+
+func (a *App) handleAuditEventByID(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		writeError(w, http.StatusMethodNotAllowed, "method not allowed")
+		return
+	}
+	id := pathID(r.URL.Path, "/api/v1/audit-events/")
+	record, ok := a.Audits.Get(id)
+	if !ok {
+		writeError(w, http.StatusNotFound, "audit event not found")
+		return
+	}
+	writeJSON(w, http.StatusOK, record)
 }

@@ -2,6 +2,7 @@ package conversation
 
 import (
 	"fmt"
+	"icoo_gateway/internal/storage"
 	"sort"
 	"strings"
 	"sync"
@@ -15,6 +16,7 @@ type Conversation struct {
 	TargetAgentID string    `json:"target_agent_id,omitempty"`
 	TargetTeamID  string    `json:"target_team_id,omitempty"`
 	Status        string    `json:"status"`
+	LastRunID     string    `json:"last_run_id,omitempty"`
 	MessageCount  int       `json:"message_count"`
 	CreatedBy     string    `json:"created_by,omitempty"`
 	CreatedAt     time.Time `json:"created_at"`
@@ -62,6 +64,12 @@ type Service struct {
 	messages      map[string][]Message
 	now           func() time.Time
 }
+
+var _ storage.Creator[Conversation, CreateInput] = (*Service)(nil)
+var _ storage.Reader[Conversation] = (*Service)(nil)
+var _ storage.Appender[Message, AddMessageInput] = (*Service)(nil)
+var _ storage.MessageScopeReader[Message] = (*Service)(nil)
+var _ storage.Setter[Conversation] = (*Service)(nil)
 
 func NewService() *Service {
 	return &Service{
@@ -220,4 +228,18 @@ func (s *Service) ListMessagesByScope(conversationID, scope string) ([]Message, 
 		}
 	}
 	return items, true
+}
+
+func (s *Service) SetLastRunID(conversationID, runID string) (Conversation, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	record, ok := s.conversations[strings.TrimSpace(conversationID)]
+	if !ok {
+		return Conversation{}, fmt.Errorf("conversation not found")
+	}
+	record.LastRunID = strings.TrimSpace(runID)
+	record.UpdatedAt = s.now().UTC()
+	s.conversations[record.ID] = record
+	return record, nil
 }

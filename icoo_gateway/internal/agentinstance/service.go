@@ -2,6 +2,7 @@ package agentinstance
 
 import (
 	"fmt"
+	"icoo_gateway/internal/storage"
 	"sort"
 	"strings"
 	"sync"
@@ -34,6 +35,11 @@ type Service struct {
 	records map[string]Instance
 	now     func() time.Time
 }
+
+var _ storage.Creator[Instance, CreateInput] = (*Service)(nil)
+var _ storage.Reader[Instance] = (*Service)(nil)
+var _ storage.Heartbeater[Instance] = (*Service)(nil)
+var _ storage.Disabler[Instance] = (*Service)(nil)
 
 func NewService() *Service {
 	return &Service{
@@ -115,6 +121,25 @@ func (s *Service) Heartbeat(id string) (Instance, error) {
 		record.Status = "idle"
 	}
 	record.UpdatedAt = now
+	s.records[id] = record
+	return record, nil
+}
+
+func (s *Service) Disable(id string) (Instance, error) {
+	id = strings.TrimSpace(id)
+	if id == "" {
+		return Instance{}, fmt.Errorf("agent instance id required")
+	}
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	record, ok := s.records[id]
+	if !ok {
+		return Instance{}, fmt.Errorf("agent instance not found")
+	}
+	record.Status = "disabled"
+	record.UpdatedAt = s.now().UTC()
 	s.records[id] = record
 	return record, nil
 }

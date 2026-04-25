@@ -1,0 +1,121 @@
+export namespace api {
+	
+	export class RequestView {
+	    request_id: string;
+	    downstream: string;
+	    upstream: string;
+	    model: string;
+	    status_code: number;
+	    duration_ms: number;
+	    error?: string;
+	    created_at: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new RequestView(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.request_id = source["request_id"];
+	        this.downstream = source["downstream"];
+	        this.upstream = source["upstream"];
+	        this.model = source["model"];
+	        this.status_code = source["status_code"];
+	        this.duration_ms = source["duration_ms"];
+	        this.error = source["error"];
+	        this.created_at = source["created_at"];
+	    }
+	}
+	export class RouteView {
+	    name: string;
+	    upstream: string;
+	    model: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new RouteView(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.upstream = source["upstream"];
+	        this.model = source["model"];
+	    }
+	}
+	export class UpstreamView {
+	    protocol: string;
+	    base_url?: string;
+	    configured: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new UpstreamView(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.protocol = source["protocol"];
+	        this.base_url = source["base_url"];
+	        this.configured = source["configured"];
+	    }
+	}
+	export class State {
+	    service: string;
+	    version: string;
+	    running: boolean;
+	    listen_addr?: string;
+	    proxy_url?: string;
+	    last_error?: string;
+	    auth_required: boolean;
+	    allow_unauthenticated_local: boolean;
+	    supported_paths: string[];
+	    defaults: RouteView[];
+	    aliases: RouteView[];
+	    upstreams: UpstreamView[];
+	    recent_requests: RequestView[];
+	    notes: string[];
+	    checks: Record<string, any>;
+	
+	    static createFrom(source: any = {}) {
+	        return new State(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.service = source["service"];
+	        this.version = source["version"];
+	        this.running = source["running"];
+	        this.listen_addr = source["listen_addr"];
+	        this.proxy_url = source["proxy_url"];
+	        this.last_error = source["last_error"];
+	        this.auth_required = source["auth_required"];
+	        this.allow_unauthenticated_local = source["allow_unauthenticated_local"];
+	        this.supported_paths = source["supported_paths"];
+	        this.defaults = this.convertValues(source["defaults"], RouteView);
+	        this.aliases = this.convertValues(source["aliases"], RouteView);
+	        this.upstreams = this.convertValues(source["upstreams"], UpstreamView);
+	        this.recent_requests = this.convertValues(source["recent_requests"], RequestView);
+	        this.notes = source["notes"];
+	        this.checks = source["checks"];
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+
+}
+

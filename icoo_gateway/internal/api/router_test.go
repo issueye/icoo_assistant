@@ -52,7 +52,7 @@ func TestRootEndpoint(t *testing.T) {
 	if body.Service != "icoo_gateway" || body.Status != "ready" {
 		t.Fatalf("unexpected body: %#v", body)
 	}
-	if len(body.Routes) != 7 {
+	if len(body.Routes) != 8 {
 		t.Fatalf("unexpected routes: %#v", body.Routes)
 	}
 }

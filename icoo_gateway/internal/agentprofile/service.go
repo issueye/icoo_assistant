@@ -2,6 +2,7 @@ package agentprofile
 
 import (
 	"fmt"
+	"icoo_gateway/internal/storage"
 	"sort"
 	"strings"
 	"sync"
@@ -27,12 +28,24 @@ type CreateInput struct {
 	Status        string `json:"status"`
 }
 
+type UpdateInput struct {
+	Name          *string `json:"name"`
+	ModelProvider *string `json:"model_provider"`
+	ModelName     *string `json:"model_name"`
+	SystemPrompt  *string `json:"system_prompt"`
+	Status        *string `json:"status"`
+}
+
 type Service struct {
 	mu      sync.RWMutex
 	nextID  int
 	records map[string]Profile
 	now     func() time.Time
 }
+
+var _ storage.Creator[Profile, CreateInput] = (*Service)(nil)
+var _ storage.Reader[Profile] = (*Service)(nil)
+var _ storage.Updater[Profile, UpdateInput] = (*Service)(nil)
 
 func NewService() *Service {
 	return &Service{
@@ -97,4 +110,40 @@ func (s *Service) List() []Profile {
 		return items[i].ID < items[j].ID
 	})
 	return items
+}
+
+func (s *Service) Update(id string, input UpdateInput) (Profile, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	record, ok := s.records[strings.TrimSpace(id)]
+	if !ok {
+		return Profile{}, fmt.Errorf("agent profile not found")
+	}
+	if input.Name != nil {
+		name := strings.TrimSpace(*input.Name)
+		if name == "" {
+			return Profile{}, fmt.Errorf("name required")
+		}
+		record.Name = name
+	}
+	if input.ModelProvider != nil {
+		record.ModelProvider = strings.TrimSpace(*input.ModelProvider)
+	}
+	if input.ModelName != nil {
+		record.ModelName = strings.TrimSpace(*input.ModelName)
+	}
+	if input.SystemPrompt != nil {
+		record.SystemPrompt = strings.TrimSpace(*input.SystemPrompt)
+	}
+	if input.Status != nil {
+		status := strings.TrimSpace(*input.Status)
+		if status == "" {
+			return Profile{}, fmt.Errorf("status required")
+		}
+		record.Status = status
+	}
+	record.UpdatedAt = s.now().UTC()
+	s.records[record.ID] = record
+	return record, nil
 }

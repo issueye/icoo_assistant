@@ -11,6 +11,7 @@ import (
 	"syscall"
 
 	"icoo_gateway/internal/api"
+	"icoo_gateway/internal/bootstrap"
 	"icoo_gateway/internal/config"
 	"icoo_gateway/internal/server"
 )
@@ -36,7 +37,19 @@ func main() {
 		log.Fatal(err)
 	}
 
-	handler := api.NewMux(api.NewApp())
+	deps, err := bootstrap.BuildDependencies(cfg)
+	if err != nil {
+		log.Fatal(err)
+	}
+	if deps.Close != nil {
+		defer func() {
+			if err := deps.Close(); err != nil {
+				log.Printf("close dependencies: %v", err)
+			}
+		}()
+	}
+
+	handler := api.NewMux(api.NewAppWithDependencies(deps))
 	srv := server.New(cfg, handler)
 
 	stop := make(chan os.Signal, 1)
@@ -92,4 +105,5 @@ func printUsage() {
 	_, _ = fmt.Fprintln(os.Stdout, "Configuration:")
 	_, _ = fmt.Fprintln(os.Stdout, "  Load environment variables from .env in the current working directory.")
 	_, _ = fmt.Fprintln(os.Stdout, "  See .env.example for supported settings.")
+	_, _ = fmt.Fprintln(os.Stdout, "  GATEWAY_STORAGE_DRIVER supports: memory, postgres (skeleton only).")
 }

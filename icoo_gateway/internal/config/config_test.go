@@ -29,11 +29,20 @@ func TestLoadUsesDefaultsWhenEnvMissing(t *testing.T) {
 	if cfg.ShutdownTimeout != 10*time.Second {
 		t.Fatalf("unexpected shutdown timeout: %s", cfg.ShutdownTimeout)
 	}
+	if cfg.StorageDriver != "memory" {
+		t.Fatalf("unexpected storage driver: %q", cfg.StorageDriver)
+	}
+	if cfg.DatabaseURL != "" {
+		t.Fatalf("unexpected database url: %q", cfg.DatabaseURL)
+	}
+	if cfg.SQLitePath == "" {
+		t.Fatalf("expected default sqlite path")
+	}
 }
 
 func TestLoadReadsDotEnv(t *testing.T) {
 	root := t.TempDir()
-	content := "GATEWAY_HOST=0.0.0.0\nGATEWAY_PORT=19090\nGATEWAY_READ_TIMEOUT_SECONDS=12\nGATEWAY_WRITE_TIMEOUT_SECONDS=20\nGATEWAY_SHUTDOWN_TIMEOUT_SECONDS=8\n"
+	content := "GATEWAY_HOST=0.0.0.0\nGATEWAY_PORT=19090\nGATEWAY_READ_TIMEOUT_SECONDS=12\nGATEWAY_WRITE_TIMEOUT_SECONDS=20\nGATEWAY_SHUTDOWN_TIMEOUT_SECONDS=8\nGATEWAY_STORAGE_DRIVER=postgres\nGATEWAY_DATABASE_URL=postgres://gateway:secret@localhost:5432/icoo_gateway?sslmode=disable\nGATEWAY_SQLITE_PATH=tmp/test.db\n"
 	if err := os.WriteFile(filepath.Join(root, ".env"), []byte(content), 0o644); err != nil {
 		t.Fatal(err)
 	}
@@ -55,5 +64,14 @@ func TestLoadReadsDotEnv(t *testing.T) {
 	}
 	if cfg.ShutdownTimeout != 8*time.Second {
 		t.Fatalf("unexpected shutdown timeout: %s", cfg.ShutdownTimeout)
+	}
+	if cfg.StorageDriver != "postgres" {
+		t.Fatalf("unexpected storage driver: %q", cfg.StorageDriver)
+	}
+	if cfg.DatabaseURL != "postgres://gateway:secret@localhost:5432/icoo_gateway?sslmode=disable" {
+		t.Fatalf("unexpected database url: %q", cfg.DatabaseURL)
+	}
+	if cfg.SQLitePath != "tmp/test.db" {
+		t.Fatalf("unexpected sqlite path: %q", cfg.SQLitePath)
 	}
 }

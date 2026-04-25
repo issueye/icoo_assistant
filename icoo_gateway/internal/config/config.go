@@ -15,6 +15,9 @@ type Config struct {
 	ReadTimeout     time.Duration
 	WriteTimeout    time.Duration
 	ShutdownTimeout time.Duration
+	StorageDriver   string
+	DatabaseURL     string
+	SQLitePath      string
 }
 
 func Load(workdir string) (Config, error) {
@@ -27,9 +30,18 @@ func Load(workdir string) (Config, error) {
 		ReadTimeout:     durationFromEnv("GATEWAY_READ_TIMEOUT_SECONDS", 10*time.Second),
 		WriteTimeout:    durationFromEnv("GATEWAY_WRITE_TIMEOUT_SECONDS", 15*time.Second),
 		ShutdownTimeout: durationFromEnv("GATEWAY_SHUTDOWN_TIMEOUT_SECONDS", 10*time.Second),
+		StorageDriver:   strings.TrimSpace(os.Getenv("GATEWAY_STORAGE_DRIVER")),
+		DatabaseURL:     strings.TrimSpace(os.Getenv("GATEWAY_DATABASE_URL")),
+		SQLitePath:      strings.TrimSpace(os.Getenv("GATEWAY_SQLITE_PATH")),
 	}
 	if cfg.Host == "" {
 		cfg.Host = "127.0.0.1"
+	}
+	if cfg.StorageDriver == "" {
+		cfg.StorageDriver = "memory"
+	}
+	if cfg.SQLitePath == "" {
+		cfg.SQLitePath = filepath.Join(workdir, "data", "icoo_gateway.db")
 	}
 	return cfg, nil
 }

@@ -2,6 +2,7 @@ package skill
 
 import (
 	"fmt"
+	"icoo_gateway/internal/storage"
 	"sort"
 	"strings"
 	"sync"
@@ -25,12 +26,25 @@ type CreateInput struct {
 	Status      string `json:"status"`
 }
 
+type UpdateInput struct {
+	Name        *string `json:"name"`
+	Version     *string `json:"version"`
+	Description *string `json:"description"`
+	Status      *string `json:"status"`
+}
+
 type Service struct {
 	mu      sync.RWMutex
 	nextID  int
 	records map[string]Skill
 	now     func() time.Time
 }
+
+var _ storage.Creator[Skill, CreateInput] = (*Service)(nil)
+var _ storage.Reader[Skill] = (*Service)(nil)
+var _ storage.Updater[Skill, UpdateInput] = (*Service)(nil)
+var _ storage.Activator[Skill] = (*Service)(nil)
+var _ storage.Deactivator[Skill] = (*Service)(nil)
 
 func NewService() *Service {
 	return &Service{
@@ -90,4 +104,47 @@ func (s *Service) List() []Skill {
 		return items[i].ID < items[j].ID
 	})
 	return items
+}
+
+func (s *Service) Update(id string, input UpdateInput) (Skill, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	record, ok := s.records[strings.TrimSpace(id)]
+	if !ok {
+		return Skill{}, fmt.Errorf("skill not found")
+	}
+	if input.Name != nil {
+		name := strings.TrimSpace(*input.Name)
+		if name == "" {
+			return Skill{}, fmt.Errorf("name required")
+		}
+		record.Name = name
+	}
+	if input.Version != nil {
+		record.Version = strings.TrimSpace(*input.Version)
+	}
+	if input.Description != nil {
+		record.Description = strings.TrimSpace(*input.Description)
+	}
+	if input.Status != nil {
+		status := strings.TrimSpace(*input.Status)
+		if status == "" {
+			return Skill{}, fmt.Errorf("status required")
+		}
+		record.Status = status
+	}
+	record.UpdatedAt = s.now().UTC()
+	s.records[record.ID] = record
+	return record, nil
+}
+
+func (s *Service) Activate(id string) (Skill, error) {
+	status := "active"
+	return s.Update(id, UpdateInput{Status: &status})
+}
+
+func (s *Service) Deactivate(id string) (Skill, error) {
+	status := "inactive"
+	return s.Update(id, UpdateInput{Status: &status})
 }
