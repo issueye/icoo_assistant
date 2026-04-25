@@ -26,6 +26,7 @@ type App struct {
 	catalog    *catalog.Catalog
 	service    *proxy.Service
 	suppliers  *supplier.Service
+	health     *supplier.HealthService
 	policies   *routepolicy.Service
 	httpServer *http.Server
 	listenAddr string
@@ -51,6 +52,7 @@ func (a *App) startup(ctx context.Context) {
 		return
 	}
 	a.suppliers = suppliers
+	a.health = supplier.NewHealthService(suppliers)
 	policies, err := routepolicy.NewService(root, suppliers)
 	if err != nil {
 		a.setLastError(err.Error())
@@ -107,6 +109,23 @@ func (a *App) DeleteSupplier(id string) ([]supplier.Record, error) {
 		return nil, err
 	}
 	return a.suppliers.List(), nil
+}
+
+func (a *App) ListSupplierHealth() []supplier.HealthRecord {
+	if a.health == nil {
+		return nil
+	}
+	return a.health.List()
+}
+
+func (a *App) CheckSupplier(id string) ([]supplier.HealthRecord, error) {
+	if a.health == nil {
+		return nil, context.Canceled
+	}
+	if _, err := a.health.Check(id); err != nil {
+		return nil, err
+	}
+	return a.health.List(), nil
 }
 
 func (a *App) ListRoutePolicies() []routepolicy.Record {

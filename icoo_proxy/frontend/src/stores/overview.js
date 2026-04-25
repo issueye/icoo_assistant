@@ -1,5 +1,5 @@
 import { defineStore } from "pinia";
-import { GetOverview, ReloadProxy } from "../../wailsjs/go/main/App";
+import { GetOverview, ListSupplierHealth, ListSuppliers, ReloadProxy } from "../../wailsjs/go/main/App";
 
 export const useOverviewStore = defineStore("overview", {
   state: () => ({
@@ -7,6 +7,8 @@ export const useOverviewStore = defineStore("overview", {
     refreshing: false,
     error: "",
     data: null,
+    suppliers: [],
+    health: [],
   }),
   getters: {
     checks(state) {
@@ -18,13 +20,40 @@ export const useOverviewStore = defineStore("overview", {
     requests(state) {
       return state.data?.recent_requests || [];
     },
+    supplierCount(state) {
+      return state.suppliers.length;
+    },
+    enabledSupplierCount(state) {
+      return state.suppliers.filter((item) => item.enabled).length;
+    },
+    checkedSupplierCount(state) {
+      return state.health.length;
+    },
+    reachableSupplierCount(state) {
+      return state.health.filter((item) => item.status === "reachable").length;
+    },
+    warningSupplierCount(state) {
+      return state.health.filter((item) => item.status !== "reachable").length;
+    },
+    activePolicyCount(state) {
+      return (state.data?.route_policies || []).filter((item) => item.enabled).length;
+    },
+    inactivePolicyCount(state) {
+      return (state.data?.route_policies || []).filter((item) => !item.enabled).length;
+    },
+    unhealthySuppliers(state) {
+      return state.health.filter((item) => item.status !== "reachable");
+    },
   },
   actions: {
     async load() {
       this.loading = true;
       this.error = "";
       try {
-        this.data = await GetOverview();
+        const [overview, suppliers, health] = await Promise.all([GetOverview(), ListSuppliers(), ListSupplierHealth()]);
+        this.data = overview;
+        this.suppliers = suppliers;
+        this.health = health;
       } catch (error) {
         this.error = error?.message || String(error);
       } finally {
@@ -35,7 +64,10 @@ export const useOverviewStore = defineStore("overview", {
       this.refreshing = true;
       this.error = "";
       try {
-        this.data = await ReloadProxy();
+        const [overview, suppliers, health] = await Promise.all([ReloadProxy(), ListSuppliers(), ListSupplierHealth()]);
+        this.data = overview;
+        this.suppliers = suppliers;
+        this.health = health;
       } catch (error) {
         this.error = error?.message || String(error);
       } finally {

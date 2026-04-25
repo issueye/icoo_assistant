@@ -29,6 +29,7 @@
             <li>Three protocol entrypoints</li>
             <li>Cross-protocol non-streaming translation</li>
             <li>Supplier registry with local persistence</li>
+            <li>Traffic monitoring with recent request history</li>
           </ul>
         </div>
       </aside>
@@ -56,6 +57,11 @@ const navItems = computed(() => [
     to: "/suppliers",
     label: "Supplier Management",
     description: "Manage upstream vendors, endpoints, models, and tags.",
+  },
+  {
+    to: "/traffic",
+    label: "Traffic Monitor",
+    description: "Inspect recent gateway requests, failures, and latency.",
   },
 ]);
 </script>

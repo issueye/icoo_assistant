@@ -46,6 +46,13 @@
     </div>
 
     <template v-else>
+      <div class="grid gap-6 xl:grid-cols-4">
+        <StatCard label="Suppliers" :value="String(store.supplierCount)" />
+        <StatCard label="Enabled Suppliers" :value="String(store.enabledSupplierCount)" />
+        <StatCard label="Health Checked" :value="String(store.checkedSupplierCount)" />
+        <StatCard label="Active Policies" :value="String(store.activePolicyCount)" />
+      </div>
+
       <div class="grid gap-6 xl:grid-cols-2">
         <PanelBlock title="Provider Readiness" eyebrow="Runtime">
           <div class="grid gap-3 md:grid-cols-3">
@@ -85,6 +92,55 @@
       </div>
 
       <div class="grid gap-6 xl:grid-cols-2">
+        <PanelBlock title="Supplier Health Summary" eyebrow="Observability">
+          <div class="grid gap-3 md:grid-cols-3">
+            <article class="rounded-3xl border border-white/10 bg-ink-900/70 p-4">
+              <p class="text-xs uppercase tracking-[0.22em] text-signal-mint">reachable</p>
+              <p class="mt-3 text-2xl font-semibold">{{ store.reachableSupplierCount }}</p>
+              <p class="mt-2 text-sm text-slate-400">Suppliers with a successful recent base endpoint response.</p>
+            </article>
+            <article class="rounded-3xl border border-white/10 bg-ink-900/70 p-4">
+              <p class="text-xs uppercase tracking-[0.22em] text-signal-coral">attention</p>
+              <p class="mt-3 text-2xl font-semibold">{{ store.warningSupplierCount }}</p>
+              <p class="mt-2 text-sm text-slate-400">Suppliers returning warning or unreachable health states.</p>
+            </article>
+            <article class="rounded-3xl border border-white/10 bg-ink-900/70 p-4">
+              <p class="text-xs uppercase tracking-[0.22em] text-signal-sky">unchecked</p>
+              <p class="mt-3 text-2xl font-semibold">{{ Math.max(store.supplierCount - store.checkedSupplierCount, 0) }}</p>
+              <p class="mt-2 text-sm text-slate-400">Profiles that have not been health-checked yet in this session.</p>
+            </article>
+          </div>
+        </PanelBlock>
+
+        <PanelBlock title="Risk Watchlist" eyebrow="Needs Attention">
+          <div v-if="store.unhealthySuppliers.length === 0" class="rounded-3xl border border-white/10 bg-black/20 px-4 py-8 text-center text-sm text-slate-400">
+            No supplier warnings yet. Run checks from the supplier page to populate this watchlist.
+          </div>
+          <div v-else class="space-y-3">
+            <article
+              v-for="item in store.unhealthySuppliers"
+              :key="item.supplier_id"
+              class="rounded-3xl border border-signal-coral/20 bg-signal-coral/10 p-4"
+            >
+              <div class="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <p class="text-sm font-semibold text-rose-50">{{ item.supplier_name }}</p>
+                  <p class="mt-1 text-xs text-rose-100/80">{{ item.protocol }} | {{ item.base_url }}</p>
+                </div>
+                <span class="rounded-full bg-signal-coral/20 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-rose-100">
+                  {{ item.status }}
+                </span>
+              </div>
+              <p class="mt-3 text-sm text-rose-50/90">{{ item.message }}</p>
+              <p class="mt-2 text-xs text-rose-100/70">
+                {{ item.status_code || "no-status" }} | {{ item.duration_ms }} ms | {{ formatDateTime(item.checked_at) }}
+              </p>
+            </article>
+          </div>
+        </PanelBlock>
+      </div>
+
+      <div class="grid gap-6 xl:grid-cols-2">
         <PanelBlock title="Default Routes" eyebrow="Routing">
           <RouteList :items="store.data?.defaults || []" empty-text="No default routes configured yet." />
         </PanelBlock>
@@ -94,7 +150,15 @@
         </PanelBlock>
       </div>
 
-      <PanelBlock title="Default Route Policies" eyebrow="Supplier Binding">
+        <PanelBlock title="Default Route Policies" eyebrow="Supplier Binding">
+        <div class="mb-4 flex flex-wrap gap-2">
+          <span class="rounded-full bg-signal-mint/15 px-3 py-2 text-xs font-semibold text-signal-mint">
+            active: {{ store.activePolicyCount }}
+          </span>
+          <span class="rounded-full bg-signal-amber/15 px-3 py-2 text-xs font-semibold text-signal-amber">
+            inactive: {{ store.inactivePolicyCount }}
+          </span>
+        </div>
         <div v-if="!(store.data?.route_policies || []).length" class="rounded-3xl border border-white/10 bg-black/20 px-4 py-8 text-center text-sm text-slate-400">
           No route policies configured yet.
         </div>
@@ -168,6 +232,13 @@ import RouteList from "../components/RouteList.vue";
 import StatCard from "../components/StatCard.vue";
 
 const store = useOverviewStore();
+
+function formatDateTime(value) {
+  if (!value) {
+    return "not checked";
+  }
+  return new Date(value).toLocaleString();
+}
 
 onMounted(() => {
   store.load();

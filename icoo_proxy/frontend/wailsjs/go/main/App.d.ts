@@ -4,11 +4,15 @@ import {supplier} from '../models';
 import {routepolicy} from '../models';
 import {api} from '../models';
 
+export function CheckSupplier(arg1:string):Promise<Array<supplier.HealthRecord>>;
+
 export function DeleteSupplier(arg1:string):Promise<Array<supplier.Record>>;
 
 export function GetOverview():Promise<Record<string, any>>;
 
 export function ListRoutePolicies():Promise<Array<routepolicy.Record>>;
+
+export function ListSupplierHealth():Promise<Array<supplier.HealthRecord>>;
 
 export function ListSuppliers():Promise<Array<supplier.Record>>;
 

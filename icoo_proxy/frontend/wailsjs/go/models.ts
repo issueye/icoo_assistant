@@ -204,6 +204,36 @@ export namespace routepolicy {
 
 export namespace supplier {
 	
+	export class HealthRecord {
+	    supplier_id: string;
+	    status: string;
+	    message: string;
+	    checked_at: string;
+	    status_code: number;
+	    duration_ms: number;
+	    reachable: boolean;
+	    protocol: string;
+	    base_url: string;
+	    supplier_name: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new HealthRecord(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.supplier_id = source["supplier_id"];
+	        this.status = source["status"];
+	        this.message = source["message"];
+	        this.checked_at = source["checked_at"];
+	        this.status_code = source["status_code"];
+	        this.duration_ms = source["duration_ms"];
+	        this.reachable = source["reachable"];
+	        this.protocol = source["protocol"];
+	        this.base_url = source["base_url"];
+	        this.supplier_name = source["supplier_name"];
+	    }
+	}
 	export class Record {
 	    id: string;
 	    name: string;

@@ -2,6 +2,7 @@ import { createRouter, createWebHashHistory } from "vue-router";
 
 import OverviewView from "../views/OverviewView.vue";
 import SuppliersView from "../views/SuppliersView.vue";
+import TrafficView from "../views/TrafficView.vue";
 
 export default createRouter({
   history: createWebHashHistory(),
@@ -15,6 +16,11 @@ export default createRouter({
       path: "/suppliers",
       name: "suppliers",
       component: SuppliersView,
+    },
+    {
+      path: "/traffic",
+      name: "traffic",
+      component: TrafficView,
     },
   ],
 });

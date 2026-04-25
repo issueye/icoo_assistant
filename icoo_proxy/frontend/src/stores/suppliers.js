@@ -1,5 +1,13 @@
 import { defineStore } from "pinia";
-import { DeleteSupplier, ListRoutePolicies, ListSuppliers, SaveRoutePolicy, SaveSupplier } from "../../wailsjs/go/main/App";
+import {
+  CheckSupplier,
+  DeleteSupplier,
+  ListRoutePolicies,
+  ListSupplierHealth,
+  ListSuppliers,
+  SaveRoutePolicy,
+  SaveSupplier,
+} from "../../wailsjs/go/main/App";
 
 const emptyForm = () => ({
   id: "",
@@ -18,9 +26,11 @@ export const useSuppliersStore = defineStore("suppliers", {
     loading: false,
     saving: false,
     deleting: "",
+    checking: "",
     error: "",
     items: [],
     policies: [],
+    health: [],
     form: emptyForm(),
     policyForm: {
       id: "",
@@ -34,15 +44,19 @@ export const useSuppliersStore = defineStore("suppliers", {
     enabledCount(state) {
       return state.items.filter((item) => item.enabled).length;
     },
+    checkedCount(state) {
+      return state.health.length;
+    },
   },
   actions: {
     async load() {
       this.loading = true;
       this.error = "";
       try {
-        const [items, policies] = await Promise.all([ListSuppliers(), ListRoutePolicies()]);
+        const [items, policies, health] = await Promise.all([ListSuppliers(), ListRoutePolicies(), ListSupplierHealth()]);
         this.items = items;
         this.policies = policies;
+        this.health = health;
       } catch (error) {
         this.error = error?.message || String(error);
       } finally {
@@ -83,6 +97,9 @@ export const useSuppliersStore = defineStore("suppliers", {
         enabled: true,
       };
     },
+    healthFor(id) {
+      return this.health.find((item) => item.supplier_id === id);
+    },
     async save() {
       this.saving = true;
       this.error = "";
@@ -112,6 +129,7 @@ export const useSuppliersStore = defineStore("suppliers", {
       this.error = "";
       try {
         this.items = await DeleteSupplier(id);
+        this.health = this.health.filter((item) => item.supplier_id !== id);
         if (this.form.id === id) {
           this.resetForm();
         }
@@ -119,6 +137,17 @@ export const useSuppliersStore = defineStore("suppliers", {
         this.error = error?.message || String(error);
       } finally {
         this.deleting = "";
+      }
+    },
+    async check(id) {
+      this.checking = id;
+      this.error = "";
+      try {
+        this.health = await CheckSupplier(id);
+      } catch (error) {
+        this.error = error?.message || String(error);
+      } finally {
+        this.checking = "";
       }
     },
   },
