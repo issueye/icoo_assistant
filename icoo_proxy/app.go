@@ -9,9 +9,11 @@ import (
 	"sync"
 
 	"icoo_proxy/internal/api"
+	"icoo_proxy/internal/bootstrap"
 	"icoo_proxy/internal/catalog"
 	"icoo_proxy/internal/config"
 	"icoo_proxy/internal/proxy"
+	"icoo_proxy/internal/routepolicy"
 	"icoo_proxy/internal/server"
 	"icoo_proxy/internal/supplier"
 )
@@ -24,6 +26,7 @@ type App struct {
 	catalog    *catalog.Catalog
 	service    *proxy.Service
 	suppliers  *supplier.Service
+	policies   *routepolicy.Service
 	httpServer *http.Server
 	listenAddr string
 	running    bool
@@ -48,6 +51,12 @@ func (a *App) startup(ctx context.Context) {
 		return
 	}
 	a.suppliers = suppliers
+	policies, err := routepolicy.NewService(root, suppliers)
+	if err != nil {
+		a.setLastError(err.Error())
+		return
+	}
+	a.policies = policies
 	if err := a.startProxy(); err != nil {
 		a.setLastError(err.Error())
 	}
@@ -98,6 +107,23 @@ func (a *App) DeleteSupplier(id string) ([]supplier.Record, error) {
 		return nil, err
 	}
 	return a.suppliers.List(), nil
+}
+
+func (a *App) ListRoutePolicies() []routepolicy.Record {
+	if a.policies == nil {
+		return nil
+	}
+	return a.policies.List()
+}
+
+func (a *App) SaveRoutePolicy(input routepolicy.UpsertInput) ([]routepolicy.Record, error) {
+	if a.policies == nil {
+		return nil, context.Canceled
+	}
+	if _, err := a.policies.Upsert(input); err != nil {
+		return nil, err
+	}
+	return a.policies.List(), nil
 }
 
 func (a *App) State() api.State {
@@ -152,11 +178,12 @@ func (a *App) State() api.State {
 			"The desktop app starts the local proxy automatically during startup.",
 		},
 		Checks: map[string]interface{}{
-			"proxy_running":       a.running,
-			"anthropic_ready":     strings.TrimSpace(a.cfg.AnthropicAPIKey) != "",
-			"openai_ready":        strings.TrimSpace(a.cfg.OpenAIApiKey) != "",
-			"route_catalog_ready": a.catalog != nil,
+			"proxy_running":        a.running,
+			"anthropic_ready":      strings.TrimSpace(a.cfg.AnthropicAPIKey) != "",
+			"openai_ready":         strings.TrimSpace(a.cfg.OpenAIApiKey) != "",
+			"route_catalog_ready":  a.catalog != nil,
 			"supplier_store_ready": a.suppliers != nil,
+			"route_policy_ready":   a.policies != nil,
 		},
 	}
 	if a.catalog != nil {
@@ -178,11 +205,30 @@ func (a *App) State() api.State {
 	if a.service != nil {
 		state.RecentRequests = a.service.RecentRequests()
 	}
+	if a.policies != nil {
+		for _, policy := range a.policies.List() {
+			state.RoutePolicies = append(state.RoutePolicies, api.RoutePolicyView{
+				ID:                 policy.ID,
+				DownstreamProtocol: policy.DownstreamProtocol,
+				SupplierID:         policy.SupplierID,
+				SupplierName:       policy.SupplierName,
+				UpstreamProtocol:   policy.UpstreamProtocol,
+				TargetModel:        policy.TargetModel,
+				Enabled:            policy.Enabled,
+				UpdatedAt:          policy.UpdatedAt,
+				CreatedAt:          policy.CreatedAt,
+			})
+		}
+	}
 	return state
 }
 
 func (a *App) startProxy() error {
 	cfg, err := config.Load(a.root)
+	if err != nil {
+		return err
+	}
+	cfg, err = bootstrap.ApplyRoutePolicies(cfg, a.suppliers, a.policies)
 	if err != nil {
 		return err
 	}
@@ -261,6 +307,7 @@ func stateToMap(state api.State) map[string]interface{} {
 		"defaults":                    state.Defaults,
 		"aliases":                     state.Aliases,
 		"upstreams":                   state.Upstreams,
+		"route_policies":              state.RoutePolicies,
 		"recent_requests":             state.RecentRequests,
 		"notes":                       state.Notes,
 		"checks":                      state.Checks,

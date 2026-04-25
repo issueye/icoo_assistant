@@ -149,6 +149,87 @@
         </form>
       </PanelBlock>
     </div>
+
+    <div class="grid gap-6 xl:grid-cols-[1fr_1fr]">
+      <PanelBlock title="Default Route Policies" eyebrow="Gateway Routing">
+        <div class="space-y-3">
+          <article
+            v-for="policy in store.policies"
+            :key="policy.id"
+            class="rounded-3xl border border-white/10 bg-ink-900/70 p-4"
+          >
+            <div class="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <p class="text-sm font-semibold">{{ policy.downstream_protocol }}</p>
+                <p class="mt-1 text-xs text-slate-400">{{ policy.supplier_name || "Unassigned" }} | {{ policy.upstream_protocol || "-" }}</p>
+              </div>
+              <button
+                class="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs font-semibold hover:border-white/20 hover:bg-white/10"
+                @click="store.selectPolicy(policy)"
+              >
+                Edit Policy
+              </button>
+            </div>
+            <div class="mt-3 flex flex-wrap gap-2">
+              <code class="rounded-full bg-black/20 px-3 py-1 font-mono text-xs">{{ policy.target_model || "No model" }}</code>
+              <span
+                class="rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em]"
+                :class="policy.enabled ? 'bg-signal-mint/15 text-signal-mint' : 'bg-signal-coral/15 text-signal-coral'"
+              >
+                {{ policy.enabled ? "enabled" : "disabled" }}
+              </span>
+            </div>
+          </article>
+        </div>
+      </PanelBlock>
+
+      <PanelBlock title="Route Policy Form" eyebrow="Default Binding">
+        <form class="space-y-4" @submit.prevent="store.savePolicy">
+          <div class="grid gap-4 md:grid-cols-2">
+            <FieldLabel label="Downstream Protocol">
+              <select v-model="store.policyForm.downstream_protocol" class="field-input">
+                <option value="anthropic">anthropic</option>
+                <option value="openai-chat">openai-chat</option>
+                <option value="openai-responses">openai-responses</option>
+              </select>
+            </FieldLabel>
+            <FieldLabel label="Supplier">
+              <select v-model="store.policyForm.supplier_id" class="field-input">
+                <option value="">Select supplier</option>
+                <option v-for="supplier in store.items" :key="supplier.id" :value="supplier.id">
+                  {{ supplier.name }} ({{ supplier.protocol }})
+                </option>
+              </select>
+            </FieldLabel>
+          </div>
+
+          <FieldLabel label="Target Model">
+            <input v-model="store.policyForm.target_model" class="field-input" placeholder="gpt-4.1-mini or claude-sonnet-4" />
+          </FieldLabel>
+
+          <label class="flex items-center gap-3 rounded-2xl border border-white/10 bg-black/10 px-4 py-3 text-sm text-slate-200">
+            <input v-model="store.policyForm.enabled" type="checkbox" class="h-4 w-4 rounded border-white/20 bg-black/20 text-signal-mint" />
+            Enable this route policy
+          </label>
+
+          <div class="flex flex-wrap gap-3">
+            <button
+              class="rounded-full bg-signal-amber px-5 py-3 text-sm font-semibold text-ink-950 transition hover:-translate-y-0.5 disabled:cursor-progress disabled:opacity-70"
+              :disabled="store.saving"
+            >
+              {{ store.saving ? "Saving..." : "Save Route Policy" }}
+            </button>
+            <button
+              type="button"
+              class="rounded-full border border-white/10 bg-white/5 px-5 py-3 text-sm font-semibold hover:border-white/20 hover:bg-white/10"
+              @click="store.resetPolicyForm"
+            >
+              Reset Policy Form
+            </button>
+          </div>
+        </form>
+      </PanelBlock>
+    </div>
   </section>
 </template>
 

@@ -94,6 +94,31 @@
         </PanelBlock>
       </div>
 
+      <PanelBlock title="Default Route Policies" eyebrow="Supplier Binding">
+        <div v-if="!(store.data?.route_policies || []).length" class="rounded-3xl border border-white/10 bg-black/20 px-4 py-8 text-center text-sm text-slate-400">
+          No route policies configured yet.
+        </div>
+        <div v-else class="grid gap-3 lg:grid-cols-3">
+          <article
+            v-for="policy in store.data?.route_policies || []"
+            :key="policy.id"
+            class="rounded-3xl border border-white/10 bg-ink-900/70 p-4"
+          >
+            <div class="flex items-center justify-between gap-3">
+              <p class="text-sm font-semibold">{{ policy.downstream_protocol }}</p>
+              <span
+                class="rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em]"
+                :class="policy.enabled ? 'bg-signal-mint/15 text-signal-mint' : 'bg-signal-coral/15 text-signal-coral'"
+              >
+                {{ policy.enabled ? "active" : "inactive" }}
+              </span>
+            </div>
+            <p class="mt-3 text-sm text-slate-300">{{ policy.supplier_name || "Unassigned supplier" }}</p>
+            <p class="mt-1 text-xs text-slate-400">{{ policy.upstream_protocol || "-" }} | {{ policy.target_model || "-" }}</p>
+          </article>
+        </div>
+      </PanelBlock>
+
       <PanelBlock title="Recent Requests" eyebrow="Traffic">
         <div v-if="store.requests.length === 0" class="rounded-3xl border border-white/10 bg-black/20 px-4 py-8 text-center text-sm text-slate-400">
           No requests recorded yet.
