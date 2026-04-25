@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -16,6 +17,7 @@ type Config struct {
 	WriteTimeout              time.Duration
 	ShutdownTimeout           time.Duration
 	ProxyAPIKey               string
+	ProxyAPIKeys              []string
 	AllowUnauthenticatedLocal bool
 	AnthropicBaseURL          string
 	AnthropicAPIKey           string
@@ -39,6 +41,7 @@ func Load(workdir string) (Config, error) {
 		WriteTimeout:              durationFromEnv("PROXY_WRITE_TIMEOUT_SECONDS", 300*time.Second),
 		ShutdownTimeout:           durationFromEnv("PROXY_SHUTDOWN_TIMEOUT_SECONDS", 10*time.Second),
 		ProxyAPIKey:               strings.TrimSpace(os.Getenv("PROXY_API_KEY")),
+		ProxyAPIKeys:              csvFromEnv("PROXY_API_KEYS"),
 		AllowUnauthenticatedLocal: boolFromEnv("PROXY_ALLOW_UNAUTHENTICATED_LOCAL", true),
 		AnthropicBaseURL:          strings.TrimSpace(os.Getenv("ANTHROPIC_BASE_URL")),
 		AnthropicAPIKey:           strings.TrimSpace(os.Getenv("ANTHROPIC_API_KEY")),
@@ -63,6 +66,19 @@ func Load(workdir string) (Config, error) {
 		cfg.AnthropicVersion = "2023-06-01"
 	}
 	return cfg, nil
+}
+
+func (c Config) AuthKeys() []string {
+	values := make([]string, 0, len(c.ProxyAPIKeys)+1)
+	for _, item := range append([]string{c.ProxyAPIKey}, c.ProxyAPIKeys...) {
+		for _, part := range strings.Split(item, ",") {
+			value := strings.TrimSpace(part)
+			if value != "" && !slices.Contains(values, value) {
+				values = append(values, value)
+			}
+		}
+	}
+	return values
 }
 
 func (c Config) Addr() string {
@@ -124,6 +140,21 @@ func boolFromEnv(key string, fallback bool) bool {
 	default:
 		return fallback
 	}
+}
+
+func csvFromEnv(key string) []string {
+	raw := strings.TrimSpace(os.Getenv(key))
+	if raw == "" {
+		return nil
+	}
+	values := make([]string, 0)
+	for _, part := range strings.Split(raw, ",") {
+		value := strings.TrimSpace(part)
+		if value != "" && !slices.Contains(values, value) {
+			values = append(values, value)
+		}
+	}
+	return values
 }
 
 func durationFromEnv(key string, fallback time.Duration) time.Duration {

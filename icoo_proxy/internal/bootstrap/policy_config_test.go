@@ -14,6 +14,7 @@ func TestApplyRoutePolicies(t *testing.T) {
 	if err != nil {
 		t.Fatalf("new suppliers: %v", err)
 	}
+	t.Cleanup(func() { _ = suppliers.Close() })
 	record, err := suppliers.Upsert(supplier.UpsertInput{
 		Name:     "Test OpenAI",
 		Protocol: "openai-responses",
@@ -29,6 +30,7 @@ func TestApplyRoutePolicies(t *testing.T) {
 	if err != nil {
 		t.Fatalf("new policies: %v", err)
 	}
+	t.Cleanup(func() { _ = policies.Close() })
 	if _, err := policies.Upsert(routepolicy.UpsertInput{
 		DownstreamProtocol: "openai-chat",
 		SupplierID:         record.ID,

@@ -9,9 +9,11 @@ import (
 	"sync"
 
 	"icoo_proxy/internal/api"
+	"icoo_proxy/internal/authkey"
 	"icoo_proxy/internal/bootstrap"
 	"icoo_proxy/internal/catalog"
 	"icoo_proxy/internal/config"
+	"icoo_proxy/internal/endpoint"
 	"icoo_proxy/internal/proxy"
 	"icoo_proxy/internal/routepolicy"
 	"icoo_proxy/internal/server"
@@ -25,9 +27,11 @@ type App struct {
 	cfg        config.Config
 	catalog    *catalog.Catalog
 	service    *proxy.Service
+	authKeys   *authkey.Service
 	suppliers  *supplier.Service
 	health     *supplier.HealthService
 	policies   *routepolicy.Service
+	endpoints  *endpoint.Service
 	httpServer *http.Server
 	listenAddr string
 	running    bool
@@ -59,6 +63,18 @@ func (a *App) startup(ctx context.Context) {
 		return
 	}
 	a.policies = policies
+	endpoints, err := endpoint.NewService(root)
+	if err != nil {
+		a.setLastError(err.Error())
+		return
+	}
+	a.endpoints = endpoints
+	authKeys, err := authkey.NewService(root)
+	if err != nil {
+		a.setLastError(err.Error())
+		return
+	}
+	a.authKeys = authKeys
 	if err := a.startProxy(); err != nil {
 		a.setLastError(err.Error())
 	}
@@ -66,6 +82,18 @@ func (a *App) startup(ctx context.Context) {
 
 func (a *App) shutdown(ctx context.Context) {
 	_ = a.stopProxy(ctx)
+	if a.endpoints != nil {
+		_ = a.endpoints.Close()
+	}
+	if a.authKeys != nil {
+		_ = a.authKeys.Close()
+	}
+	if a.policies != nil {
+		_ = a.policies.Close()
+	}
+	if a.suppliers != nil {
+		_ = a.suppliers.Close()
+	}
 }
 
 func (a *App) GetOverview() map[string]interface{} {
@@ -145,6 +173,60 @@ func (a *App) SaveRoutePolicy(input routepolicy.UpsertInput) ([]routepolicy.Reco
 	return a.policies.List(), nil
 }
 
+func (a *App) ListEndpoints() []endpoint.Record {
+	if a.endpoints == nil {
+		return nil
+	}
+	return a.endpoints.List()
+}
+
+func (a *App) SaveEndpoint(input endpoint.UpsertInput) ([]endpoint.Record, error) {
+	if a.endpoints == nil {
+		return nil, context.Canceled
+	}
+	if _, err := a.endpoints.Upsert(input); err != nil {
+		return nil, err
+	}
+	return a.endpoints.List(), nil
+}
+
+func (a *App) DeleteEndpoint(id string) ([]endpoint.Record, error) {
+	if a.endpoints == nil {
+		return nil, context.Canceled
+	}
+	if err := a.endpoints.Delete(id); err != nil {
+		return nil, err
+	}
+	return a.endpoints.List(), nil
+}
+
+func (a *App) ListAuthKeys() []authkey.Record {
+	if a.authKeys == nil {
+		return nil
+	}
+	return a.authKeys.List()
+}
+
+func (a *App) SaveAuthKey(input authkey.UpsertInput) ([]authkey.Record, error) {
+	if a.authKeys == nil {
+		return nil, context.Canceled
+	}
+	if _, err := a.authKeys.Upsert(input); err != nil {
+		return nil, err
+	}
+	return a.authKeys.List(), nil
+}
+
+func (a *App) DeleteAuthKey(id string) ([]authkey.Record, error) {
+	if a.authKeys == nil {
+		return nil, context.Canceled
+	}
+	if err := a.authKeys.Delete(id); err != nil {
+		return nil, err
+	}
+	return a.authKeys.List(), nil
+}
+
 func (a *App) State() api.State {
 	a.mu.RLock()
 	defer a.mu.RUnlock()
@@ -156,21 +238,16 @@ func (a *App) State() api.State {
 		ListenAddr:                a.listenAddr,
 		ProxyURL:                  proxyURL(a.listenAddr),
 		LastError:                 a.lastError,
-		AuthRequired:              strings.TrimSpace(a.cfg.ProxyAPIKey) != "",
+		AuthRequired:              len(a.cfg.AuthKeys()) > 0,
+		AuthKeyCount:              len(a.cfg.AuthKeys()),
 		AllowUnauthenticatedLocal: a.cfg.AllowUnauthenticatedLocal,
-		SupportedPaths: []string{
+		SupportedPaths: append([]string{
 			"/healthz",
 			"/readyz",
 			"/admin/models",
 			"/admin/routes",
 			"/admin/requests",
-			"/v1/messages",
-			"/anthropic/v1/messages",
-			"/v1/chat/completions",
-			"/openai/v1/chat/completions",
-			"/v1/responses",
-			"/openai/v1/responses",
-		},
+		}, a.enabledEndpointPathsLocked()...),
 		Upstreams: []api.UpstreamView{
 			{
 				Protocol:   string(catalog.ProtocolAnthropic),
@@ -204,6 +281,8 @@ func (a *App) State() api.State {
 			"route_catalog_ready":  a.catalog != nil,
 			"supplier_store_ready": a.suppliers != nil,
 			"route_policy_ready":   a.policies != nil,
+			"endpoint_store_ready": a.endpoints != nil,
+			"auth_key_store_ready": a.authKeys != nil,
 		},
 	}
 	if a.catalog != nil {
@@ -224,6 +303,20 @@ func (a *App) State() api.State {
 	}
 	if a.service != nil {
 		state.RecentRequests = a.service.RecentRequests()
+	}
+	if a.endpoints != nil {
+		for _, item := range a.endpoints.List() {
+			state.Endpoints = append(state.Endpoints, api.EndpointView{
+				ID:          item.ID,
+				Path:        item.Path,
+				Protocol:    item.Protocol,
+				Description: item.Description,
+				Enabled:     item.Enabled,
+				BuiltIn:     item.BuiltIn,
+				UpdatedAt:   item.UpdatedAt,
+				CreatedAt:   item.CreatedAt,
+			})
+		}
 	}
 	if a.policies != nil {
 		for _, policy := range a.policies.List() {
@@ -252,12 +345,15 @@ func (a *App) startProxy() error {
 	if err != nil {
 		return err
 	}
+	if a.authKeys != nil {
+		cfg.ProxyAPIKeys = authkey.MergeSecrets(cfg.ProxyAPIKey, append(cfg.ProxyAPIKeys, a.authKeys.EnabledSecrets()...))
+	}
 	cat, err := catalog.New(cfg)
 	if err != nil {
 		return err
 	}
 	service := proxy.New(cfg, cat)
-	handler := api.NewMux(a, service)
+	handler := api.NewMux(a, service, a.endpointRoutes())
 	srv := server.New(cfg, handler)
 	listener, err := net.Listen("tcp", cfg.Addr())
 	if err != nil {
@@ -281,6 +377,52 @@ func (a *App) startProxy() error {
 		}
 	}()
 	return nil
+}
+
+func (a *App) endpointRoutes() []api.EndpointRoute {
+	if a.endpoints == nil {
+		return defaultEndpointRoutes()
+	}
+	records := a.endpoints.Enabled()
+	routes := make([]api.EndpointRoute, 0, len(records))
+	for _, item := range records {
+		protocol := catalog.Protocol(item.Protocol)
+		switch protocol {
+		case catalog.ProtocolAnthropic, catalog.ProtocolOpenAIChat, catalog.ProtocolOpenAIResponse:
+			routes = append(routes, api.EndpointRoute{
+				Path:     item.Path,
+				Protocol: protocol,
+			})
+		}
+	}
+	return routes
+}
+
+func (a *App) enabledEndpointPathsLocked() []string {
+	if a.endpoints == nil {
+		paths := make([]string, 0, len(defaultEndpointRoutes()))
+		for _, route := range defaultEndpointRoutes() {
+			paths = append(paths, route.Path)
+		}
+		return paths
+	}
+	items := a.endpoints.Enabled()
+	paths := make([]string, 0, len(items))
+	for _, item := range items {
+		paths = append(paths, item.Path)
+	}
+	return paths
+}
+
+func defaultEndpointRoutes() []api.EndpointRoute {
+	return []api.EndpointRoute{
+		{Path: "/v1/messages", Protocol: catalog.ProtocolAnthropic},
+		{Path: "/anthropic/v1/messages", Protocol: catalog.ProtocolAnthropic},
+		{Path: "/v1/chat/completions", Protocol: catalog.ProtocolOpenAIChat},
+		{Path: "/openai/v1/chat/completions", Protocol: catalog.ProtocolOpenAIChat},
+		{Path: "/v1/responses", Protocol: catalog.ProtocolOpenAIResponse},
+		{Path: "/openai/v1/responses", Protocol: catalog.ProtocolOpenAIResponse},
+	}
 }
 
 func (a *App) stopProxy(ctx context.Context) error {
@@ -322,11 +464,13 @@ func stateToMap(state api.State) map[string]interface{} {
 		"proxy_url":                   state.ProxyURL,
 		"last_error":                  state.LastError,
 		"auth_required":               state.AuthRequired,
+		"auth_key_count":              state.AuthKeyCount,
 		"allow_unauthenticated_local": state.AllowUnauthenticatedLocal,
 		"supported_paths":             state.SupportedPaths,
 		"defaults":                    state.Defaults,
 		"aliases":                     state.Aliases,
 		"upstreams":                   state.Upstreams,
+		"endpoints":                   state.Endpoints,
 		"route_policies":              state.RoutePolicies,
 		"recent_requests":             state.RecentRequests,
 		"notes":                       state.Notes,

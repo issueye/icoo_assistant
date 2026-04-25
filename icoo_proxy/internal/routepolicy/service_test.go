@@ -24,6 +24,7 @@ func TestUpsertAndList(t *testing.T) {
 	if err != nil {
 		t.Fatalf("new service: %v", err)
 	}
+	t.Cleanup(func() { _ = svc.Close() })
 	items := svc.List()
 	if len(items) != 3 {
 		t.Fatalf("expected seeded policies, got %d", len(items))

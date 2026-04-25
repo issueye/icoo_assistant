@@ -265,18 +265,18 @@ func (s *Service) Handle(w http.ResponseWriter, r *http.Request, downstream cata
 }
 
 func (s *Service) authorize(r *http.Request) error {
-	expected := strings.TrimSpace(s.cfg.ProxyAPIKey)
-	if expected == "" && s.cfg.AllowUnauthenticatedLocal {
+	expected := s.cfg.AuthKeys()
+	if len(expected) == 0 && s.cfg.AllowUnauthenticatedLocal {
 		return nil
 	}
-	if expected == "" {
+	if len(expected) == 0 {
 		return fmt.Errorf("proxy api key is required")
 	}
-	if strings.TrimSpace(r.Header.Get("x-api-key")) == expected {
+	if slices.Contains(expected, strings.TrimSpace(r.Header.Get("x-api-key"))) {
 		return nil
 	}
 	auth := strings.TrimSpace(r.Header.Get("Authorization"))
-	if strings.HasPrefix(strings.ToLower(auth), "bearer ") && strings.TrimSpace(auth[7:]) == expected {
+	if strings.HasPrefix(strings.ToLower(auth), "bearer ") && slices.Contains(expected, strings.TrimSpace(auth[7:])) {
 		return nil
 	}
 	return fmt.Errorf("invalid proxy api key")

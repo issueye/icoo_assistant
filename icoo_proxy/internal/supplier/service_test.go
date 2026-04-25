@@ -11,6 +11,7 @@ func TestUpsertListDelete(t *testing.T) {
 	if err != nil {
 		t.Fatalf("new service: %v", err)
 	}
+	t.Cleanup(func() { _ = svc.Close() })
 	initial := svc.List()
 	if len(initial) == 0 {
 		t.Fatalf("expected seeded suppliers")
@@ -57,6 +58,7 @@ func TestHealthCheck(t *testing.T) {
 	if err != nil {
 		t.Fatalf("new service: %v", err)
 	}
+	t.Cleanup(func() { _ = svc.Close() })
 	record, err := svc.Upsert(UpsertInput{
 		Name:     "Health Vendor",
 		Protocol: "openai-responses",

@@ -1,16 +1,15 @@
 package supplier
 
 import (
-	"encoding/json"
 	"fmt"
-	"os"
-	"path/filepath"
 	"slices"
 	"strings"
-	"sync"
 	"time"
 
+	"gorm.io/gorm"
+
 	"icoo_proxy/internal/routepolicy"
+	"icoo_proxy/internal/storage"
 )
 
 type Record struct {
@@ -27,18 +26,22 @@ type Record struct {
 	CreatedAt    string   `json:"created_at"`
 }
 
-type entry struct {
-	ID          string    `json:"id"`
-	Name        string    `json:"name"`
-	Protocol    string    `json:"protocol"`
-	BaseURL     string    `json:"base_url"`
-	APIKey      string    `json:"api_key"`
-	Enabled     bool      `json:"enabled"`
-	Description string    `json:"description"`
-	Models      []string  `json:"models"`
-	Tags        []string  `json:"tags"`
-	UpdatedAt   time.Time `json:"updated_at"`
-	CreatedAt   time.Time `json:"created_at"`
+type supplierModel struct {
+	ID          string `gorm:"primaryKey"`
+	Name        string `gorm:"index"`
+	Protocol    string
+	BaseURL     string
+	APIKey      string
+	Enabled     bool
+	Description string
+	Models      string
+	Tags        string
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
+}
+
+func (supplierModel) TableName() string {
+	return "suppliers"
 }
 
 type UpsertInput struct {
@@ -54,57 +57,57 @@ type UpsertInput struct {
 }
 
 type Service struct {
-	mu      sync.RWMutex
-	rootDir string
-	path    string
-	items   []entry
+	db *gorm.DB
 }
 
 func NewService(root string) (*Service, error) {
-	storeDir := filepath.Join(root, ".suppliers")
-	if err := os.MkdirAll(storeDir, 0o755); err != nil {
+	db, err := storage.Open(root)
+	if err != nil {
 		return nil, err
 	}
-	svc := &Service{
-		rootDir: storeDir,
-		path:    filepath.Join(storeDir, "suppliers.json"),
+	if err := db.AutoMigrate(&supplierModel{}); err != nil {
+		return nil, err
 	}
-	if err := svc.load(); err != nil {
+	svc := &Service{db: db}
+	if err := svc.seedDefaults(); err != nil {
 		return nil, err
 	}
 	return svc, nil
 }
 
+func (s *Service) Close() error {
+	sqlDB, err := s.db.DB()
+	if err != nil {
+		return err
+	}
+	return sqlDB.Close()
+}
+
 func (s *Service) List() []Record {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	items := make([]Record, 0, len(s.items))
-	for _, item := range s.items {
+	var rows []supplierModel
+	if err := s.db.Order("lower(name) asc").Find(&rows).Error; err != nil {
+		return nil
+	}
+	items := make([]Record, 0, len(rows))
+	for _, item := range rows {
 		items = append(items, toRecord(item))
 	}
-	slices.SortFunc(items, func(a, b Record) int {
-		return strings.Compare(strings.ToLower(a.Name), strings.ToLower(b.Name))
-	})
 	return items
 }
 
 func (s *Service) Resolve(id string) (routepolicy.SupplierSnapshot, bool) {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	for _, item := range s.items {
-		if item.ID != strings.TrimSpace(id) {
-			continue
-		}
-		return routepolicy.SupplierSnapshot{
-			ID:        item.ID,
-			Name:      item.Name,
-			Protocol:  item.Protocol,
-			BaseURL:   item.BaseURL,
-			APIKey:    item.APIKey,
-			IsEnabled: item.Enabled,
-		}, true
+	var item supplierModel
+	if err := s.db.First(&item, "id = ?", strings.TrimSpace(id)).Error; err != nil {
+		return routepolicy.SupplierSnapshot{}, false
 	}
-	return routepolicy.SupplierSnapshot{}, false
+	return routepolicy.SupplierSnapshot{
+		ID:        item.ID,
+		Name:      item.Name,
+		Protocol:  item.Protocol,
+		BaseURL:   item.BaseURL,
+		APIKey:    item.APIKey,
+		IsEnabled: item.Enabled,
+	}, true
 }
 
 func (s *Service) Upsert(input UpsertInput) (Record, error) {
@@ -121,49 +124,37 @@ func (s *Service) Upsert(input UpsertInput) (Record, error) {
 		return Record{}, fmt.Errorf("supplier base_url is required")
 	}
 
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
 	now := time.Now()
 	id := strings.TrimSpace(input.ID)
-	index := -1
-	for i, item := range s.items {
-		if item.ID == id && id != "" {
-			index = i
-			break
-		}
+	var existing supplierModel
+	found := false
+	if id != "" {
+		found = s.db.Limit(1).Find(&existing, "id = ?", id).RowsAffected > 0
 	}
 
-	current := entry{
+	current := supplierModel{
 		ID:          generateID(name),
-		CreatedAt:   now,
-		UpdatedAt:   now,
 		Name:        name,
 		Protocol:    protocol,
 		BaseURL:     baseURL,
 		APIKey:      strings.TrimSpace(input.APIKey),
 		Enabled:     input.Enabled,
 		Description: strings.TrimSpace(input.Description),
-		Models:      splitCSVLike(input.Models),
-		Tags:        splitCSVLike(input.Tags),
+		Models:      strings.Join(splitCSVLike(input.Models), ","),
+		Tags:        strings.Join(splitCSVLike(input.Tags), ","),
+		CreatedAt:   now,
+		UpdatedAt:   now,
 	}
-
-	if index >= 0 {
-		existing := s.items[index]
+	if found {
 		current.ID = existing.ID
 		current.CreatedAt = existing.CreatedAt
 		if strings.TrimSpace(input.APIKey) == "" {
 			current.APIKey = existing.APIKey
 		}
-		s.items[index] = current
-	} else {
-		if id != "" {
-			current.ID = id
-		}
-		s.items = append(s.items, current)
+	} else if id != "" {
+		current.ID = id
 	}
-
-	if err := s.saveLocked(); err != nil {
+	if err := s.db.Save(&current).Error; err != nil {
 		return Record{}, err
 	}
 	return toRecord(current), nil
@@ -174,54 +165,33 @@ func (s *Service) Delete(id string) error {
 	if id == "" {
 		return fmt.Errorf("supplier id is required")
 	}
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	index := -1
-	for i, item := range s.items {
-		if item.ID == id {
-			index = i
-			break
-		}
+	result := s.db.Delete(&supplierModel{}, "id = ?", id)
+	if result.Error != nil {
+		return result.Error
 	}
-	if index < 0 {
+	if result.RowsAffected == 0 {
 		return fmt.Errorf("supplier not found")
 	}
-	s.items = append(s.items[:index], s.items[index+1:]...)
-	return s.saveLocked()
-}
-
-func (s *Service) load() error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	data, err := os.ReadFile(s.path)
-	if err != nil {
-		if os.IsNotExist(err) {
-			s.items = defaultSuppliers()
-			return s.saveLocked()
-		}
-		return err
-	}
-	if len(data) == 0 {
-		s.items = defaultSuppliers()
-		return s.saveLocked()
-	}
-	var items []entry
-	if err := json.Unmarshal(data, &items); err != nil {
-		return err
-	}
-	s.items = items
 	return nil
 }
 
-func (s *Service) saveLocked() error {
-	data, err := json.MarshalIndent(s.items, "", "  ")
-	if err != nil {
+func (s *Service) seedDefaults() error {
+	var count int64
+	if err := s.db.Model(&supplierModel{}).Count(&count).Error; err != nil {
 		return err
 	}
-	return os.WriteFile(s.path, data, 0o644)
+	if count > 0 {
+		return nil
+	}
+	for _, item := range defaultSuppliers() {
+		if err := s.db.Create(&item).Error; err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
-func toRecord(item entry) Record {
+func toRecord(item supplierModel) Record {
 	return Record{
 		ID:           item.ID,
 		Name:         item.Name,
@@ -230,8 +200,8 @@ func toRecord(item entry) Record {
 		APIKeyMasked: maskSecret(item.APIKey),
 		Enabled:      item.Enabled,
 		Description:  item.Description,
-		Models:       slices.Clone(item.Models),
-		Tags:         slices.Clone(item.Tags),
+		Models:       slices.Clone(splitCSVLike(item.Models)),
+		Tags:         slices.Clone(splitCSVLike(item.Tags)),
 		UpdatedAt:    item.UpdatedAt.Format(time.RFC3339),
 		CreatedAt:    item.CreatedAt.Format(time.RFC3339),
 	}
@@ -282,9 +252,9 @@ func generateID(name string) string {
 	return fmt.Sprintf("%s-%d", base, time.Now().UnixNano())
 }
 
-func defaultSuppliers() []entry {
+func defaultSuppliers() []supplierModel {
 	now := time.Now()
-	return []entry{
+	return []supplierModel{
 		{
 			ID:          "anthropic-default",
 			Name:        "Anthropic Default",
@@ -292,8 +262,8 @@ func defaultSuppliers() []entry {
 			BaseURL:     "https://api.anthropic.com",
 			Enabled:     true,
 			Description: "Default Anthropic upstream profile for local gateway routing.",
-			Models:      []string{"claude-sonnet-4", "claude-opus-4"},
-			Tags:        []string{"official", "text"},
+			Models:      "claude-sonnet-4,claude-opus-4",
+			Tags:        "official,text",
 			CreatedAt:   now,
 			UpdatedAt:   now,
 		},
@@ -304,8 +274,8 @@ func defaultSuppliers() []entry {
 			BaseURL:     "https://api.openai.com",
 			Enabled:     true,
 			Description: "Default OpenAI Responses profile for cross-protocol routing.",
-			Models:      []string{"gpt-4.1", "gpt-4.1-mini"},
-			Tags:        []string{"official", "responses"},
+			Models:      "gpt-4.1,gpt-4.1-mini",
+			Tags:        "official,responses",
 			CreatedAt:   now,
 			UpdatedAt:   now,
 		},

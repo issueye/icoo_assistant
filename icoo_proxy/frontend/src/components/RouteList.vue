@@ -8,12 +8,14 @@
         <p class="text-sm font-medium text-slate-900">{{ item.name }}</p>
         <p class="mt-1 text-xs text-slate-500">{{ item.upstream }}</p>
       </div>
-      <code class="mono-chip">{{ item.model }}</code>
+      <UTag code>{{ item.model }}</UTag>
     </article>
   </div>
 </template>
 
 <script setup>
+import UTag from "./ued/UTag.vue";
+
 defineProps({
   items: {
     type: Array,

@@ -35,3 +35,20 @@ func TestLoadUsesEnvFileAndDefaults(t *testing.T) {
 		t.Fatalf("expected openai key from env file, got %q", cfg.OpenAIApiKey)
 	}
 }
+
+func TestAuthKeysMergesLegacyAndListValues(t *testing.T) {
+	cfg := Config{
+		ProxyAPIKey:  "alpha",
+		ProxyAPIKeys: []string{"beta,gamma", "alpha", " gamma "},
+	}
+	got := cfg.AuthKeys()
+	want := []string{"alpha", "beta", "gamma"}
+	if len(got) != len(want) {
+		t.Fatalf("expected %#v, got %#v", want, got)
+	}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Fatalf("expected %#v, got %#v", want, got)
+		}
+	}
+}

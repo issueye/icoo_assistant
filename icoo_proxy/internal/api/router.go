@@ -15,11 +15,13 @@ type State struct {
 	ProxyURL                  string                 `json:"proxy_url,omitempty"`
 	LastError                 string                 `json:"last_error,omitempty"`
 	AuthRequired              bool                   `json:"auth_required"`
+	AuthKeyCount              int                    `json:"auth_key_count"`
 	AllowUnauthenticatedLocal bool                   `json:"allow_unauthenticated_local"`
 	SupportedPaths            []string               `json:"supported_paths"`
 	Defaults                  []RouteView            `json:"defaults"`
 	Aliases                   []RouteView            `json:"aliases"`
 	Upstreams                 []UpstreamView         `json:"upstreams"`
+	Endpoints                 []EndpointView         `json:"endpoints"`
 	RoutePolicies             []RoutePolicyView      `json:"route_policies"`
 	RecentRequests            []RequestView          `json:"recent_requests"`
 	Notes                     []string               `json:"notes"`
@@ -61,6 +63,17 @@ type RoutePolicyView struct {
 	CreatedAt          string `json:"created_at"`
 }
 
+type EndpointView struct {
+	ID          string `json:"id"`
+	Path        string `json:"path"`
+	Protocol    string `json:"protocol"`
+	Description string `json:"description"`
+	Enabled     bool   `json:"enabled"`
+	BuiltIn     bool   `json:"built_in"`
+	UpdatedAt   string `json:"updated_at"`
+	CreatedAt   string `json:"created_at"`
+}
+
 type StateProvider interface {
 	State() State
 }
@@ -69,7 +82,12 @@ type ProxyHandler interface {
 	Handle(w http.ResponseWriter, r *http.Request, downstream catalog.Protocol)
 }
 
-func NewMux(provider StateProvider, proxy ProxyHandler) http.Handler {
+type EndpointRoute struct {
+	Path     string
+	Protocol catalog.Protocol
+}
+
+func NewMux(provider StateProvider, proxy ProxyHandler, endpoints []EndpointRoute) http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusOK, provider.State())
@@ -110,24 +128,12 @@ func NewMux(provider StateProvider, proxy ProxyHandler) http.Handler {
 			"items": provider.State().RecentRequests,
 		})
 	})
-	mux.HandleFunc("/v1/messages", func(w http.ResponseWriter, r *http.Request) {
-		proxy.Handle(w, r, catalog.ProtocolAnthropic)
-	})
-	mux.HandleFunc("/anthropic/v1/messages", func(w http.ResponseWriter, r *http.Request) {
-		proxy.Handle(w, r, catalog.ProtocolAnthropic)
-	})
-	mux.HandleFunc("/v1/chat/completions", func(w http.ResponseWriter, r *http.Request) {
-		proxy.Handle(w, r, catalog.ProtocolOpenAIChat)
-	})
-	mux.HandleFunc("/openai/v1/chat/completions", func(w http.ResponseWriter, r *http.Request) {
-		proxy.Handle(w, r, catalog.ProtocolOpenAIChat)
-	})
-	mux.HandleFunc("/v1/responses", func(w http.ResponseWriter, r *http.Request) {
-		proxy.Handle(w, r, catalog.ProtocolOpenAIResponse)
-	})
-	mux.HandleFunc("/openai/v1/responses", func(w http.ResponseWriter, r *http.Request) {
-		proxy.Handle(w, r, catalog.ProtocolOpenAIResponse)
-	})
+	for _, endpoint := range endpoints {
+		route := endpoint
+		mux.HandleFunc(route.Path, func(w http.ResponseWriter, r *http.Request) {
+			proxy.Handle(w, r, route.Protocol)
+		})
+	}
 	return mux
 }
 

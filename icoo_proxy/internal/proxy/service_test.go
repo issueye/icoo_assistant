@@ -11,6 +11,56 @@ import (
 	"icoo_proxy/internal/config"
 )
 
+func TestHandleAcceptsConfiguredAuthKeyList(t *testing.T) {
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"id":"chatcmpl_123","choices":[{"index":0,"message":{"role":"assistant","content":"ok"},"finish_reason":"stop"}]}`))
+	}))
+	defer upstream.Close()
+
+	cfg := config.Config{
+		AllowUnauthenticatedLocal: false,
+		ProxyAPIKeys:              []string{"client-one", "client-two"},
+		OpenAIBaseURL:             upstream.URL,
+		OpenAIApiKey:              "test-openai-key",
+		DefaultChatRoute:          "openai-chat:gpt-test",
+	}
+	cat, err := catalog.New(cfg)
+	if err != nil {
+		t.Fatalf("new catalog: %v", err)
+	}
+	service := New(cfg, cat)
+
+	for _, header := range []string{"x-api-key", "Authorization"} {
+		req := httptest.NewRequest(http.MethodPost, "/v1/chat/completions", bytes.NewBufferString(`{"model":"gpt-test","messages":[{"role":"user","content":"hello"}]}`))
+		if header == "Authorization" {
+			req.Header.Set(header, "Bearer client-two")
+		} else {
+			req.Header.Set(header, "client-two")
+		}
+		rec := httptest.NewRecorder()
+
+		service.Handle(rec, req, catalog.ProtocolOpenAIChat)
+
+		if rec.Code != http.StatusOK {
+			t.Fatalf("%s expected status 200, got %d body=%s", header, rec.Code, rec.Body.String())
+		}
+	}
+
+	req := httptest.NewRequest(http.MethodPost, "/v1/chat/completions", bytes.NewBufferString(`{"model":"gpt-test","messages":[{"role":"user","content":"hello"}]}`))
+	req.Header.Set("x-api-key", "bad-key")
+	rec := httptest.NewRecorder()
+
+	service.Handle(rec, req, catalog.ProtocolOpenAIChat)
+
+	if rec.Code != http.StatusUnauthorized {
+		t.Fatalf("expected unauthorized, got %d body=%s", rec.Code, rec.Body.String())
+	}
+	if !bytes.Contains(rec.Body.Bytes(), []byte("invalid proxy api key")) {
+		t.Fatalf("expected invalid key error, got %s", rec.Body.String())
+	}
+}
+
 func TestHandleAnthropicPassthroughRewritesAliasModel(t *testing.T) {
 	var gotAuth string
 	var gotVersion string

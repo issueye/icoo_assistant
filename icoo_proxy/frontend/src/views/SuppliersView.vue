@@ -29,7 +29,14 @@
         </div>
         <div v-else class="table-shell">
           <div class="table-scroll">
-            <table class="admin-table">
+            <table class="admin-table admin-table-fixed supplier-table">
+              <colgroup>
+                <col style="width: 20%" />
+                <col style="width: 34%" />
+                <col style="width: 18%" />
+                <col style="width: 18%" />
+                <col style="width: 132px" />
+              </colgroup>
               <thead>
                 <tr>
                   <th>供应商</th>
@@ -44,46 +51,50 @@
                   <td>
                     <div class="flex items-center gap-2">
                       <p class="font-medium text-slate-900">{{ item.name }}</p>
-                      <span class="badge" :class="item.enabled ? 'badge-success' : 'badge-danger'">
+                      <UTag :variant="item.enabled ? 'success' : 'error'">
                         {{ item.enabled ? "启用" : "停用" }}
-                      </span>
+                      </UTag>
                     </div>
-                    <p class="mt-2 text-sm text-slate-600">{{ item.description || "暂无描述。" }}</p>
-                    <p class="mt-2 table-meta">更新时间：{{ formatCheckedAt(item.updated_at) }}</p>
+                    <p class="mt-1 text-sm leading-5 text-slate-600 supplier-table__text">
+                      {{ item.description || "暂无描述。" }}
+                    </p>
+                    <p class="mt-1 table-meta">更新时间：{{ formatCheckedAt(item.updated_at) }}</p>
                   </td>
                   <td>
                     <p class="font-medium text-slate-900">{{ item.protocol }}</p>
-                    <p class="mt-2 break-all table-meta">{{ item.base_url }}</p>
-                    <div class="mt-2">
-                      <code class="mono-chip">{{ item.api_key_masked || "未保存 API Key" }}</code>
+                    <p class="mt-1 break-all table-meta supplier-table__text">{{ item.base_url }}</p>
+                    <div class="mt-1">
+                      <UTag code>{{ item.api_key_masked || "未保存 API Key" }}</UTag>
                     </div>
                   </td>
                   <td>
                     <div class="flex flex-wrap gap-2">
-                      <span v-for="model in item.models || []" :key="model" class="tag-chip">
+                      <UTag v-for="model in item.models || []" :key="model" variant="info">
                         {{ model }}
-                      </span>
+                      </UTag>
                       <span v-if="!(item.models || []).length" class="table-meta">无模型</span>
                     </div>
-                    <div class="mt-2 flex flex-wrap gap-2">
-                      <span v-for="tag in item.tags || []" :key="tag" class="tag-chip">
+                    <div class="mt-1 flex flex-wrap gap-1.5">
+                      <UTag v-for="tag in item.tags || []" :key="tag">
                         #{{ tag }}
-                      </span>
+                      </UTag>
                     </div>
                   </td>
                   <td>
                     <template v-if="store.healthFor(item.id)">
                       <div class="flex flex-wrap items-center gap-2">
-                        <span class="badge" :class="healthTone(store.healthFor(item.id)).badge">
+                        <UTag :variant="healthTone(store.healthFor(item.id))">
                           {{ store.healthFor(item.id).status }}
-                        </span>
-                        <span class="tag-chip">{{ store.healthFor(item.id).duration_ms }} ms</span>
+                        </UTag>
+                        <UTag variant="info">{{ store.healthFor(item.id).duration_ms }} ms</UTag>
                       </div>
-                      <p class="mt-2 table-meta">
+                      <p class="mt-1 table-meta">
                         HTTP {{ store.healthFor(item.id).status_code || "无状态码" }}
                       </p>
-                      <p class="mt-2 text-sm text-slate-600">{{ store.healthFor(item.id).message }}</p>
-                      <p class="mt-2 table-meta">{{ formatCheckedAt(store.healthFor(item.id).checked_at) }}</p>
+                      <p class="mt-1 text-sm leading-5 text-slate-600 supplier-table__text">
+                        {{ store.healthFor(item.id).message }}
+                      </p>
+                      <p class="mt-1 table-meta">{{ formatCheckedAt(store.healthFor(item.id).checked_at) }}</p>
                     </template>
                     <span v-else class="table-meta">尚未检查</span>
                   </td>
@@ -93,7 +104,7 @@
                         {{ store.checking === item.id ? "检查中..." : "检查" }}
                       </button>
                       <button class="btn btn-secondary" @click="openSupplierEdit(item)">编辑</button>
-                      <button class="btn btn-danger" :disabled="store.deleting === item.id" @click="openDeleteConfirm(item)">
+                      <button class="btn btn-error" :disabled="store.deleting === item.id" @click="openDeleteConfirm(item)">
                         {{ store.deleting === item.id ? "删除中..." : "删除" }}
                       </button>
                     </div>
@@ -106,37 +117,42 @@
       </PanelBlock>
     </div>
 
-    <div class="section-grid xl:grid-cols-2">
-      <PanelBlock title="三条默认协议路由">
-        <div class="grid gap-3">
-          <article v-for="item in store.policiesByProtocol" :key="item.key" class="list-card">
-            <div class="flex flex-wrap items-start justify-between gap-3">
+    <div class="section-grid">
+      <PanelBlock title="默认路由配置">
+        <div class="divide-y divide-[#eeeeF2] rounded-lg border border-[#e8e8ee]">
+          <article v-for="item in store.policiesByProtocol" :key="item.key" class="grid gap-3 px-3 py-3 lg:grid-cols-[1.1fr_2fr_auto] lg:items-center">
+            <div class="flex items-start justify-between gap-3 lg:block">
               <div>
                 <p class="text-base font-medium text-slate-900">{{ item.label }}</p>
-                <p class="mt-2 text-sm text-slate-600">{{ item.description }}</p>
+                <p class="mt-1 text-xs leading-5 text-slate-500">{{ item.description }}</p>
               </div>
-              <span
-                class="badge"
-                :class="item.policy?.enabled ? 'badge-success' : 'badge-warning'"
-              >
-                {{ item.policy?.enabled ? "已启用" : "未启用" }}
-              </span>
+              <div class="lg:mt-2">
+                <UTag :variant="routeStatusVariant(item)">
+                  {{ routeStatusText(item) }}
+                </UTag>
+              </div>
             </div>
-            <div class="mt-3 grid gap-2 md:grid-cols-3">
-              <div class="sub-card">
+
+            <div class="grid gap-2 md:grid-cols-4">
+              <div>
                 <p class="table-meta">下游协议</p>
-                <p class="mt-2 font-medium text-slate-900">{{ item.key }}</p>
+                <div class="mt-1"><UTag code>{{ item.key }}</UTag></div>
               </div>
-              <div class="sub-card">
+              <div>
                 <p class="table-meta">供应商</p>
-                <p class="mt-2 font-medium text-slate-900">{{ item.policy?.supplier_name || "未分配" }}</p>
+                <p class="mt-1 truncate text-sm font-medium text-slate-900">{{ item.policy?.supplier_name || "未分配" }}</p>
               </div>
-              <div class="sub-card">
+              <div>
+                <p class="table-meta">上游协议</p>
+                <p class="mt-1 truncate text-sm text-slate-700">{{ item.policy?.upstream_protocol || "待选择" }}</p>
+              </div>
+              <div>
                 <p class="table-meta">目标模型</p>
-                <p class="mt-2 font-medium text-slate-900">{{ item.policy?.target_model || "未设置" }}</p>
+                <p class="mt-1 truncate text-sm font-medium text-slate-900">{{ item.policy?.target_model || "未设置" }}</p>
               </div>
             </div>
-            <div class="mt-3">
+
+            <div class="flex justify-end">
               <button
                 class="btn btn-secondary"
                 @click="item.policy ? openPolicyEdit(item.policy) : openPolicyCreate(item.key)"
@@ -146,52 +162,61 @@
             </div>
           </article>
         </div>
-      </PanelBlock>
 
-      <PanelBlock title="默认路由策略">
-        <div v-if="!store.policies.length" class="empty-state">
+        <div class="mt-4 border-t border-[#eeeeF2] pt-4">
+          <div class="mb-3 flex items-center justify-between gap-3">
+            <div>
+              <p class="text-sm font-medium text-slate-900">策略明细</p>
+              <p class="mt-1 text-xs text-slate-500">查看所有已保存的默认路由策略。</p>
+            </div>
+            <button class="btn btn-secondary" @click="openPolicyCreate">新建策略</button>
+          </div>
+
+          <div v-if="!store.policies.length" class="empty-state">
           当前尚未配置路由策略。
-        </div>
-        <div v-else class="table-shell">
-          <div class="table-scroll">
-            <table class="admin-table">
-              <thead>
-                <tr>
-                  <th>下游协议</th>
-                  <th>供应商</th>
-                  <th>上游 / 模型</th>
-                  <th>状态</th>
-                  <th>操作</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="policy in store.policies" :key="policy.id">
-                  <td>
-                    <p class="font-medium text-slate-900">{{ policy.downstream_protocol }}</p>
-                  </td>
-                  <td>
-                    <p class="text-sm text-slate-700">{{ policy.supplier_name || "未分配" }}</p>
-                    <p class="mt-1 table-meta">{{ policy.supplier_id || "-" }}</p>
-                  </td>
-                  <td>
-                    <p class="text-sm text-slate-700">{{ policy.upstream_protocol || "-" }}</p>
-                    <div class="mt-2">
-                      <code class="mono-chip">{{ policy.target_model || "无模型" }}</code>
-                    </div>
-                  </td>
-                  <td>
-                    <span class="badge" :class="policy.enabled ? 'badge-success' : 'badge-danger'">
-                      {{ policy.enabled ? "启用" : "停用" }}
-                    </span>
-                  </td>
-                  <td>
-                    <button class="btn btn-secondary" @click="openPolicyEdit(policy)">
-                      编辑策略
-                    </button>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+          </div>
+          <div v-else class="table-shell">
+            <div class="table-scroll">
+              <table class="admin-table">
+                <thead>
+                  <tr>
+                    <th>下游协议</th>
+                    <th>供应商</th>
+                    <th>上游协议</th>
+                    <th>目标模型</th>
+                    <th>状态</th>
+                    <th>操作</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="policy in store.policies" :key="policy.id">
+                    <td>
+                      <UTag code>{{ policy.downstream_protocol }}</UTag>
+                    </td>
+                    <td>
+                      <p class="text-sm font-medium text-slate-900">{{ policy.supplier_name || "未分配" }}</p>
+                      <p class="mt-1 table-meta">{{ policy.supplier_id || "-" }}</p>
+                    </td>
+                    <td>
+                      <UTag variant="info">{{ policy.upstream_protocol || "-" }}</UTag>
+                    </td>
+                    <td>
+                      <UTag code>{{ policy.target_model || "无模型" }}</UTag>
+                    </td>
+                    <td>
+                      <UTag :variant="policy.enabled ? 'success' : 'error'">
+                        {{ policy.enabled ? "启用" : "停用" }}
+                      </UTag>
+                    </td>
+                    <td>
+                      <button class="btn btn-secondary" @click="openPolicyEdit(policy)">
+                        编辑
+                      </button>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       </PanelBlock>
@@ -224,9 +249,32 @@
         </FieldLabel>
 
         <div class="grid gap-3 md:grid-cols-2">
-          <FieldLabel label="模型列表">
-            <input v-model="store.form.models" class="field-input" placeholder="gpt-4.1, gpt-4.1-mini" />
-          </FieldLabel>
+          <div class="space-y-2">
+            <div class="flex items-center justify-between gap-3">
+              <span class="text-sm font-medium text-slate-700">模型列表</span>
+              <button type="button" class="btn btn-secondary px-2 py-1 text-xs" @click="addModelRow">
+                添加模型
+              </button>
+            </div>
+            <div class="space-y-2">
+              <div v-for="(model, index) in store.form.models" :key="index" class="flex items-center gap-2">
+                <input
+                  :value="model"
+                  class="field-input"
+                  :placeholder="index === 0 ? '例如：gpt-4.1-mini' : '继续添加模型'"
+                  @input="updateModelRow(index, $event.target.value)"
+                />
+                <button
+                  type="button"
+                  class="btn btn-secondary shrink-0 px-2 py-2"
+                  :disabled="store.form.models.length === 1"
+                  @click="removeModelRow(index)"
+                >
+                  删除
+                </button>
+              </div>
+            </div>
+          </div>
           <FieldLabel label="标签">
             <input v-model="store.form.tags" class="field-input" placeholder="official, primary" />
           </FieldLabel>
@@ -302,6 +350,7 @@ import StatCard from "../components/StatCard.vue";
 import UConfirmDialog from "../components/ued/UConfirmDialog.vue";
 import UModal from "../components/ued/UModal.vue";
 import USelect from "../components/ued/USelect.vue";
+import UTag from "../components/ued/UTag.vue";
 
 const store = useSuppliersStore();
 const supplierModalOpen = ref(false);
@@ -325,15 +374,15 @@ const supplierOptions = computed(() =>
 
 function healthTone(record) {
   if (!record) {
-    return { badge: "badge-neutral" };
+    return "neutral";
   }
   if (record.status === "reachable") {
-    return { badge: "badge-success" };
+    return "success";
   }
   if (record.status === "warning") {
-    return { badge: "badge-warning" };
+    return "warning";
   }
-  return { badge: "badge-danger" };
+  return "error";
 }
 
 function formatCheckedAt(value) {
@@ -341,6 +390,20 @@ function formatCheckedAt(value) {
     return "尚未检查";
   }
   return new Date(value).toLocaleString();
+}
+
+function routeStatusText(item) {
+  if (!item.policy) {
+    return "未配置";
+  }
+  return item.policy.enabled ? "已启用" : "已停用";
+}
+
+function routeStatusVariant(item) {
+  if (!item.policy) {
+    return "warning";
+  }
+  return item.policy.enabled ? "success" : "error";
 }
 
 function openDeleteConfirm(item) {
@@ -362,6 +425,21 @@ function openSupplierEdit(item) {
 function closeSupplierModal() {
   supplierModalOpen.value = false;
   store.resetForm();
+}
+
+function addModelRow() {
+  store.form.models.push("");
+}
+
+function updateModelRow(index, value) {
+  store.form.models[index] = value;
+}
+
+function removeModelRow(index) {
+  if (store.form.models.length === 1) {
+    return;
+  }
+  store.form.models.splice(index, 1);
 }
 
 async function submitSupplier() {

@@ -9,12 +9,23 @@
 
     <div class="section-grid xl:grid-cols-2">
       <PanelBlock title="按钮">
-        <div class="flex flex-wrap gap-2">
-          <UButton>主要按钮</UButton>
-          <UButton variant="secondary">次要按钮</UButton>
-          <UButton variant="danger">危险按钮</UButton>
-          <UButton variant="ghost">文本按钮</UButton>
-          <UButton loading>加载中</UButton>
+        <div class="space-y-3">
+          <div class="flex flex-wrap gap-2">
+            <UButton variant="primary">Primary</UButton>
+            <UButton variant="success">Success</UButton>
+            <UButton variant="warning">Warning</UButton>
+            <UButton variant="error">Error</UButton>
+            <UButton variant="info">Info</UButton>
+            <UButton variant="secondary">Secondary</UButton>
+            <UButton variant="ghost">Ghost</UButton>
+          </div>
+          <div class="flex flex-wrap items-center gap-2">
+            <UButton size="xs">XS</UButton>
+            <UButton size="sm">SM</UButton>
+            <UButton size="md">MD</UButton>
+            <UButton size="lg">LG</UButton>
+            <UButton loading>加载中</UButton>
+          </div>
         </div>
       </PanelBlock>
 
@@ -27,6 +38,26 @@
     </div>
 
     <div class="section-grid xl:grid-cols-2">
+      <PanelBlock title="标签">
+        <div class="space-y-3">
+          <div class="flex flex-wrap gap-2">
+            <UTag variant="primary">primary</UTag>
+            <UTag variant="success">success</UTag>
+            <UTag variant="warning">warning</UTag>
+            <UTag variant="error">error</UTag>
+            <UTag variant="info">info</UTag>
+            <UTag>neutral</UTag>
+            <UTag code>openai-responses</UTag>
+          </div>
+          <div class="flex flex-wrap items-center gap-2">
+            <UTag size="xs" variant="primary">xs</UTag>
+            <UTag size="sm" variant="success">sm</UTag>
+            <UTag size="md" variant="warning">md</UTag>
+            <UTag size="lg" variant="error">lg</UTag>
+          </div>
+        </div>
+      </PanelBlock>
+
       <PanelBlock title="输入与下拉">
         <div class="space-y-3">
           <UInput v-model="form.name" label="名称" placeholder="请输入名称" />
@@ -38,7 +69,7 @@
       <PanelBlock title="弹窗">
         <div class="flex flex-wrap gap-2">
           <UButton @click="showModal = true">普通弹窗</UButton>
-          <UButton variant="danger" @click="showConfirm = true">确认弹窗</UButton>
+          <UButton variant="error" @click="showConfirm = true">确认弹窗</UButton>
         </div>
       </PanelBlock>
     </div>
@@ -46,7 +77,7 @@
     <PanelBlock title="表格">
       <UTable :columns="columns" :rows="rows" row-key="id" empty-text="暂无组件示例数据。">
         <template #cell-status="{ value }">
-          <span class="badge" :class="value === '启用' ? 'badge-success' : 'badge-danger'">{{ value }}</span>
+          <UTag :variant="value === '启用' ? 'success' : 'error'">{{ value }}</UTag>
         </template>
         <template #actions="{ row }">
           <div class="flex gap-2">
@@ -91,6 +122,7 @@ import UModal from "../components/ued/UModal.vue";
 import USelect from "../components/ued/USelect.vue";
 import USwitch from "../components/ued/USwitch.vue";
 import UTable from "../components/ued/UTable.vue";
+import UTag from "../components/ued/UTag.vue";
 
 const showModal = ref(false);
 const showConfirm = ref(false);

@@ -7,7 +7,7 @@
     <template #footer>
       <div class="flex justify-end gap-2">
         <UButton variant="secondary" @click="handleCancel">{{ cancelText }}</UButton>
-        <UButton :variant="danger ? 'danger' : 'primary'" :loading="loading" @click="$emit('confirm')">
+        <UButton :variant="danger ? 'error' : 'primary'" :loading="loading" @click="$emit('confirm')">
           {{ confirmText }}
         </UButton>
       </div>

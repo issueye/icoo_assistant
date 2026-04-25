@@ -17,7 +17,7 @@ const emptyForm = () => ({
   api_key: "",
   enabled: true,
   description: "",
-  models: "",
+  models: [""],
   tags: "",
 });
 
@@ -107,7 +107,7 @@ export const useSuppliersStore = defineStore("suppliers", {
         api_key: "",
         enabled: Boolean(item.enabled),
         description: item.description || "",
-        models: (item.models || []).join(", "),
+        models: item.models?.length ? [...item.models] : [""],
         tags: (item.tags || []).join(", "),
       };
     },
@@ -139,7 +139,10 @@ export const useSuppliersStore = defineStore("suppliers", {
       this.saving = true;
       this.error = "";
       try {
-        this.items = await SaveSupplier({ ...this.form });
+        this.items = await SaveSupplier({
+          ...this.form,
+          models: this.form.models.map((item) => String(item).trim()).filter(Boolean).join(", "),
+        });
         this.resetForm();
       } catch (error) {
         this.error = error?.message || String(error);

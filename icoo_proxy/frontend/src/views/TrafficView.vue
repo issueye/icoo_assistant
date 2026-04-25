@@ -34,14 +34,15 @@
             @update:model-value="store.setFilter"
           />
 
-          <div class="sub-card">
-            <p class="text-sm font-medium text-slate-900">最近刷新时间</p>
-            <p class="mt-2 text-sm text-slate-500">{{ formatDateTime(store.lastUpdatedAt) }}</p>
-          </div>
-
-          <div class="sub-card">
-            <p class="text-sm font-medium text-slate-900">当前筛选结果</p>
-            <p class="mt-2 text-sm text-slate-500">共显示 {{ store.filteredRequests.length }} 条请求</p>
+          <div class="divide-y divide-[#eeeeF2] border-y border-[#eeeeF2]">
+            <div class="flex items-center justify-between gap-3 py-2">
+              <p class="text-sm text-slate-500">最近刷新时间</p>
+              <p class="text-right text-sm font-medium text-slate-900">{{ formatDateTime(store.lastUpdatedAt) }}</p>
+            </div>
+            <div class="flex items-center justify-between gap-3 py-2">
+              <p class="text-sm text-slate-500">当前筛选结果</p>
+              <p class="text-right text-sm font-medium text-slate-900">{{ store.filteredRequests.length }} 条</p>
+            </div>
           </div>
         </div>
       </PanelBlock>
@@ -80,7 +81,7 @@
                     <code class="mono-chip">{{ request.model || "-" }}</code>
                   </td>
                   <td>
-                    <span class="badge" :class="request.status_code >= 400 ? 'badge-danger' : 'badge-success'">
+                    <span class="badge" :class="request.status_code >= 400 ? 'badge-error' : 'badge-success'">
                       {{ request.status_code || "-" }}
                     </span>
                   </td>

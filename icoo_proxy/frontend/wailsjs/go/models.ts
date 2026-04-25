@@ -1,5 +1,31 @@
 export namespace api {
 	
+	export class EndpointView {
+	    id: string;
+	    path: string;
+	    protocol: string;
+	    description: string;
+	    enabled: boolean;
+	    built_in: boolean;
+	    updated_at: string;
+	    created_at: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new EndpointView(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.path = source["path"];
+	        this.protocol = source["protocol"];
+	        this.description = source["description"];
+	        this.enabled = source["enabled"];
+	        this.built_in = source["built_in"];
+	        this.updated_at = source["updated_at"];
+	        this.created_at = source["created_at"];
+	    }
+	}
 	export class RequestView {
 	    request_id: string;
 	    downstream: string;
@@ -94,11 +120,13 @@ export namespace api {
 	    proxy_url?: string;
 	    last_error?: string;
 	    auth_required: boolean;
+	    auth_key_count: number;
 	    allow_unauthenticated_local: boolean;
 	    supported_paths: string[];
 	    defaults: RouteView[];
 	    aliases: RouteView[];
 	    upstreams: UpstreamView[];
+	    endpoints: EndpointView[];
 	    route_policies: RoutePolicyView[];
 	    recent_requests: RequestView[];
 	    notes: string[];
@@ -117,11 +145,13 @@ export namespace api {
 	        this.proxy_url = source["proxy_url"];
 	        this.last_error = source["last_error"];
 	        this.auth_required = source["auth_required"];
+	        this.auth_key_count = source["auth_key_count"];
 	        this.allow_unauthenticated_local = source["allow_unauthenticated_local"];
 	        this.supported_paths = source["supported_paths"];
 	        this.defaults = this.convertValues(source["defaults"], RouteView);
 	        this.aliases = this.convertValues(source["aliases"], RouteView);
 	        this.upstreams = this.convertValues(source["upstreams"], UpstreamView);
+	        this.endpoints = this.convertValues(source["endpoints"], EndpointView);
 	        this.route_policies = this.convertValues(source["route_policies"], RoutePolicyView);
 	        this.recent_requests = this.convertValues(source["recent_requests"], RequestView);
 	        this.notes = source["notes"];
@@ -145,6 +175,106 @@ export namespace api {
 		    }
 		    return a;
 		}
+	}
+
+}
+
+export namespace authkey {
+	
+	export class Record {
+	    id: string;
+	    name: string;
+	    secret_masked: string;
+	    enabled: boolean;
+	    description: string;
+	    updated_at: string;
+	    created_at: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new Record(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.name = source["name"];
+	        this.secret_masked = source["secret_masked"];
+	        this.enabled = source["enabled"];
+	        this.description = source["description"];
+	        this.updated_at = source["updated_at"];
+	        this.created_at = source["created_at"];
+	    }
+	}
+	export class UpsertInput {
+	    id: string;
+	    name: string;
+	    secret: string;
+	    enabled: boolean;
+	    description: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new UpsertInput(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.name = source["name"];
+	        this.secret = source["secret"];
+	        this.enabled = source["enabled"];
+	        this.description = source["description"];
+	    }
+	}
+
+}
+
+export namespace endpoint {
+	
+	export class Record {
+	    id: string;
+	    path: string;
+	    protocol: string;
+	    description: string;
+	    enabled: boolean;
+	    built_in: boolean;
+	    updated_at: string;
+	    created_at: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new Record(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.path = source["path"];
+	        this.protocol = source["protocol"];
+	        this.description = source["description"];
+	        this.enabled = source["enabled"];
+	        this.built_in = source["built_in"];
+	        this.updated_at = source["updated_at"];
+	        this.created_at = source["created_at"];
+	    }
+	}
+	export class UpsertInput {
+	    id: string;
+	    path: string;
+	    protocol: string;
+	    description: string;
+	    enabled: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new UpsertInput(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.path = source["path"];
+	        this.protocol = source["protocol"];
+	        this.description = source["description"];
+	        this.enabled = source["enabled"];
+	    }
 	}
 
 }
@@ -296,4 +426,3 @@ export namespace supplier {
 	}
 
 }
-

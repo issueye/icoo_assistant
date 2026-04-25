@@ -6,12 +6,28 @@ export function CheckSupplier(arg1) {
   return window['go']['main']['App']['CheckSupplier'](arg1);
 }
 
+export function DeleteAuthKey(arg1) {
+  return window['go']['main']['App']['DeleteAuthKey'](arg1);
+}
+
+export function DeleteEndpoint(arg1) {
+  return window['go']['main']['App']['DeleteEndpoint'](arg1);
+}
+
 export function DeleteSupplier(arg1) {
   return window['go']['main']['App']['DeleteSupplier'](arg1);
 }
 
 export function GetOverview() {
   return window['go']['main']['App']['GetOverview']();
+}
+
+export function ListAuthKeys() {
+  return window['go']['main']['App']['ListAuthKeys']();
+}
+
+export function ListEndpoints() {
+  return window['go']['main']['App']['ListEndpoints']();
 }
 
 export function ListRoutePolicies() {
@@ -28,6 +44,14 @@ export function ListSuppliers() {
 
 export function ReloadProxy() {
   return window['go']['main']['App']['ReloadProxy']();
+}
+
+export function SaveEndpoint(arg1) {
+  return window['go']['main']['App']['SaveEndpoint'](arg1);
+}
+
+export function SaveAuthKey(arg1) {
+  return window['go']['main']['App']['SaveAuthKey'](arg1);
 }
 
 export function SaveRoutePolicy(arg1) {
