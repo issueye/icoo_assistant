@@ -1,6 +1,10 @@
 package supplier
 
-import "testing"
+import (
+	"net/http"
+	"net/http/httptest"
+	"testing"
+)
 
 func TestUpsertListDelete(t *testing.T) {
 	svc, err := NewService(t.TempDir())
@@ -40,5 +44,38 @@ func TestUpsertListDelete(t *testing.T) {
 	items = svc.List()
 	if len(items) != len(initial) {
 		t.Fatalf("expected supplier count restored, got %d", len(items))
+	}
+}
+
+func TestHealthCheck(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer server.Close()
+
+	svc, err := NewService(t.TempDir())
+	if err != nil {
+		t.Fatalf("new service: %v", err)
+	}
+	record, err := svc.Upsert(UpsertInput{
+		Name:     "Health Vendor",
+		Protocol: "openai-responses",
+		BaseURL:  server.URL,
+		Enabled:  true,
+	})
+	if err != nil {
+		t.Fatalf("upsert: %v", err)
+	}
+
+	health := NewHealthService(svc)
+	result, err := health.Check(record.ID)
+	if err != nil {
+		t.Fatalf("health check: %v", err)
+	}
+	if !result.Reachable {
+		t.Fatalf("expected supplier to be reachable")
+	}
+	if result.Status != "reachable" {
+		t.Fatalf("expected reachable status, got %q", result.Status)
 	}
 }

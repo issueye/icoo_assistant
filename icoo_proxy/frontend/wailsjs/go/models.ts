@@ -26,6 +26,34 @@ export namespace api {
 	        this.created_at = source["created_at"];
 	    }
 	}
+	export class RoutePolicyView {
+	    id: string;
+	    downstream_protocol: string;
+	    supplier_id: string;
+	    supplier_name: string;
+	    upstream_protocol: string;
+	    target_model: string;
+	    enabled: boolean;
+	    updated_at: string;
+	    created_at: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new RoutePolicyView(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.downstream_protocol = source["downstream_protocol"];
+	        this.supplier_id = source["supplier_id"];
+	        this.supplier_name = source["supplier_name"];
+	        this.upstream_protocol = source["upstream_protocol"];
+	        this.target_model = source["target_model"];
+	        this.enabled = source["enabled"];
+	        this.updated_at = source["updated_at"];
+	        this.created_at = source["created_at"];
+	    }
+	}
 	export class RouteView {
 	    name: string;
 	    upstream: string;
@@ -71,6 +99,7 @@ export namespace api {
 	    defaults: RouteView[];
 	    aliases: RouteView[];
 	    upstreams: UpstreamView[];
+	    route_policies: RoutePolicyView[];
 	    recent_requests: RequestView[];
 	    notes: string[];
 	    checks: Record<string, any>;
@@ -93,6 +122,7 @@ export namespace api {
 	        this.defaults = this.convertValues(source["defaults"], RouteView);
 	        this.aliases = this.convertValues(source["aliases"], RouteView);
 	        this.upstreams = this.convertValues(source["upstreams"], UpstreamView);
+	        this.route_policies = this.convertValues(source["route_policies"], RoutePolicyView);
 	        this.recent_requests = this.convertValues(source["recent_requests"], RequestView);
 	        this.notes = source["notes"];
 	        this.checks = source["checks"];
@@ -115,6 +145,154 @@ export namespace api {
 		    }
 		    return a;
 		}
+	}
+
+}
+
+export namespace routepolicy {
+	
+	export class Record {
+	    id: string;
+	    downstream_protocol: string;
+	    supplier_id: string;
+	    supplier_name: string;
+	    upstream_protocol: string;
+	    target_model: string;
+	    enabled: boolean;
+	    updated_at: string;
+	    created_at: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new Record(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.downstream_protocol = source["downstream_protocol"];
+	        this.supplier_id = source["supplier_id"];
+	        this.supplier_name = source["supplier_name"];
+	        this.upstream_protocol = source["upstream_protocol"];
+	        this.target_model = source["target_model"];
+	        this.enabled = source["enabled"];
+	        this.updated_at = source["updated_at"];
+	        this.created_at = source["created_at"];
+	    }
+	}
+	export class UpsertInput {
+	    id: string;
+	    downstream_protocol: string;
+	    supplier_id: string;
+	    target_model: string;
+	    enabled: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new UpsertInput(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.downstream_protocol = source["downstream_protocol"];
+	        this.supplier_id = source["supplier_id"];
+	        this.target_model = source["target_model"];
+	        this.enabled = source["enabled"];
+	    }
+	}
+
+}
+
+export namespace supplier {
+	
+	export class HealthRecord {
+	    supplier_id: string;
+	    status: string;
+	    message: string;
+	    checked_at: string;
+	    status_code: number;
+	    duration_ms: number;
+	    reachable: boolean;
+	    protocol: string;
+	    base_url: string;
+	    supplier_name: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new HealthRecord(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.supplier_id = source["supplier_id"];
+	        this.status = source["status"];
+	        this.message = source["message"];
+	        this.checked_at = source["checked_at"];
+	        this.status_code = source["status_code"];
+	        this.duration_ms = source["duration_ms"];
+	        this.reachable = source["reachable"];
+	        this.protocol = source["protocol"];
+	        this.base_url = source["base_url"];
+	        this.supplier_name = source["supplier_name"];
+	    }
+	}
+	export class Record {
+	    id: string;
+	    name: string;
+	    protocol: string;
+	    base_url: string;
+	    api_key_masked: string;
+	    enabled: boolean;
+	    description: string;
+	    models: string[];
+	    tags: string[];
+	    updated_at: string;
+	    created_at: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new Record(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.name = source["name"];
+	        this.protocol = source["protocol"];
+	        this.base_url = source["base_url"];
+	        this.api_key_masked = source["api_key_masked"];
+	        this.enabled = source["enabled"];
+	        this.description = source["description"];
+	        this.models = source["models"];
+	        this.tags = source["tags"];
+	        this.updated_at = source["updated_at"];
+	        this.created_at = source["created_at"];
+	    }
+	}
+	export class UpsertInput {
+	    id: string;
+	    name: string;
+	    protocol: string;
+	    base_url: string;
+	    api_key: string;
+	    enabled: boolean;
+	    description: string;
+	    models: string;
+	    tags: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new UpsertInput(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.name = source["name"];
+	        this.protocol = source["protocol"];
+	        this.base_url = source["base_url"];
+	        this.api_key = source["api_key"];
+	        this.enabled = source["enabled"];
+	        this.description = source["description"];
+	        this.models = source["models"];
+	        this.tags = source["tags"];
+	    }
 	}
 
 }

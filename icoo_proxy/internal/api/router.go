@@ -20,6 +20,7 @@ type State struct {
 	Defaults                  []RouteView            `json:"defaults"`
 	Aliases                   []RouteView            `json:"aliases"`
 	Upstreams                 []UpstreamView         `json:"upstreams"`
+	RoutePolicies             []RoutePolicyView      `json:"route_policies"`
 	RecentRequests            []RequestView          `json:"recent_requests"`
 	Notes                     []string               `json:"notes"`
 	Checks                    map[string]interface{} `json:"checks"`
@@ -46,6 +47,18 @@ type RequestView struct {
 	DurationMS int64  `json:"duration_ms"`
 	Error      string `json:"error,omitempty"`
 	CreatedAt  string `json:"created_at"`
+}
+
+type RoutePolicyView struct {
+	ID                 string `json:"id"`
+	DownstreamProtocol string `json:"downstream_protocol"`
+	SupplierID         string `json:"supplier_id"`
+	SupplierName       string `json:"supplier_name"`
+	UpstreamProtocol   string `json:"upstream_protocol"`
+	TargetModel        string `json:"target_model"`
+	Enabled            bool   `json:"enabled"`
+	UpdatedAt          string `json:"updated_at"`
+	CreatedAt          string `json:"created_at"`
 }
 
 type StateProvider interface {

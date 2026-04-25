@@ -9,20 +9,22 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"icoo_proxy/internal/routepolicy"
 )
 
 type Record struct {
-	ID           string    `json:"id"`
-	Name         string    `json:"name"`
-	Protocol     string    `json:"protocol"`
-	BaseURL      string    `json:"base_url"`
-	APIKeyMasked string    `json:"api_key_masked"`
-	Enabled      bool      `json:"enabled"`
-	Description  string    `json:"description"`
-	Models       []string  `json:"models"`
-	Tags         []string  `json:"tags"`
-	UpdatedAt    time.Time `json:"updated_at"`
-	CreatedAt    time.Time `json:"created_at"`
+	ID           string   `json:"id"`
+	Name         string   `json:"name"`
+	Protocol     string   `json:"protocol"`
+	BaseURL      string   `json:"base_url"`
+	APIKeyMasked string   `json:"api_key_masked"`
+	Enabled      bool     `json:"enabled"`
+	Description  string   `json:"description"`
+	Models       []string `json:"models"`
+	Tags         []string `json:"tags"`
+	UpdatedAt    string   `json:"updated_at"`
+	CreatedAt    string   `json:"created_at"`
 }
 
 type entry struct {
@@ -84,6 +86,25 @@ func (s *Service) List() []Record {
 		return strings.Compare(strings.ToLower(a.Name), strings.ToLower(b.Name))
 	})
 	return items
+}
+
+func (s *Service) Resolve(id string) (routepolicy.SupplierSnapshot, bool) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	for _, item := range s.items {
+		if item.ID != strings.TrimSpace(id) {
+			continue
+		}
+		return routepolicy.SupplierSnapshot{
+			ID:        item.ID,
+			Name:      item.Name,
+			Protocol:  item.Protocol,
+			BaseURL:   item.BaseURL,
+			APIKey:    item.APIKey,
+			IsEnabled: item.Enabled,
+		}, true
+	}
+	return routepolicy.SupplierSnapshot{}, false
 }
 
 func (s *Service) Upsert(input UpsertInput) (Record, error) {
@@ -211,8 +232,8 @@ func toRecord(item entry) Record {
 		Description:  item.Description,
 		Models:       slices.Clone(item.Models),
 		Tags:         slices.Clone(item.Tags),
-		UpdatedAt:    item.UpdatedAt,
-		CreatedAt:    item.CreatedAt,
+		UpdatedAt:    item.UpdatedAt.Format(time.RFC3339),
+		CreatedAt:    item.CreatedAt.Format(time.RFC3339),
 	}
 }
 
