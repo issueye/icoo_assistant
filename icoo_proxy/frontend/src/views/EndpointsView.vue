@@ -28,58 +28,40 @@
       <div v-else-if="!store.items.length" class="empty-state">
         当前尚未配置端点。
       </div>
-      <div v-else class="table-shell">
-        <div class="table-scroll">
-          <table class="admin-table">
-            <thead>
-              <tr>
-                <th>路径</th>
-                <th>协议</th>
-                <th>说明</th>
-                <th>类型</th>
-                <th>状态</th>
-                <th>操作</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="item in store.items" :key="item.id">
-                <td>
-                  <UTag code>{{ item.path }}</UTag>
-                </td>
-                <td>
-                  <UTag variant="info">{{ item.protocol }}</UTag>
-                </td>
-                <td>
-                  <p class="max-w-xl text-sm text-slate-600">{{ item.description || "-" }}</p>
-                  <p class="mt-1 table-meta">更新时间：{{ formatDateTime(item.updated_at) }}</p>
-                </td>
-                <td>
-                  <UTag :variant="item.built_in ? 'neutral' : 'warning'">
-                    {{ item.built_in ? "内置" : "自定义" }}
-                  </UTag>
-                </td>
-                <td>
-                  <UTag :variant="item.enabled ? 'success' : 'error'">
-                    {{ item.enabled ? "启用" : "停用" }}
-                  </UTag>
-                </td>
-                <td>
-                  <div class="table-actions">
-                    <button class="btn btn-secondary" @click="openEdit(item)">编辑</button>
-                    <button
-                      class="btn btn-error"
-                      :disabled="item.built_in || store.deleting === item.id"
-                      @click="remove(item)"
-                    >
-                      {{ store.deleting === item.id ? "删除中..." : "删除" }}
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
+      <UTable v-else :columns="tableColumns" :rows="store.items" action-width="132px" fixed>
+        <template #cell-path="{ row }">
+          <UTag code>{{ row.path }}</UTag>
+        </template>
+        <template #cell-protocol="{ row }">
+          <UTag variant="info">{{ row.protocol }}</UTag>
+        </template>
+        <template #cell-description="{ row }">
+          <p class="max-w-xl text-sm text-slate-600">{{ row.description || "-" }}</p>
+          <p class="mt-1 table-meta">更新时间：{{ formatDateTime(row.updated_at) }}</p>
+        </template>
+        <template #cell-builtIn="{ row }">
+          <UTag :variant="row.built_in ? 'neutral' : 'warning'">
+            {{ row.built_in ? "内置" : "自定义" }}
+          </UTag>
+        </template>
+        <template #cell-enabled="{ row }">
+          <UTag :variant="row.enabled ? 'success' : 'error'">
+            {{ row.enabled ? "启用" : "停用" }}
+          </UTag>
+        </template>
+        <template #actions="{ row }">
+          <div class="table-actions">
+            <button class="btn btn-secondary" @click="openEdit(row)">编辑</button>
+            <button
+              class="btn btn-error"
+              :disabled="row.built_in || store.deleting === row.id"
+              @click="remove(row)"
+            >
+              {{ store.deleting === row.id ? "删除中..." : "删除" }}
+            </button>
+          </div>
+        </template>
+      </UTable>
     </PanelBlock>
 
     <UModal
@@ -120,11 +102,19 @@ import PanelBlock from "../components/PanelBlock.vue";
 import StatCard from "../components/StatCard.vue";
 import UModal from "../components/ued/UModal.vue";
 import USelect from "../components/ued/USelect.vue";
+import UTable from "../components/ued/UTable.vue";
 import UTag from "../components/ued/UTag.vue";
 import { useEndpointsStore } from "../stores/endpoints";
 
 const store = useEndpointsStore();
 const modalOpen = ref(false);
+const tableColumns = [
+  { key: "path", title: "路径", width: "22%" },
+  { key: "protocol", title: "协议", width: "16%" },
+  { key: "description", title: "说明", width: "34%" },
+  { key: "builtIn", title: "类型", width: "10%" },
+  { key: "enabled", title: "状态", width: "10%" },
+];
 
 function openCreate() {
   store.resetForm();

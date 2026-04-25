@@ -27,93 +27,76 @@
         <div v-else-if="!store.items.length" class="empty-state">
           当前尚未配置供应商。
         </div>
-        <div v-else class="table-shell">
-          <div class="table-scroll">
-            <table class="admin-table admin-table-fixed supplier-table">
-              <colgroup>
-                <col style="width: 20%" />
-                <col style="width: 34%" />
-                <col style="width: 18%" />
-                <col style="width: 18%" />
-                <col style="width: 132px" />
-              </colgroup>
-              <thead>
-                <tr>
-                  <th>供应商</th>
-                  <th>协议 / 地址</th>
-                  <th>模型 / 标签</th>
-                  <th>健康状态</th>
-                  <th>操作</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="item in store.items" :key="item.id">
-                  <td>
-                    <div class="flex items-center gap-2">
-                      <p class="font-medium text-slate-900">{{ item.name }}</p>
-                      <UTag :variant="item.enabled ? 'success' : 'error'">
-                        {{ item.enabled ? "启用" : "停用" }}
-                      </UTag>
-                    </div>
-                    <p class="mt-1 text-sm leading-5 text-slate-600 supplier-table__text">
-                      {{ item.description || "暂无描述。" }}
-                    </p>
-                    <p class="mt-1 table-meta">更新时间：{{ formatCheckedAt(item.updated_at) }}</p>
-                  </td>
-                  <td>
-                    <p class="font-medium text-slate-900">{{ item.protocol }}</p>
-                    <p class="mt-1 break-all table-meta supplier-table__text">{{ item.base_url }}</p>
-                    <div class="mt-1">
-                      <UTag code>{{ item.api_key_masked || "未保存 API Key" }}</UTag>
-                    </div>
-                  </td>
-                  <td>
-                    <div class="flex flex-wrap gap-2">
-                      <UTag v-for="model in item.models || []" :key="model" variant="info">
-                        {{ model }}
-                      </UTag>
-                      <span v-if="!(item.models || []).length" class="table-meta">无模型</span>
-                    </div>
-                    <div class="mt-1 flex flex-wrap gap-1.5">
-                      <UTag v-for="tag in item.tags || []" :key="tag">
-                        #{{ tag }}
-                      </UTag>
-                    </div>
-                  </td>
-                  <td>
-                    <template v-if="store.healthFor(item.id)">
-                      <div class="flex flex-wrap items-center gap-2">
-                        <UTag :variant="healthTone(store.healthFor(item.id))">
-                          {{ store.healthFor(item.id).status }}
-                        </UTag>
-                        <UTag variant="info">{{ store.healthFor(item.id).duration_ms }} ms</UTag>
-                      </div>
-                      <p class="mt-1 table-meta">
-                        HTTP {{ store.healthFor(item.id).status_code || "无状态码" }}
-                      </p>
-                      <p class="mt-1 text-sm leading-5 text-slate-600 supplier-table__text">
-                        {{ store.healthFor(item.id).message }}
-                      </p>
-                      <p class="mt-1 table-meta">{{ formatCheckedAt(store.healthFor(item.id).checked_at) }}</p>
-                    </template>
-                    <span v-else class="table-meta">尚未检查</span>
-                  </td>
-                  <td>
-                    <div class="table-actions">
-                      <button class="btn btn-info" :disabled="store.checking === item.id" @click="store.check(item.id)">
-                        {{ store.checking === item.id ? "检查中..." : "检查" }}
-                      </button>
-                      <button class="btn btn-secondary" @click="openSupplierEdit(item)">编辑</button>
-                      <button class="btn btn-error" :disabled="store.deleting === item.id" @click="openDeleteConfirm(item)">
-                        {{ store.deleting === item.id ? "删除中..." : "删除" }}
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
+        <UTable
+          v-else
+          :columns="supplierTableColumns"
+          :rows="store.items"
+          action-width="132px"
+          fixed
+          table-class="supplier-table"
+        >
+          <template #cell-supplier="{ row }">
+            <div class="flex items-center gap-2">
+              <p class="font-medium text-slate-900">{{ row.name }}</p>
+              <UTag :variant="row.enabled ? 'success' : 'error'">
+                {{ row.enabled ? "启用" : "停用" }}
+              </UTag>
+            </div>
+            <p class="mt-1 text-sm leading-5 text-slate-600 table-cell-wrap">
+              {{ row.description || "暂无描述。" }}
+            </p>
+            <p class="mt-1 table-meta">更新时间：{{ formatCheckedAt(row.updated_at) }}</p>
+          </template>
+          <template #cell-protocol="{ row }">
+            <p class="font-medium text-slate-900">{{ row.protocol }}</p>
+            <p class="mt-1 break-all table-meta table-cell-wrap">{{ row.base_url }}</p>
+            <div class="mt-1">
+              <UTag code>{{ row.api_key_masked || "未保存 API Key" }}</UTag>
+            </div>
+          </template>
+          <template #cell-models="{ row }">
+            <div class="flex flex-wrap gap-2">
+              <UTag v-for="model in row.models || []" :key="model" variant="info">
+                {{ model }}
+              </UTag>
+              <span v-if="!(row.models || []).length" class="table-meta">无模型</span>
+            </div>
+            <div class="mt-1 flex flex-wrap gap-1.5">
+              <UTag v-for="tag in row.tags || []" :key="tag">
+                #{{ tag }}
+              </UTag>
+            </div>
+          </template>
+          <template #cell-health="{ row }">
+            <template v-if="store.healthFor(row.id)">
+              <div class="flex flex-wrap items-center gap-2">
+                <UTag :variant="healthTone(store.healthFor(row.id))">
+                  {{ store.healthFor(row.id).status }}
+                </UTag>
+                <UTag variant="info">{{ store.healthFor(row.id).duration_ms }} ms</UTag>
+              </div>
+              <p class="mt-1 table-meta">
+                HTTP {{ store.healthFor(row.id).status_code || "无状态码" }}
+              </p>
+              <p class="mt-1 text-sm leading-5 text-slate-600 table-cell-wrap">
+                {{ store.healthFor(row.id).message }}
+              </p>
+              <p class="mt-1 table-meta">{{ formatCheckedAt(store.healthFor(row.id).checked_at) }}</p>
+            </template>
+            <span v-else class="table-meta">尚未检查</span>
+          </template>
+          <template #actions="{ row }">
+            <div class="table-actions">
+              <button class="btn btn-info" :disabled="store.checking === row.id" @click="store.check(row.id)">
+                {{ store.checking === row.id ? "检查中..." : "检查" }}
+              </button>
+              <button class="btn btn-secondary" @click="openSupplierEdit(row)">编辑</button>
+              <button class="btn btn-error" :disabled="store.deleting === row.id" @click="openDeleteConfirm(row)">
+                {{ store.deleting === row.id ? "删除中..." : "删除" }}
+              </button>
+            </div>
+          </template>
+        </UTable>
       </PanelBlock>
     </div>
 
@@ -175,49 +158,31 @@
           <div v-if="!store.policies.length" class="empty-state">
           当前尚未配置路由策略。
           </div>
-          <div v-else class="table-shell">
-            <div class="table-scroll">
-              <table class="admin-table">
-                <thead>
-                  <tr>
-                    <th>下游协议</th>
-                    <th>供应商</th>
-                    <th>上游协议</th>
-                    <th>目标模型</th>
-                    <th>状态</th>
-                    <th>操作</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr v-for="policy in store.policies" :key="policy.id">
-                    <td>
-                      <UTag code>{{ policy.downstream_protocol }}</UTag>
-                    </td>
-                    <td>
-                      <p class="text-sm font-medium text-slate-900">{{ policy.supplier_name || "未分配" }}</p>
-                      <p class="mt-1 table-meta">{{ policy.supplier_id || "-" }}</p>
-                    </td>
-                    <td>
-                      <UTag variant="info">{{ policy.upstream_protocol || "-" }}</UTag>
-                    </td>
-                    <td>
-                      <UTag code>{{ policy.target_model || "无模型" }}</UTag>
-                    </td>
-                    <td>
-                      <UTag :variant="policy.enabled ? 'success' : 'error'">
-                        {{ policy.enabled ? "启用" : "停用" }}
-                      </UTag>
-                    </td>
-                    <td>
-                      <button class="btn btn-secondary" @click="openPolicyEdit(policy)">
-                        编辑
-                      </button>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
+          <UTable v-else :columns="policyTableColumns" :rows="store.policies" action-width="96px" fixed>
+            <template #cell-downstream="{ row }">
+              <UTag code>{{ row.downstream_protocol }}</UTag>
+            </template>
+            <template #cell-supplier="{ row }">
+              <p class="text-sm font-medium text-slate-900">{{ row.supplier_name || "未分配" }}</p>
+              <p class="mt-1 table-meta table-cell-wrap">{{ row.supplier_id || "-" }}</p>
+            </template>
+            <template #cell-upstream="{ row }">
+              <UTag variant="info">{{ row.upstream_protocol || "-" }}</UTag>
+            </template>
+            <template #cell-model="{ row }">
+              <UTag code>{{ row.target_model || "无模型" }}</UTag>
+            </template>
+            <template #cell-enabled="{ row }">
+              <UTag :variant="row.enabled ? 'success' : 'error'">
+                {{ row.enabled ? "启用" : "停用" }}
+              </UTag>
+            </template>
+            <template #actions="{ row }">
+              <button class="btn btn-secondary" @click="openPolicyEdit(row)">
+                编辑
+              </button>
+            </template>
+          </UTable>
         </div>
       </PanelBlock>
     </div>
@@ -350,6 +315,7 @@ import StatCard from "../components/StatCard.vue";
 import UConfirmDialog from "../components/ued/UConfirmDialog.vue";
 import UModal from "../components/ued/UModal.vue";
 import USelect from "../components/ued/USelect.vue";
+import UTable from "../components/ued/UTable.vue";
 import UTag from "../components/ued/UTag.vue";
 
 const store = useSuppliersStore();
@@ -371,6 +337,19 @@ const supplierOptions = computed(() =>
     value: supplier.id,
   })),
 );
+const supplierTableColumns = [
+  { key: "supplier", title: "供应商", width: "20%" },
+  { key: "protocol", title: "协议 / 地址", width: "34%" },
+  { key: "models", title: "模型 / 标签", width: "18%" },
+  { key: "health", title: "健康状态", width: "18%" },
+];
+const policyTableColumns = [
+  { key: "downstream", title: "下游协议", width: "18%" },
+  { key: "supplier", title: "供应商", width: "30%" },
+  { key: "upstream", title: "上游协议", width: "18%" },
+  { key: "model", title: "目标模型", width: "22%" },
+  { key: "enabled", title: "状态", width: "12%" },
+];
 
 function healthTone(record) {
   if (!record) {

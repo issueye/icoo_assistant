@@ -54,52 +54,40 @@
         <div v-else-if="store.filteredRequests.length === 0" class="empty-state">
           当前没有匹配的请求记录。
         </div>
-        <div v-else class="table-shell">
-          <div class="table-scroll">
-            <table class="admin-table">
-              <thead>
-                <tr>
-                  <th>请求 ID</th>
-                  <th>下游 / 上游</th>
-                  <th>模型</th>
-                  <th>状态码</th>
-                  <th>耗时</th>
-                  <th>创建时间</th>
-                  <th>错误信息</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="request in store.filteredRequests" :key="request.request_id">
-                  <td>
-                    <p class="font-medium text-slate-900">{{ request.request_id }}</p>
-                  </td>
-                  <td>
-                    <p class="text-sm text-slate-700">{{ request.downstream }}</p>
-                    <p class="mt-1 table-meta">{{ request.upstream || "-" }}</p>
-                  </td>
-                  <td>
-                    <code class="mono-chip">{{ request.model || "-" }}</code>
-                  </td>
-                  <td>
-                    <span class="badge" :class="request.status_code >= 400 ? 'badge-error' : 'badge-success'">
-                      {{ request.status_code || "-" }}
-                    </span>
-                  </td>
-                  <td>
-                    <span class="tag-chip">{{ request.duration_ms }} ms</span>
-                  </td>
-                  <td>
-                    <span class="table-meta">{{ formatDateTime(request.created_at) }}</span>
-                  </td>
-                  <td>
-                    <p v-if="request.error" class="text-sm text-rose-700">{{ request.error }}</p>
-                    <span v-else class="table-meta">无</span>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
+        <UTable
+          v-else
+          :columns="tableColumns"
+          :rows="store.filteredRequests"
+          row-key="request_id"
+          fixed
+          table-class="traffic-table"
+        >
+          <template #cell-requestId="{ row }">
+            <p class="font-medium text-slate-900 table-cell-wrap">{{ row.request_id }}</p>
+          </template>
+          <template #cell-route="{ row }">
+            <p class="text-sm text-slate-700 table-cell-wrap">{{ row.downstream }}</p>
+            <p class="mt-1 table-meta table-cell-wrap">{{ row.upstream || "-" }}</p>
+          </template>
+          <template #cell-model="{ row }">
+            <UTag code>{{ row.model || "-" }}</UTag>
+          </template>
+          <template #cell-status="{ row }">
+            <UTag :variant="row.status_code >= 400 ? 'error' : 'success'">
+              {{ row.status_code || "-" }}
+            </UTag>
+          </template>
+          <template #cell-duration="{ row }">
+            <UTag>{{ row.duration_ms }} ms</UTag>
+          </template>
+          <template #cell-createdAt="{ row }">
+            <span class="table-meta">{{ formatDateTime(row.created_at) }}</span>
+          </template>
+          <template #cell-error="{ row }">
+            <p v-if="row.error" class="text-sm text-rose-700 table-cell-wrap">{{ row.error }}</p>
+            <span v-else class="table-meta">无</span>
+          </template>
+        </UTable>
       </PanelBlock>
     </div>
   </section>
@@ -112,9 +100,20 @@ import { useTrafficStore } from "../stores/traffic";
 import PanelBlock from "../components/PanelBlock.vue";
 import StatCard from "../components/StatCard.vue";
 import USelect from "../components/ued/USelect.vue";
+import UTable from "../components/ued/UTable.vue";
+import UTag from "../components/ued/UTag.vue";
 
 const store = useTrafficStore();
 let refreshTimer = null;
+const tableColumns = [
+  { key: "requestId", title: "请求 ID", width: "18%" },
+  { key: "route", title: "下游 / 上游", width: "16%" },
+  { key: "model", title: "模型", width: "15%" },
+  { key: "status", title: "状态码", width: "10%" },
+  { key: "duration", title: "耗时", width: "10%" },
+  { key: "createdAt", title: "创建时间", width: "16%" },
+  { key: "error", title: "错误信息", width: "15%" },
+];
 
 function stopTimer() {
   if (refreshTimer) {

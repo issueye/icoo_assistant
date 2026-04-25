@@ -27,48 +27,31 @@
       <div v-else-if="!store.items.length" class="empty-state">
         当前尚未添加授权 Key。本地信任模式仍按配置生效。
       </div>
-      <div v-else class="table-shell">
-        <div class="table-scroll">
-          <table class="admin-table">
-            <thead>
-              <tr>
-                <th>名称</th>
-                <th>Key</th>
-                <th>说明</th>
-                <th>状态</th>
-                <th>操作</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="item in store.items" :key="item.id">
-                <td>
-                  <p class="font-medium text-slate-950">{{ item.name }}</p>
-                  <p class="mt-1 table-meta">更新时间：{{ formatDateTime(item.updated_at) }}</p>
-                </td>
-                <td>
-                  <UTag code>{{ item.secret_masked }}</UTag>
-                </td>
-                <td>
-                  <p class="max-w-xl text-sm text-slate-600">{{ item.description || "-" }}</p>
-                </td>
-                <td>
-                  <UTag :variant="item.enabled ? 'success' : 'error'">
-                    {{ item.enabled ? "启用" : "停用" }}
-                  </UTag>
-                </td>
-                <td>
-                  <div class="table-actions">
-                    <button class="btn btn-secondary" @click="openEdit(item)">编辑</button>
-                    <button class="btn btn-error" :disabled="store.deleting === item.id" @click="remove(item)">
-                      {{ store.deleting === item.id ? "删除中..." : "删除" }}
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
+      <UTable v-else :columns="tableColumns" :rows="store.items" action-width="132px" fixed>
+        <template #cell-name="{ row }">
+          <p class="font-medium text-slate-950">{{ row.name }}</p>
+          <p class="mt-1 table-meta">更新时间：{{ formatDateTime(row.updated_at) }}</p>
+        </template>
+        <template #cell-secret="{ row }">
+          <UTag code>{{ row.secret_masked }}</UTag>
+        </template>
+        <template #cell-description="{ row }">
+          <p class="max-w-xl text-sm text-slate-600">{{ row.description || "-" }}</p>
+        </template>
+        <template #cell-enabled="{ row }">
+          <UTag :variant="row.enabled ? 'success' : 'error'">
+            {{ row.enabled ? "启用" : "停用" }}
+          </UTag>
+        </template>
+        <template #actions="{ row }">
+          <div class="table-actions">
+            <button class="btn btn-secondary" @click="openEdit(row)">编辑</button>
+            <button class="btn btn-error" :disabled="store.deleting === row.id" @click="remove(row)">
+              {{ store.deleting === row.id ? "删除中..." : "删除" }}
+            </button>
+          </div>
+        </template>
+      </UTable>
     </PanelBlock>
 
     <UModal v-model:open="modalOpen" :title="store.form.id ? '编辑授权 Key' : '新增授权 Key'" width="560px" @close="store.resetForm">
@@ -108,11 +91,18 @@ import FieldLabel from "../components/FieldLabel.vue";
 import PanelBlock from "../components/PanelBlock.vue";
 import StatCard from "../components/StatCard.vue";
 import UModal from "../components/ued/UModal.vue";
+import UTable from "../components/ued/UTable.vue";
 import UTag from "../components/ued/UTag.vue";
 import { useAuthKeysStore } from "../stores/authKeys";
 
 const store = useAuthKeysStore();
 const modalOpen = ref(false);
+const tableColumns = [
+  { key: "name", title: "名称", width: "22%" },
+  { key: "secret", title: "Key", width: "22%" },
+  { key: "description", title: "说明", width: "36%" },
+  { key: "enabled", title: "状态", width: "10%" },
+];
 
 function openCreate() {
   store.resetForm();
