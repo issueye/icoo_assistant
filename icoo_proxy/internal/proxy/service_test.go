@@ -318,3 +318,130 @@ func TestHandleTranslatesResponsesToAnthropic(t *testing.T) {
 		t.Fatalf("expected message + function_call outputs, got %d", len(output))
 	}
 }
+
+func TestHandleTranslatesAnthropicToChat(t *testing.T) {
+	var gotModel string
+	var gotMessages []interface{}
+	var gotTools []interface{}
+
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var payload map[string]interface{}
+		if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+			t.Fatalf("decode upstream body: %v", err)
+		}
+		gotModel, _ = payload["model"].(string)
+		gotMessages, _ = payload["messages"].([]interface{})
+		gotTools, _ = payload["tools"].([]interface{})
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"id":"chatcmpl_456","choices":[{"index":0,"message":{"role":"assistant","content":"hello from chat","tool_calls":[{"id":"tool_lookup","type":"function","function":{"name":"lookup_docs","arguments":"{\"topic\":\"proxy\"}"}}]},"finish_reason":"tool_calls"}],"usage":{"prompt_tokens":10,"completion_tokens":5,"total_tokens":15}}`))
+	}))
+	defer upstream.Close()
+
+	cfg := config.Config{
+		AllowUnauthenticatedLocal: true,
+		OpenAIBaseURL:             upstream.URL,
+		OpenAIApiKey:              "test-openai-key",
+		ModelRoutes:               "anthropic-chat=openai-chat:gpt-4o-mini",
+	}
+	cat, err := catalog.New(cfg)
+	if err != nil {
+		t.Fatalf("new catalog: %v", err)
+	}
+	service := New(cfg, cat)
+
+	req := httptest.NewRequest(http.MethodPost, "/v1/messages", bytes.NewBufferString(`{"model":"anthropic-chat","system":"Be practical","tools":[{"name":"lookup_docs","description":"Lookup docs","input_schema":{"type":"object","properties":{"topic":{"type":"string"}}}}],"messages":[{"role":"user","content":[{"type":"text","text":"hello"}]}],"max_tokens":32}`))
+	rec := httptest.NewRecorder()
+
+	service.Handle(rec, req, catalog.ProtocolAnthropic)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d body=%s", rec.Code, rec.Body.String())
+	}
+	if gotModel != "gpt-4o-mini" {
+		t.Fatalf("expected translated model, got %q", gotModel)
+	}
+	if len(gotMessages) != 2 {
+		t.Fatalf("expected system + user chat messages, got %d", len(gotMessages))
+	}
+	if len(gotTools) != 1 {
+		t.Fatalf("expected one translated chat tool, got %d", len(gotTools))
+	}
+	var payload map[string]interface{}
+	if err := json.Unmarshal(rec.Body.Bytes(), &payload); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if payload["type"] != "message" {
+		t.Fatalf("expected anthropic message response, got %#v", payload["type"])
+	}
+	content, _ := payload["content"].([]interface{})
+	if len(content) != 2 {
+		t.Fatalf("expected text + tool_use anthropic content, got %d", len(content))
+	}
+}
+
+func TestHandleTranslatesChatToAnthropic(t *testing.T) {
+	var gotModel string
+	var gotSystem string
+	var gotMessages []interface{}
+	var gotTools []interface{}
+
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var payload map[string]interface{}
+		if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+			t.Fatalf("decode upstream body: %v", err)
+		}
+		gotModel, _ = payload["model"].(string)
+		gotSystem, _ = payload["system"].(string)
+		gotMessages, _ = payload["messages"].([]interface{})
+		gotTools, _ = payload["tools"].([]interface{})
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"id":"msg_456","type":"message","model":"claude-3","role":"assistant","content":[{"type":"text","text":"hello from anthropic"},{"type":"tool_use","id":"tool_lookup","name":"lookup_docs","input":{"topic":"proxy"}}],"stop_reason":"tool_use","usage":{"input_tokens":13,"output_tokens":7}}`))
+	}))
+	defer upstream.Close()
+
+	cfg := config.Config{
+		AllowUnauthenticatedLocal: true,
+		AnthropicBaseURL:          upstream.URL,
+		AnthropicAPIKey:           "test-anthropic-key",
+		AnthropicVersion:          "2023-06-01",
+		ModelRoutes:               "chat-anthropic=anthropic:claude-sonnet-4",
+	}
+	cat, err := catalog.New(cfg)
+	if err != nil {
+		t.Fatalf("new catalog: %v", err)
+	}
+	service := New(cfg, cat)
+
+	req := httptest.NewRequest(http.MethodPost, "/v1/chat/completions", bytes.NewBufferString(`{"model":"chat-anthropic","messages":[{"role":"system","content":"Be practical"},{"role":"assistant","content":null,"tool_calls":[{"id":"tool_prev","type":"function","function":{"name":"lookup_docs","arguments":"{\"topic\":\"proxy\"}"}}]},{"role":"tool","tool_call_id":"tool_prev","content":"done"},{"role":"user","content":"hello"}],"tools":[{"type":"function","function":{"name":"lookup_docs","description":"Lookup docs","parameters":{"type":"object","properties":{"topic":{"type":"string"}}}}}],"max_tokens":32}`))
+	rec := httptest.NewRecorder()
+
+	service.Handle(rec, req, catalog.ProtocolOpenAIChat)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d body=%s", rec.Code, rec.Body.String())
+	}
+	if gotModel != "claude-sonnet-4" {
+		t.Fatalf("expected translated model, got %q", gotModel)
+	}
+	if gotSystem != "Be practical" {
+		t.Fatalf("expected anthropic system, got %q", gotSystem)
+	}
+	if len(gotMessages) != 3 {
+		t.Fatalf("expected assistant tool_use + tool_result + user anthropic messages, got %d", len(gotMessages))
+	}
+	if len(gotTools) != 1 {
+		t.Fatalf("expected one translated anthropic tool, got %d", len(gotTools))
+	}
+	var payload map[string]interface{}
+	if err := json.Unmarshal(rec.Body.Bytes(), &payload); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	choices, _ := payload["choices"].([]interface{})
+	if len(choices) != 1 {
+		t.Fatalf("expected one choice, got %d", len(choices))
+	}
+	choice, _ := choices[0].(map[string]interface{})
+	if choice["finish_reason"] != "tool_calls" {
+		t.Fatalf("expected tool_calls finish reason, got %#v", choice["finish_reason"])
+	}
+}

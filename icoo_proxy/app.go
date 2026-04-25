@@ -192,6 +192,7 @@ func (a *App) State() api.State {
 			"Current build supports same-protocol forwarding and model alias rewriting.",
 			"Current build also supports non-streaming chat/completions <-> responses translation.",
 			"Current build also supports non-streaming anthropic messages <-> responses translation.",
+			"Current build also supports non-streaming anthropic messages <-> chat/completions translation.",
 			"Basic function tool definitions and non-streaming tool call/result mapping are now supported.",
 			"Streaming cross-protocol translation is still planned.",
 			"The desktop app starts the local proxy automatically during startup.",

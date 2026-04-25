@@ -58,6 +58,22 @@ func translateResponsesToAnthropicRequest(body []byte, model string) ([]byte, er
 	return json.Marshal(request)
 }
 
+func translateAnthropicToChatRequest(body []byte, model string) ([]byte, error) {
+	responsesBody, err := translateAnthropicToResponsesRequest(body, model)
+	if err != nil {
+		return nil, err
+	}
+	return translateResponsesToChatRequest(responsesBody, model)
+}
+
+func translateChatToAnthropicRequest(body []byte, model string) ([]byte, error) {
+	responsesBody, err := translateChatToResponsesRequest(body, model)
+	if err != nil {
+		return nil, err
+	}
+	return translateResponsesToAnthropicRequest(responsesBody, model)
+}
+
 func translateChatToResponsesRequest(body []byte, model string) ([]byte, error) {
 	var payload map[string]interface{}
 	if err := json.Unmarshal(body, &payload); err != nil {
@@ -79,10 +95,7 @@ func translateChatToResponsesRequest(body []byte, model string) ([]byte, error) 
 		if strings.EqualFold(role, "system") {
 			continue
 		}
-		input = append(input, map[string]interface{}{
-			"role":    role,
-			"content": normalizeMessageContent(msg["content"]),
-		})
+		input = append(input, chatMessageToResponsesInput(msg)...)
 	}
 
 	request := map[string]interface{}{
@@ -216,6 +229,22 @@ func translateChatToResponsesResponse(body []byte, model string) ([]byte, error)
 	return json.Marshal(response)
 }
 
+func translateAnthropicToChatResponse(body []byte, model string) ([]byte, error) {
+	responsesBody, err := translateAnthropicToResponsesResponse(body, model)
+	if err != nil {
+		return nil, err
+	}
+	return translateResponsesToChatResponse(responsesBody, model)
+}
+
+func translateChatToAnthropicResponse(body []byte, model string) ([]byte, error) {
+	responsesBody, err := translateChatToResponsesResponse(body, model)
+	if err != nil {
+		return nil, err
+	}
+	return translateResponsesToAnthropicResponse(responsesBody, model)
+}
+
 func translateResponsesToAnthropicResponse(body []byte, model string) ([]byte, error) {
 	var payload map[string]interface{}
 	if err := json.Unmarshal(body, &payload); err != nil {
@@ -325,6 +354,34 @@ func normalizeResponsesInput(raw interface{}) []map[string]interface{} {
 			if !ok {
 				continue
 			}
+			itemType, _ := item["type"].(string)
+			switch itemType {
+			case "function_call_output":
+				items = append(items, map[string]interface{}{
+					"role": "user",
+					"content": []map[string]interface{}{
+						{
+							"type":        "tool_result",
+							"tool_use_id": stringValue(item["call_id"], ""),
+							"content":     responseToolOutputToText(item["output"]),
+						},
+					},
+				})
+				continue
+			case "function_call":
+				items = append(items, map[string]interface{}{
+					"role": "assistant",
+					"content": []map[string]interface{}{
+						{
+							"type":  "tool_use",
+							"id":    stringValue(item["call_id"], ""),
+							"name":  stringValue(item["name"], ""),
+							"input": parseJSONStringObject(stringValue(item["arguments"], "{}")),
+						},
+					},
+				})
+				continue
+			}
 			role, _ := item["role"].(string)
 			if role == "" {
 				role = "user"
@@ -393,6 +450,51 @@ func normalizeResponsesInputToChatMessages(raw interface{}) []map[string]interfa
 	default:
 		return nil
 	}
+}
+
+func chatMessageToResponsesInput(msg map[string]interface{}) []map[string]interface{} {
+	role, _ := msg["role"].(string)
+	if role == "" {
+		role = "user"
+	}
+	if role == "tool" {
+		return []map[string]interface{}{{
+			"type":    "function_call_output",
+			"call_id": stringValue(msg["tool_call_id"], ""),
+			"output":  contentToText(msg["content"]),
+		}}
+	}
+
+	items := make([]map[string]interface{}, 0)
+	if content := contentToText(msg["content"]); content != "" {
+		items = append(items, map[string]interface{}{
+			"role":    role,
+			"content": content,
+		})
+	}
+	if role == "assistant" {
+		toolCalls, _ := msg["tool_calls"].([]interface{})
+		for _, rawToolCall := range toolCalls {
+			toolCall, ok := rawToolCall.(map[string]interface{})
+			if !ok {
+				continue
+			}
+			function, _ := toolCall["function"].(map[string]interface{})
+			items = append(items, map[string]interface{}{
+				"type":      "function_call",
+				"call_id":   stringValue(toolCall["id"], ""),
+				"name":      stringValue(function["name"], ""),
+				"arguments": stringValue(function["arguments"], "{}"),
+			})
+		}
+	}
+	if len(items) == 0 {
+		items = append(items, map[string]interface{}{
+			"role":    role,
+			"content": normalizeMessageContent(msg["content"]),
+		})
+	}
+	return items
 }
 
 func normalizeAnthropicMessages(raw []interface{}) []map[string]interface{} {

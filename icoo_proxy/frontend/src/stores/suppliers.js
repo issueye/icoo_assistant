@@ -47,6 +47,41 @@ export const useSuppliersStore = defineStore("suppliers", {
     checkedCount(state) {
       return state.health.length;
     },
+    routeDefinitions() {
+      return [
+        {
+          key: "anthropic",
+          label: "Anthropic 路由",
+          description: "用于兼容 /v1/messages 与 /anthropic/v1/messages 请求。",
+        },
+        {
+          key: "openai-chat",
+          label: "Chat 路由",
+          description: "用于兼容 /v1/chat/completions 与 /openai/v1/chat/completions 请求。",
+        },
+        {
+          key: "openai-responses",
+          label: "Responses 路由",
+          description: "用于兼容 /v1/responses 与 /openai/v1/responses 请求。",
+        },
+      ];
+    },
+    policyOptions() {
+      return this.routeDefinitions.map((item) => ({
+        label: item.label,
+        value: item.key,
+      }));
+    },
+    policiesByProtocol() {
+      const lookup = {};
+      this.policies.forEach((item) => {
+        lookup[item.downstream_protocol] = item;
+      });
+      return this.routeDefinitions.map((definition) => ({
+        ...definition,
+        policy: lookup[definition.key] || null,
+      }));
+    },
   },
   actions: {
     async load() {

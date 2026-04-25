@@ -2,7 +2,7 @@
   <div v-if="items.length === 0" class="empty-state">
     {{ emptyText }}
   </div>
-  <div v-else class="space-y-3">
+  <div v-else class="space-y-2">
     <article v-for="item in items" :key="item.name" class="table-row">
       <div>
         <p class="text-sm font-medium text-slate-900">{{ item.name }}</p>
@@ -21,7 +21,7 @@ defineProps({
   },
   emptyText: {
     type: String,
-    default: "No items.",
+    default: "暂无数据。",
   },
 });
 </script>

@@ -25,13 +25,13 @@
 - 同协议模型别名转发
 - 非流式 `chat/completions <-> responses` 跨协议转换
 - 非流式 `anthropic messages <-> responses` 跨协议转换
+- 非流式 `anthropic messages <-> chat/completions` 跨协议转换
 - 基础 function tools 定义映射
 - 非流式 tool call / tool result 基础映射
 - 桌面页状态概览与代理重载
 
 当前版本尚未完成：
 
-- Anthropic / OpenAI 之间的跨协议转换
 - 更完整的流式事件兼容
 - 更细的请求日志和审计界面
 - 路由可视化编辑
@@ -93,8 +93,11 @@ POST /openai/v1/responses
 - 非流式 `responses -> chat/completions`
 - 非流式 `anthropic messages -> responses`
 - 非流式 `responses -> anthropic messages`
+- 非流式 `anthropic messages -> chat/completions`
+- 非流式 `chat/completions -> anthropic messages`
 - `chat tools <-> responses tools`
 - `anthropic tools <-> responses tools`
+- `chat tools <-> anthropic tools`
 - 非流式 tool call / function_call / tool_use 基础互转
 - OpenAI 与 Anthropic 风格错误结构
 - 最近请求摘要
@@ -103,5 +106,3 @@ POST /openai/v1/responses
 
 - 跨协议流式转换
 - 更完整的工具调用覆盖，例如并行工具、严格 schema 和复杂 content part
-
-如果某个别名被路由到不同协议，当前会明确返回 `501 Not Implemented`，用于给后续转换引擎预留扩展位。

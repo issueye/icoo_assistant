@@ -1,18 +1,14 @@
 <template>
   <section class="page-section">
     <div class="page-header">
-      <p class="page-eyebrow">Traffic Monitor</p>
       <h2 class="page-title">请求流量监控</h2>
-      <p class="page-description">
-        用更接近传统后台系统的方式查看最近请求、状态码和耗时，便于定位协议转换异常、路由命中问题和上游响应波动。
-      </p>
       <div class="toolbar">
         <button class="btn btn-primary" :disabled="store.refreshing" @click="store.refresh">
-          {{ store.refreshing ? "Refreshing..." : "Refresh Traffic" }}
+          {{ store.refreshing ? "刷新中..." : "刷新流量" }}
         </button>
         <label class="field-toggle rounded-lg">
           <input :checked="store.autoRefresh" type="checkbox" class="field-checkbox" @change="store.toggleAutoRefresh" />
-          Auto refresh every 6s
+          每 6 秒自动刷新
         </label>
       </div>
     </div>
@@ -22,55 +18,53 @@
     </div>
 
     <div class="section-grid xl:grid-cols-4">
-      <StatCard label="Recent Requests" :value="String(store.requests.length)" />
-      <StatCard label="Successful" :value="String(store.successCount)" />
-      <StatCard label="Errors" :value="String(store.errorCount)" />
-      <StatCard label="Avg Latency" :value="`${store.averageLatency} ms`" />
+      <StatCard label="最近请求数" :value="String(store.requests.length)" />
+      <StatCard label="成功请求数" :value="String(store.successCount)" />
+      <StatCard label="错误请求数" :value="String(store.errorCount)" />
+      <StatCard label="平均耗时" :value="`${store.averageLatency} ms`" />
     </div>
 
     <div class="section-grid xl:grid-cols-[320px_minmax(0,1fr)]">
-      <PanelBlock title="Filters" eyebrow="Focus">
+      <PanelBlock title="筛选条件">
         <div class="space-y-4">
-          <label class="block">
-            <span class="mb-2 block text-sm font-medium text-slate-700">Protocol</span>
-            <select :value="store.filter" class="field-input" @change="store.setFilter($event.target.value)">
-              <option v-for="option in store.protocolOptions" :key="option" :value="option">
-                {{ option }}
-              </option>
-            </select>
-          </label>
+          <USelect
+            label="协议"
+            :model-value="store.filter"
+            :options="store.protocolOptions"
+            @update:model-value="store.setFilter"
+          />
 
           <div class="sub-card">
-            <p class="text-sm font-medium text-slate-900">Last updated</p>
+            <p class="text-sm font-medium text-slate-900">最近刷新时间</p>
             <p class="mt-2 text-sm text-slate-500">{{ formatDateTime(store.lastUpdatedAt) }}</p>
           </div>
 
           <div class="sub-card">
-            <p class="text-sm font-medium text-slate-900">Current filter result</p>
-            <p class="mt-2 text-sm text-slate-500">{{ store.filteredRequests.length }} request(s) visible</p>
+            <p class="text-sm font-medium text-slate-900">当前筛选结果</p>
+            <p class="mt-2 text-sm text-slate-500">共显示 {{ store.filteredRequests.length }} 条请求</p>
           </div>
         </div>
       </PanelBlock>
 
-      <PanelBlock title="Recent Request Timeline" eyebrow="Inspection">
+      <PanelBlock title="最近请求明细">
         <div v-if="store.loading" class="empty-state">
-          Loading traffic...
+          正在加载流量数据...
         </div>
         <div v-else-if="store.filteredRequests.length === 0" class="empty-state">
-          No matching requests yet.
+          当前没有匹配的请求记录。
         </div>
         <div v-else class="table-shell">
           <div class="table-scroll">
             <table class="admin-table">
               <thead>
                 <tr>
-                  <th>Request ID</th>
-                  <th>Downstream / Upstream</th>
-                  <th>Model</th>
-                  <th>Status</th>
-                  <th>Latency</th>
-                  <th>Created At</th>
-                  <th>Error</th>
+                  <th>请求 ID</th>
+                  <th>下游 / 上游</th>
+                  <th>模型</th>
+                  <th>状态码</th>
+                  <th>耗时</th>
+                  <th>创建时间</th>
+                  <th>错误信息</th>
                 </tr>
               </thead>
               <tbody>
@@ -98,7 +92,7 @@
                   </td>
                   <td>
                     <p v-if="request.error" class="text-sm text-rose-700">{{ request.error }}</p>
-                    <span v-else class="table-meta">-</span>
+                    <span v-else class="table-meta">无</span>
                   </td>
                 </tr>
               </tbody>
@@ -116,6 +110,7 @@ import { useTrafficStore } from "../stores/traffic";
 
 import PanelBlock from "../components/PanelBlock.vue";
 import StatCard from "../components/StatCard.vue";
+import USelect from "../components/ued/USelect.vue";
 
 const store = useTrafficStore();
 let refreshTimer = null;
@@ -139,7 +134,7 @@ function startTimer() {
 
 function formatDateTime(value) {
   if (!value) {
-    return "not available";
+    return "暂无";
   }
   return new Date(value).toLocaleString();
 }

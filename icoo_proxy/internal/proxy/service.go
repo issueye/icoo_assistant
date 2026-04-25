@@ -359,6 +359,10 @@ func (s *Service) prepareRequestBody(downstream catalog.Protocol, route catalog.
 		return translateAnthropicToResponsesRequest(body, route.Model)
 	case downstream == catalog.ProtocolOpenAIResponse && route.Upstream == catalog.ProtocolAnthropic:
 		return translateResponsesToAnthropicRequest(body, route.Model)
+	case downstream == catalog.ProtocolAnthropic && route.Upstream == catalog.ProtocolOpenAIChat:
+		return translateAnthropicToChatRequest(body, route.Model)
+	case downstream == catalog.ProtocolOpenAIChat && route.Upstream == catalog.ProtocolAnthropic:
+		return translateChatToAnthropicRequest(body, route.Model)
 	default:
 		return nil, fmt.Errorf("cross protocol translation from %s to %s is not implemented yet", downstream, route.Upstream)
 	}
@@ -374,6 +378,10 @@ func translateResponseBody(downstream, upstream catalog.Protocol, model string, 
 		return translateResponsesToAnthropicResponse(body, model)
 	case downstream == catalog.ProtocolOpenAIResponse && upstream == catalog.ProtocolAnthropic:
 		return translateAnthropicToResponsesResponse(body, model)
+	case downstream == catalog.ProtocolAnthropic && upstream == catalog.ProtocolOpenAIChat:
+		return translateChatToAnthropicResponse(body, model)
+	case downstream == catalog.ProtocolOpenAIChat && upstream == catalog.ProtocolAnthropic:
+		return translateAnthropicToChatResponse(body, model)
 	default:
 		return nil, fmt.Errorf("cross protocol response translation from %s to %s is not implemented yet", upstream, downstream)
 	}
