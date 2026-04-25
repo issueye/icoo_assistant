@@ -1,122 +1,107 @@
 <template>
-  <section class="space-y-6">
-    <div class="rounded-[30px] border border-white/10 bg-white/5 p-6 shadow-panel backdrop-blur">
-      <div class="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
-        <div>
-          <p class="text-xs uppercase tracking-[0.26em] text-signal-amber">Supplier Management</p>
-          <h2 class="mt-3 text-4xl font-bold tracking-[-0.05em]">Manage upstream vendors and routing candidates.</h2>
-          <p class="mt-4 max-w-3xl text-sm leading-7 text-slate-300/80">
-            Supplier profiles are stored locally and can be used as the management base for future dynamic route
-            selection, policy assignment, and provider-specific health checks.
-          </p>
-        </div>
-
-        <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
-          <StatCard label="Total Suppliers" :value="String(store.items.length)" />
-          <StatCard label="Enabled Profiles" :value="String(store.enabledCount)" />
-          <StatCard label="Health Checked" :value="String(store.checkedCount)" />
-          <StatCard
-            label="Current Form"
-            :value="store.form.id ? 'Editing existing supplier' : 'Creating new supplier'"
-          />
-        </div>
-      </div>
+  <section class="page-section">
+    <div class="page-header">
+      <p class="page-eyebrow">Supplier Management</p>
+      <h2 class="page-title">供应商与路由策略管理</h2>
+      <p class="page-description">
+        在这里集中维护上游供应商、目标模型、健康检查结果和默认路由策略，界面交互调整为传统后台管理台风格，便于录入、查询和维护。
+      </p>
     </div>
 
-    <div v-if="store.error" class="rounded-3xl border border-signal-coral/25 bg-signal-coral/10 px-5 py-4 text-sm text-rose-100">
+    <div v-if="store.error" class="notice-error">
       {{ store.error }}
     </div>
 
-    <div class="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
+    <div class="section-grid xl:grid-cols-4">
+      <StatCard label="Total Suppliers" :value="String(store.items.length)" />
+      <StatCard label="Enabled Profiles" :value="String(store.enabledCount)" />
+      <StatCard label="Health Checked" :value="String(store.checkedCount)" />
+      <StatCard label="Current Form" :value="store.form.id ? 'Editing existing supplier' : 'Creating new supplier'" />
+    </div>
+
+    <div class="section-grid xl:grid-cols-[1.15fr_0.85fr]">
       <PanelBlock title="Supplier Registry" eyebrow="Catalog">
-        <div v-if="store.loading" class="rounded-3xl border border-white/10 bg-black/20 px-4 py-8 text-center text-sm text-slate-400">
+        <div v-if="store.loading" class="empty-state">
           Loading suppliers...
         </div>
-        <div v-else class="space-y-3">
-          <article
-            v-for="item in store.items"
-            :key="item.id"
-            class="rounded-3xl border border-white/10 bg-ink-900/70 p-4"
-          >
-            <div class="flex flex-wrap items-start justify-between gap-3">
-              <div>
-                <div class="flex items-center gap-2">
-                  <p class="text-base font-semibold">{{ item.name }}</p>
-                  <span
-                    class="rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.18em]"
-                    :class="item.enabled ? 'bg-signal-mint/15 text-signal-mint' : 'bg-signal-coral/15 text-signal-coral'"
-                  >
-                    {{ item.enabled ? "enabled" : "disabled" }}
-                  </span>
-                </div>
-                <p class="mt-1 text-sm text-slate-400">{{ item.protocol }} | {{ item.base_url }}</p>
-              </div>
-              <div class="flex gap-2">
-                <button
-                  class="rounded-full border border-signal-sky/20 bg-signal-sky/10 px-4 py-2 text-xs font-semibold text-signal-sky hover:bg-signal-sky/20 disabled:cursor-progress disabled:opacity-70"
-                  :disabled="store.checking === item.id"
-                  @click="store.check(item.id)"
-                >
-                  {{ store.checking === item.id ? "Checking..." : "Check" }}
-                </button>
-                <button
-                  class="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs font-semibold hover:border-white/20 hover:bg-white/10"
-                  @click="store.select(item)"
-                >
-                  Edit
-                </button>
-                <button
-                  class="rounded-full border border-signal-coral/20 bg-signal-coral/10 px-4 py-2 text-xs font-semibold text-rose-100 hover:bg-signal-coral/20 disabled:cursor-progress disabled:opacity-70"
-                  :disabled="store.deleting === item.id"
-                  @click="store.remove(item.id)"
-                >
-                  {{ store.deleting === item.id ? "Deleting..." : "Delete" }}
-                </button>
-              </div>
-            </div>
-
-            <p class="mt-3 text-sm leading-6 text-slate-300/80">{{ item.description || "No description yet." }}</p>
-
-            <div
-              v-if="store.healthFor(item.id)"
-              class="mt-4 rounded-2xl border border-white/10 bg-black/20 p-4 text-sm text-slate-200"
-            >
-              <div class="flex flex-wrap items-center gap-2">
-                <span
-                  class="rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.18em]"
-                  :class="healthTone(store.healthFor(item.id)).badge"
-                >
-                  {{ store.healthFor(item.id).status }}
-                </span>
-                <code class="rounded-full bg-white/5 px-3 py-1 text-xs">
-                  {{ store.healthFor(item.id).status_code || "no-status" }}
-                </code>
-                <span class="text-xs text-slate-400">{{ store.healthFor(item.id).duration_ms }} ms</span>
-              </div>
-              <p class="mt-3 leading-6 text-slate-300/80">{{ store.healthFor(item.id).message }}</p>
-              <p class="mt-2 text-xs text-slate-500">
-                {{ formatCheckedAt(store.healthFor(item.id).checked_at) }} | {{ store.healthFor(item.id).base_url }}
-              </p>
-            </div>
-
-            <div class="mt-4 flex flex-wrap gap-2">
-              <code class="rounded-full bg-black/20 px-3 py-1 font-mono text-xs">{{ item.api_key_masked || "No API key stored" }}</code>
-              <span
-                v-for="model in item.models || []"
-                :key="model"
-                class="rounded-full bg-signal-sky/10 px-3 py-1 text-xs text-signal-sky"
-              >
-                {{ model }}
-              </span>
-              <span
-                v-for="tag in item.tags || []"
-                :key="tag"
-                class="rounded-full bg-white/5 px-3 py-1 text-xs text-slate-300"
-              >
-                #{{ tag }}
-              </span>
-            </div>
-          </article>
+        <div v-else-if="!store.items.length" class="empty-state">
+          No suppliers configured yet.
+        </div>
+        <div v-else class="table-shell">
+          <div class="table-scroll">
+            <table class="admin-table">
+              <thead>
+                <tr>
+                  <th>Supplier</th>
+                  <th>Protocol / Endpoint</th>
+                  <th>Models / Tags</th>
+                  <th>Health</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="item in store.items" :key="item.id">
+                  <td>
+                    <div class="flex items-center gap-2">
+                      <p class="font-medium text-slate-900">{{ item.name }}</p>
+                      <span class="badge" :class="item.enabled ? 'badge-success' : 'badge-danger'">
+                        {{ item.enabled ? "enabled" : "disabled" }}
+                      </span>
+                    </div>
+                    <p class="mt-2 text-sm text-slate-600">{{ item.description || "No description yet." }}</p>
+                    <p class="mt-2 table-meta">Updated: {{ formatCheckedAt(item.updated_at) }}</p>
+                  </td>
+                  <td>
+                    <p class="font-medium text-slate-900">{{ item.protocol }}</p>
+                    <p class="mt-2 break-all table-meta">{{ item.base_url }}</p>
+                    <div class="mt-2">
+                      <code class="mono-chip">{{ item.api_key_masked || "No API key stored" }}</code>
+                    </div>
+                  </td>
+                  <td>
+                    <div class="flex flex-wrap gap-2">
+                      <span v-for="model in item.models || []" :key="model" class="tag-chip">
+                        {{ model }}
+                      </span>
+                      <span v-if="!(item.models || []).length" class="table-meta">No models</span>
+                    </div>
+                    <div class="mt-2 flex flex-wrap gap-2">
+                      <span v-for="tag in item.tags || []" :key="tag" class="tag-chip">
+                        #{{ tag }}
+                      </span>
+                    </div>
+                  </td>
+                  <td>
+                    <template v-if="store.healthFor(item.id)">
+                      <div class="flex flex-wrap items-center gap-2">
+                        <span class="badge" :class="healthTone(store.healthFor(item.id)).badge">
+                          {{ store.healthFor(item.id).status }}
+                        </span>
+                        <span class="tag-chip">{{ store.healthFor(item.id).duration_ms }} ms</span>
+                      </div>
+                      <p class="mt-2 table-meta">
+                        HTTP {{ store.healthFor(item.id).status_code || "no-status" }}
+                      </p>
+                      <p class="mt-2 text-sm text-slate-600">{{ store.healthFor(item.id).message }}</p>
+                      <p class="mt-2 table-meta">{{ formatCheckedAt(store.healthFor(item.id).checked_at) }}</p>
+                    </template>
+                    <span v-else class="table-meta">Not checked yet</span>
+                  </td>
+                  <td>
+                    <div class="table-actions">
+                      <button class="btn btn-info" :disabled="store.checking === item.id" @click="store.check(item.id)">
+                        {{ store.checking === item.id ? "Checking..." : "Check" }}
+                      </button>
+                      <button class="btn btn-secondary" @click="store.select(item)">Edit</button>
+                      <button class="btn btn-danger" :disabled="store.deleting === item.id" @click="store.remove(item.id)">
+                        {{ store.deleting === item.id ? "Deleting..." : "Delete" }}
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </div>
       </PanelBlock>
 
@@ -156,23 +141,16 @@
             </FieldLabel>
           </div>
 
-          <label class="flex items-center gap-3 rounded-2xl border border-white/10 bg-black/10 px-4 py-3 text-sm text-slate-200">
-            <input v-model="store.form.enabled" type="checkbox" class="h-4 w-4 rounded border-white/20 bg-black/20 text-signal-mint" />
+          <label class="field-toggle">
+            <input v-model="store.form.enabled" type="checkbox" class="field-checkbox" />
             Enable this supplier profile
           </label>
 
           <div class="flex flex-wrap gap-3">
-            <button
-              class="rounded-full bg-signal-mint px-5 py-3 text-sm font-semibold text-ink-950 transition hover:-translate-y-0.5 disabled:cursor-progress disabled:opacity-70"
-              :disabled="store.saving"
-            >
+            <button class="btn btn-primary" :disabled="store.saving">
               {{ store.saving ? "Saving..." : store.form.id ? "Update Supplier" : "Create Supplier" }}
             </button>
-            <button
-              type="button"
-              class="rounded-full border border-white/10 bg-white/5 px-5 py-3 text-sm font-semibold hover:border-white/20 hover:bg-white/10"
-              @click="store.resetForm"
-            >
+            <button type="button" class="btn btn-secondary" @click="store.resetForm">
               Reset Form
             </button>
           </div>
@@ -180,36 +158,52 @@
       </PanelBlock>
     </div>
 
-    <div class="grid gap-6 xl:grid-cols-[1fr_1fr]">
+    <div class="section-grid xl:grid-cols-2">
       <PanelBlock title="Default Route Policies" eyebrow="Gateway Routing">
-        <div class="space-y-3">
-          <article
-            v-for="policy in store.policies"
-            :key="policy.id"
-            class="rounded-3xl border border-white/10 bg-ink-900/70 p-4"
-          >
-            <div class="flex flex-wrap items-start justify-between gap-3">
-              <div>
-                <p class="text-sm font-semibold">{{ policy.downstream_protocol }}</p>
-                <p class="mt-1 text-xs text-slate-400">{{ policy.supplier_name || "Unassigned" }} | {{ policy.upstream_protocol || "-" }}</p>
-              </div>
-              <button
-                class="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs font-semibold hover:border-white/20 hover:bg-white/10"
-                @click="store.selectPolicy(policy)"
-              >
-                Edit Policy
-              </button>
-            </div>
-            <div class="mt-3 flex flex-wrap gap-2">
-              <code class="rounded-full bg-black/20 px-3 py-1 font-mono text-xs">{{ policy.target_model || "No model" }}</code>
-              <span
-                class="rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em]"
-                :class="policy.enabled ? 'bg-signal-mint/15 text-signal-mint' : 'bg-signal-coral/15 text-signal-coral'"
-              >
-                {{ policy.enabled ? "enabled" : "disabled" }}
-              </span>
-            </div>
-          </article>
+        <div v-if="!store.policies.length" class="empty-state">
+          No route policies configured yet.
+        </div>
+        <div v-else class="table-shell">
+          <div class="table-scroll">
+            <table class="admin-table">
+              <thead>
+                <tr>
+                  <th>Downstream</th>
+                  <th>Supplier</th>
+                  <th>Upstream / Model</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="policy in store.policies" :key="policy.id">
+                  <td>
+                    <p class="font-medium text-slate-900">{{ policy.downstream_protocol }}</p>
+                  </td>
+                  <td>
+                    <p class="text-sm text-slate-700">{{ policy.supplier_name || "Unassigned" }}</p>
+                    <p class="mt-1 table-meta">{{ policy.supplier_id || "-" }}</p>
+                  </td>
+                  <td>
+                    <p class="text-sm text-slate-700">{{ policy.upstream_protocol || "-" }}</p>
+                    <div class="mt-2">
+                      <code class="mono-chip">{{ policy.target_model || "No model" }}</code>
+                    </div>
+                  </td>
+                  <td>
+                    <span class="badge" :class="policy.enabled ? 'badge-success' : 'badge-danger'">
+                      {{ policy.enabled ? "enabled" : "disabled" }}
+                    </span>
+                  </td>
+                  <td>
+                    <button class="btn btn-secondary" @click="store.selectPolicy(policy)">
+                      Edit Policy
+                    </button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </div>
       </PanelBlock>
 
@@ -237,23 +231,16 @@
             <input v-model="store.policyForm.target_model" class="field-input" placeholder="gpt-4.1-mini or claude-sonnet-4" />
           </FieldLabel>
 
-          <label class="flex items-center gap-3 rounded-2xl border border-white/10 bg-black/10 px-4 py-3 text-sm text-slate-200">
-            <input v-model="store.policyForm.enabled" type="checkbox" class="h-4 w-4 rounded border-white/20 bg-black/20 text-signal-mint" />
+          <label class="field-toggle">
+            <input v-model="store.policyForm.enabled" type="checkbox" class="field-checkbox" />
             Enable this route policy
           </label>
 
           <div class="flex flex-wrap gap-3">
-            <button
-              class="rounded-full bg-signal-amber px-5 py-3 text-sm font-semibold text-ink-950 transition hover:-translate-y-0.5 disabled:cursor-progress disabled:opacity-70"
-              :disabled="store.saving"
-            >
+            <button class="btn btn-primary" :disabled="store.saving">
               {{ store.saving ? "Saving..." : "Save Route Policy" }}
             </button>
-            <button
-              type="button"
-              class="rounded-full border border-white/10 bg-white/5 px-5 py-3 text-sm font-semibold hover:border-white/20 hover:bg-white/10"
-              @click="store.resetPolicyForm"
-            >
+            <button type="button" class="btn btn-secondary" @click="store.resetPolicyForm">
               Reset Policy Form
             </button>
           </div>
@@ -275,15 +262,15 @@ const store = useSuppliersStore();
 
 function healthTone(record) {
   if (!record) {
-    return { badge: "bg-white/10 text-slate-200" };
+    return { badge: "badge-neutral" };
   }
   if (record.status === "reachable") {
-    return { badge: "bg-signal-mint/15 text-signal-mint" };
+    return { badge: "badge-success" };
   }
   if (record.status === "warning") {
-    return { badge: "bg-signal-amber/15 text-signal-amber" };
+    return { badge: "badge-warning" };
   }
-  return { badge: "bg-signal-coral/15 text-signal-coral" };
+  return { badge: "badge-danger" };
 }
 
 function formatCheckedAt(value) {

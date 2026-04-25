@@ -1,52 +1,38 @@
 <template>
-  <section class="space-y-6">
-    <div class="rounded-[30px] border border-white/10 bg-white/5 p-6 shadow-panel backdrop-blur">
-      <div class="grid gap-6 xl:grid-cols-[1.25fr_0.75fr]">
-        <div>
-          <p class="text-xs uppercase tracking-[0.26em] text-signal-amber">Traffic Monitor</p>
-          <h2 class="mt-3 text-4xl font-bold tracking-[-0.05em]">Review recent gateway traffic without leaving the desktop console.</h2>
-          <p class="mt-4 max-w-3xl text-sm leading-7 text-slate-300/80">
-            This view focuses on the latest proxied requests so we can quickly spot failures, protocol mismatches,
-            and latency spikes while iterating on routing and supplier configuration.
-          </p>
-          <div class="mt-6 flex flex-wrap items-center gap-3">
-            <button
-              class="rounded-full bg-signal-amber px-5 py-3 text-sm font-semibold text-ink-950 transition hover:-translate-y-0.5 disabled:cursor-progress disabled:opacity-70"
-              :disabled="store.refreshing"
-              @click="store.refresh"
-            >
-              {{ store.refreshing ? "Refreshing..." : "Refresh Traffic" }}
-            </button>
-            <label class="flex items-center gap-3 rounded-full border border-white/10 bg-black/10 px-4 py-2 text-sm text-slate-200">
-              <input
-                :checked="store.autoRefresh"
-                type="checkbox"
-                class="h-4 w-4 rounded border-white/20 bg-black/20 text-signal-mint"
-                @change="store.toggleAutoRefresh"
-              />
-              Auto refresh every 6s
-            </label>
-          </div>
-        </div>
-
-        <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
-          <StatCard label="Recent Requests" :value="String(store.requests.length)" />
-          <StatCard label="Successful" :value="String(store.successCount)" />
-          <StatCard label="Errors" :value="String(store.errorCount)" />
-          <StatCard label="Avg Latency" :value="`${store.averageLatency} ms`" />
-        </div>
+  <section class="page-section">
+    <div class="page-header">
+      <p class="page-eyebrow">Traffic Monitor</p>
+      <h2 class="page-title">请求流量监控</h2>
+      <p class="page-description">
+        用更接近传统后台系统的方式查看最近请求、状态码和耗时，便于定位协议转换异常、路由命中问题和上游响应波动。
+      </p>
+      <div class="toolbar">
+        <button class="btn btn-primary" :disabled="store.refreshing" @click="store.refresh">
+          {{ store.refreshing ? "Refreshing..." : "Refresh Traffic" }}
+        </button>
+        <label class="field-toggle rounded-lg">
+          <input :checked="store.autoRefresh" type="checkbox" class="field-checkbox" @change="store.toggleAutoRefresh" />
+          Auto refresh every 6s
+        </label>
       </div>
     </div>
 
-    <div v-if="store.error" class="rounded-3xl border border-signal-coral/25 bg-signal-coral/10 px-5 py-4 text-sm text-rose-100">
+    <div v-if="store.error" class="notice-error">
       {{ store.error }}
     </div>
 
-    <div class="grid gap-6 xl:grid-cols-[0.85fr_1.15fr]">
+    <div class="section-grid xl:grid-cols-4">
+      <StatCard label="Recent Requests" :value="String(store.requests.length)" />
+      <StatCard label="Successful" :value="String(store.successCount)" />
+      <StatCard label="Errors" :value="String(store.errorCount)" />
+      <StatCard label="Avg Latency" :value="`${store.averageLatency} ms`" />
+    </div>
+
+    <div class="section-grid xl:grid-cols-[320px_minmax(0,1fr)]">
       <PanelBlock title="Filters" eyebrow="Focus">
         <div class="space-y-4">
           <label class="block">
-            <span class="mb-2 block text-sm font-medium text-slate-200">Protocol</span>
+            <span class="mb-2 block text-sm font-medium text-slate-700">Protocol</span>
             <select :value="store.filter" class="field-input" @change="store.setFilter($event.target.value)">
               <option v-for="option in store.protocolOptions" :key="option" :value="option">
                 {{ option }}
@@ -54,52 +40,70 @@
             </select>
           </label>
 
-          <div class="rounded-3xl border border-white/10 bg-black/20 p-4 text-sm text-slate-300/80">
-            <p class="font-semibold text-slate-100">Last updated</p>
-            <p class="mt-2 text-slate-400">{{ formatDateTime(store.lastUpdatedAt) }}</p>
+          <div class="sub-card">
+            <p class="text-sm font-medium text-slate-900">Last updated</p>
+            <p class="mt-2 text-sm text-slate-500">{{ formatDateTime(store.lastUpdatedAt) }}</p>
           </div>
 
-          <div class="rounded-3xl border border-white/10 bg-black/20 p-4 text-sm text-slate-300/80">
-            <p class="font-semibold text-slate-100">Current filter result</p>
-            <p class="mt-2 text-slate-400">{{ store.filteredRequests.length }} request(s) visible</p>
+          <div class="sub-card">
+            <p class="text-sm font-medium text-slate-900">Current filter result</p>
+            <p class="mt-2 text-sm text-slate-500">{{ store.filteredRequests.length }} request(s) visible</p>
           </div>
         </div>
       </PanelBlock>
 
       <PanelBlock title="Recent Request Timeline" eyebrow="Inspection">
-        <div v-if="store.loading" class="rounded-3xl border border-white/10 bg-black/20 px-4 py-8 text-center text-sm text-slate-400">
+        <div v-if="store.loading" class="empty-state">
           Loading traffic...
         </div>
-        <div v-else-if="store.filteredRequests.length === 0" class="rounded-3xl border border-white/10 bg-black/20 px-4 py-8 text-center text-sm text-slate-400">
+        <div v-else-if="store.filteredRequests.length === 0" class="empty-state">
           No matching requests yet.
         </div>
-        <div v-else class="space-y-3">
-          <article
-            v-for="request in store.filteredRequests"
-            :key="request.request_id"
-            class="rounded-3xl border border-white/10 bg-ink-900/70 p-4"
-          >
-            <div class="flex flex-wrap items-start justify-between gap-3">
-              <div>
-                <p class="text-sm font-semibold">{{ request.downstream }} -> {{ request.upstream || "-" }}</p>
-                <p class="mt-1 text-xs text-slate-400">{{ request.request_id }}</p>
-              </div>
-              <div class="flex flex-wrap items-center gap-2">
-                <code class="rounded-full bg-black/20 px-3 py-1 font-mono text-xs">{{ request.model || "-" }}</code>
-                <span
-                  class="rounded-full px-3 py-1 text-xs font-semibold"
-                  :class="request.status_code >= 400 ? 'bg-signal-coral/15 text-signal-coral' : 'bg-signal-mint/15 text-signal-mint'"
-                >
-                  {{ request.status_code || "-" }}
-                </span>
-                <span class="rounded-full bg-white/5 px-3 py-1 text-xs text-slate-300">{{ request.duration_ms }} ms</span>
-              </div>
-            </div>
-            <p class="mt-3 text-xs text-slate-500">{{ formatDateTime(request.created_at) }}</p>
-            <p v-if="request.error" class="mt-3 rounded-2xl border border-signal-coral/15 bg-signal-coral/10 px-4 py-3 text-sm text-rose-100">
-              {{ request.error }}
-            </p>
-          </article>
+        <div v-else class="table-shell">
+          <div class="table-scroll">
+            <table class="admin-table">
+              <thead>
+                <tr>
+                  <th>Request ID</th>
+                  <th>Downstream / Upstream</th>
+                  <th>Model</th>
+                  <th>Status</th>
+                  <th>Latency</th>
+                  <th>Created At</th>
+                  <th>Error</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="request in store.filteredRequests" :key="request.request_id">
+                  <td>
+                    <p class="font-medium text-slate-900">{{ request.request_id }}</p>
+                  </td>
+                  <td>
+                    <p class="text-sm text-slate-700">{{ request.downstream }}</p>
+                    <p class="mt-1 table-meta">{{ request.upstream || "-" }}</p>
+                  </td>
+                  <td>
+                    <code class="mono-chip">{{ request.model || "-" }}</code>
+                  </td>
+                  <td>
+                    <span class="badge" :class="request.status_code >= 400 ? 'badge-danger' : 'badge-success'">
+                      {{ request.status_code || "-" }}
+                    </span>
+                  </td>
+                  <td>
+                    <span class="tag-chip">{{ request.duration_ms }} ms</span>
+                  </td>
+                  <td>
+                    <span class="table-meta">{{ formatDateTime(request.created_at) }}</span>
+                  </td>
+                  <td>
+                    <p v-if="request.error" class="text-sm text-rose-700">{{ request.error }}</p>
+                    <span v-else class="table-meta">-</span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </div>
       </PanelBlock>
     </div>

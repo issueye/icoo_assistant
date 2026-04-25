@@ -1,10 +1,12 @@
 <template>
-  <section class="rounded-[30px] border border-white/10 bg-white/5 p-5 shadow-panel backdrop-blur">
-    <div class="mb-5">
-      <p class="text-xs uppercase tracking-[0.24em] text-signal-sky">{{ eyebrow }}</p>
-      <h3 class="mt-2 text-2xl font-bold tracking-[-0.04em]">{{ title }}</h3>
+  <section class="content-panel">
+    <div class="panel-header">
+      <p v-if="eyebrow" class="panel-eyebrow">{{ eyebrow }}</p>
+      <h3 class="panel-title">{{ title }}</h3>
     </div>
-    <slot />
+    <div class="panel-body">
+      <slot />
+    </div>
   </section>
 </template>
 
