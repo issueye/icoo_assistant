@@ -14,6 +14,8 @@ export function DeleteEndpoint(arg1:string):Promise<Array<endpoint.Record>>;
 
 export function DeleteSupplier(arg1:string):Promise<Array<supplier.Record>>;
 
+export function GetAuthKeySecret(arg1:string):Promise<string>;
+
 export function GetOverview():Promise<Record<string, any>>;
 
 export function ListAuthKeys():Promise<Array<authkey.Record>>;
@@ -28,9 +30,9 @@ export function ListSuppliers():Promise<Array<supplier.Record>>;
 
 export function ReloadProxy():Promise<Record<string, any>>;
 
-export function SaveEndpoint(arg1:endpoint.UpsertInput):Promise<Array<endpoint.Record>>;
-
 export function SaveAuthKey(arg1:authkey.UpsertInput):Promise<Array<authkey.Record>>;
+
+export function SaveEndpoint(arg1:endpoint.UpsertInput):Promise<Array<endpoint.Record>>;
 
 export function SaveRoutePolicy(arg1:routepolicy.UpsertInput):Promise<Array<routepolicy.Record>>;
 

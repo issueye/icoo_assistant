@@ -74,7 +74,7 @@
       </PanelBlock>
     </div>
 
-    <PanelBlock title="表格">
+    <PanelBlock title="基础表格">
       <UTable :columns="columns" :rows="rows" row-key="id" empty-text="暂无组件示例数据。">
         <template #cell-status="{ value }">
           <UTag :variant="value === '启用' ? 'success' : 'error'">{{ value }}</UTag>
@@ -85,6 +85,41 @@
           </div>
         </template>
       </UTable>
+    </PanelBlock>
+
+    <PanelBlock title="现代化表格">
+      <p class="mb-3 text-xs text-zinc-500">
+        演示固定列、文字溢出省略 + Tooltip、斑马纹、列对齐等特性。
+      </p>
+      <UTable
+        :columns="advancedColumns"
+        :rows="advancedRows"
+        row-key="id"
+        fixed
+        stripe
+        action-width="120px"
+      >
+        <template #cell-status="{ value }">
+          <UTag :variant="value === '启用' ? 'success' : 'error'">{{ value }}</UTag>
+        </template>
+        <template #actions="{ row }">
+          <div class="flex gap-2">
+            <UButton size="sm" variant="secondary">编辑</UButton>
+            <UButton size="sm" variant="ghost">详情</UButton>
+          </div>
+        </template>
+      </UTable>
+    </PanelBlock>
+
+    <PanelBlock title="Tooltip 组件">
+      <div class="flex flex-wrap items-center gap-4">
+        <UTooltip content="这是一个基础的提示文本">
+          <UButton size="sm" variant="secondary">悬停查看提示</UButton>
+        </UTooltip>
+        <UTooltip content="提示可以包含很长的说明内容，用于补充界面中无法完整展示的信息。">
+          <span class="text-sm text-zinc-600 underline decoration-dotted">长文本提示</span>
+        </UTooltip>
+      </div>
     </PanelBlock>
 
     <UModal v-model:open="showModal" title="普通弹窗">
@@ -123,6 +158,7 @@ import USelect from "../components/ued/USelect.vue";
 import USwitch from "../components/ued/USwitch.vue";
 import UTable from "../components/ued/UTable.vue";
 import UTag from "../components/ued/UTag.vue";
+import UTooltip from "../components/ued/UTooltip.vue";
 
 const showModal = ref(false);
 const showConfirm = ref(false);
@@ -149,5 +185,72 @@ const columns = [
 const rows = [
   { id: "1", name: "供应商按钮", type: "操作组件", status: "启用" },
   { id: "2", name: "确认弹窗", type: "反馈组件", status: "启用" },
+];
+
+const advancedColumns = [
+  { key: "id", title: "ID", width: "80px", fixed: "left", align: "center" },
+  {
+    key: "name",
+    title: "名称（固定左侧 + 省略 + Tooltip）",
+    width: "200px",
+    fixed: "left",
+    ellipsis: true,
+    tooltip: true,
+  },
+  {
+    key: "description",
+    title: "说明（溢出省略 + Tooltip）",
+    width: "280px",
+    ellipsis: true,
+    tooltip: true,
+  },
+  { key: "type", title: "类型", width: "120px" },
+  { key: "status", title: "状态", width: "90px", align: "center" },
+  { key: "count", title: "计数", width: "100px", align: "right" },
+];
+
+const advancedRows = [
+  {
+    id: "101",
+    name: "这是一个非常长的组件名称，用于测试文字溢出省略和 Tooltip 功能",
+    description:
+      "这是超长说明文本，用于演示当单元格内容超出列宽时，如何通过省略号隐藏并在悬停时通过 Tooltip 展示完整内容。",
+    type: "操作组件",
+    status: "启用",
+    count: 128,
+  },
+  {
+    id: "102",
+    name: "确认弹窗",
+    description: "用于二次确认的弹窗组件，适用于删除、覆盖等高风险操作场景。",
+    type: "反馈组件",
+    status: "停用",
+    count: 56,
+  },
+  {
+    id: "103",
+    name: "数据表格",
+    description:
+      "现代化表格组件，支持固定列、表头固定、斑马纹、文字溢出省略、Tooltip 提示等丰富特性。",
+    type: "数据展示",
+    status: "启用",
+    count: 2048,
+  },
+  {
+    id: "104",
+    name: "下拉选择器",
+    description: "支持单选、搜索和分组的标准下拉选择组件。",
+    type: "表单组件",
+    status: "启用",
+    count: 12,
+  },
+  {
+    id: "105",
+    name: "开关按钮",
+    description: "用于切换配置项的布尔状态，支持禁用态和提示文本。",
+    type: "表单组件",
+    status: "启用",
+    count: 99,
+  },
 ];
 </script>

@@ -1,5 +1,5 @@
 import { defineStore } from "pinia";
-import { DeleteEndpoint, ListEndpoints, ReloadProxy, SaveEndpoint } from "../../wailsjs/go/main/App";
+import { DeleteEndpoint, ListEndpoints, ReloadProxy, SaveEndpoint } from "../lib/wailsApp";
 
 const emptyForm = () => ({
   id: "",

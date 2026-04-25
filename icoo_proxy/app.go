@@ -126,6 +126,9 @@ func (a *App) SaveSupplier(input supplier.UpsertInput) ([]supplier.Record, error
 	if _, err := a.suppliers.Upsert(input); err != nil {
 		return nil, err
 	}
+	if _, err := a.ReloadProxy(); err != nil {
+		return nil, err
+	}
 	return a.suppliers.List(), nil
 }
 
@@ -134,6 +137,9 @@ func (a *App) DeleteSupplier(id string) ([]supplier.Record, error) {
 		return nil, context.Canceled
 	}
 	if err := a.suppliers.Delete(id); err != nil {
+		return nil, err
+	}
+	if _, err := a.ReloadProxy(); err != nil {
 		return nil, err
 	}
 	return a.suppliers.List(), nil
@@ -168,6 +174,9 @@ func (a *App) SaveRoutePolicy(input routepolicy.UpsertInput) ([]routepolicy.Reco
 		return nil, context.Canceled
 	}
 	if _, err := a.policies.Upsert(input); err != nil {
+		return nil, err
+	}
+	if _, err := a.ReloadProxy(); err != nil {
 		return nil, err
 	}
 	return a.policies.List(), nil
@@ -225,6 +234,13 @@ func (a *App) DeleteAuthKey(id string) ([]authkey.Record, error) {
 		return nil, err
 	}
 	return a.authKeys.List(), nil
+}
+
+func (a *App) GetAuthKeySecret(id string) (string, error) {
+	if a.authKeys == nil {
+		return "", context.Canceled
+	}
+	return a.authKeys.GetSecret(id)
 }
 
 func (a *App) State() api.State {

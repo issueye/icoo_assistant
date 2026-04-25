@@ -7,7 +7,7 @@ import {
   ListSuppliers,
   SaveRoutePolicy,
   SaveSupplier,
-} from "../../wailsjs/go/main/App";
+} from "../lib/wailsApp";
 
 const emptyForm = () => ({
   id: "",

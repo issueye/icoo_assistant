@@ -1,5 +1,5 @@
 import { defineStore } from "pinia";
-import { GetOverview, ListSupplierHealth, ListSuppliers, ReloadProxy } from "../../wailsjs/go/main/App";
+import { GetOverview, ListSupplierHealth, ListSuppliers, ReloadProxy } from "../lib/wailsApp";
 
 export const useOverviewStore = defineStore("overview", {
   state: () => ({

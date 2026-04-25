@@ -18,6 +18,10 @@ export function DeleteSupplier(arg1) {
   return window['go']['main']['App']['DeleteSupplier'](arg1);
 }
 
+export function GetAuthKeySecret(arg1) {
+  return window['go']['main']['App']['GetAuthKeySecret'](arg1);
+}
+
 export function GetOverview() {
   return window['go']['main']['App']['GetOverview']();
 }
@@ -46,12 +50,12 @@ export function ReloadProxy() {
   return window['go']['main']['App']['ReloadProxy']();
 }
 
-export function SaveEndpoint(arg1) {
-  return window['go']['main']['App']['SaveEndpoint'](arg1);
-}
-
 export function SaveAuthKey(arg1) {
   return window['go']['main']['App']['SaveAuthKey'](arg1);
+}
+
+export function SaveEndpoint(arg1) {
+  return window['go']['main']['App']['SaveEndpoint'](arg1);
 }
 
 export function SaveRoutePolicy(arg1) {

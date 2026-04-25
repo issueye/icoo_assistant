@@ -376,8 +376,8 @@ body {
     @apply h-11 border-b border-[#e4e4e7] px-3 py-2 align-middle text-sm leading-5 text-zinc-700;
   }
 
-  .admin-table th:last-child,
-  .admin-table td:last-child {
+  .admin-table th:last-child:not(.is-sticky-right),
+  .admin-table td:last-child:not(.is-sticky-right) {
     @apply text-center;
   }
 
@@ -391,6 +391,93 @@ body {
 
   .admin-table tbody tr:last-child td {
     @apply border-b-0;
+  }
+
+  /* Sticky header */
+  .admin-table--sticky-header thead {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+  }
+
+  /* Zebra striping */
+  .admin-table--stripe tbody tr:nth-child(even) {
+    background-color: #fafafa;
+  }
+  .admin-table--stripe tbody tr:nth-child(even):hover {
+    background-color: #f4f4f5;
+  }
+
+  /* Column alignment */
+  .admin-table > thead > tr > th.is-align-center,
+  .admin-table > tbody > tr > td.is-align-center {
+    text-align: center;
+  }
+  .admin-table > thead > tr > th.is-align-right,
+  .admin-table > tbody > tr > td.is-align-right {
+    text-align: right;
+  }
+  .admin-table > thead > tr > th.is-align-left,
+  .admin-table > tbody > tr > td.is-align-left {
+    text-align: left;
+  }
+
+  /* Text ellipsis */
+  .table-cell-ellipsis {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 100%;
+  }
+
+  /* Sticky columns */
+  .admin-table th.is-sticky,
+  .admin-table td.is-sticky {
+    position: sticky;
+    z-index: 10;
+  }
+
+  .admin-table thead th.is-sticky {
+    z-index: 30;
+  }
+
+  /* Sticky column backgrounds */
+  .admin-table td.is-sticky,
+  .admin-table th.is-sticky {
+    background: #ffffff;
+  }
+
+  .admin-table tbody tr:hover td.is-sticky,
+  .admin-table tbody tr:hover th.is-sticky {
+    background: #fafafa;
+  }
+
+  .admin-table--stripe tbody tr:nth-child(even) td.is-sticky,
+  .admin-table--stripe tbody tr:nth-child(even) th.is-sticky {
+    background: #fafafa;
+  }
+
+  .admin-table--stripe tbody tr:nth-child(even):hover td.is-sticky,
+  .admin-table--stripe tbody tr:nth-child(even):hover th.is-sticky {
+    background: #f4f4f5;
+  }
+
+  /* Sticky column shadow edges */
+  .admin-table td.is-sticky-left,
+  .admin-table th.is-sticky-left {
+    box-shadow: inset -6px 0 6px -6px rgba(0, 0, 0, 0.08);
+  }
+
+  .admin-table td.is-sticky-right,
+  .admin-table th.is-sticky-right {
+    box-shadow: inset 6px 0 6px -6px rgba(0, 0, 0, 0.08);
+  }
+
+  /* Actions column alignment override */
+  .admin-table th.actions-header,
+  .admin-table td.actions-header {
+    text-align: center;
   }
 
   .table-meta {

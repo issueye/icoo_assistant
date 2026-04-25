@@ -45,6 +45,13 @@
         </template>
         <template #actions="{ row }">
           <div class="table-actions">
+            <button
+              class="btn btn-info"
+              :disabled="store.copying === row.id"
+              @click="copyKey(row)"
+            >
+              {{ store.copying === row.id ? "复制中..." : "复制" }}
+            </button>
             <button class="btn btn-secondary" @click="openEdit(row)">编辑</button>
             <button class="btn btn-error" :disabled="store.deleting === row.id" @click="remove(row)">
               {{ store.deleting === row.id ? "删除中..." : "删除" }}
@@ -128,6 +135,13 @@ async function submit() {
 
 async function remove(item) {
   await store.remove(item.id);
+}
+
+async function copyKey(item) {
+  const secret = await store.copySecret(item.id);
+  if (secret) {
+    // Optionally show a toast or alert; for now rely on clipboard feedback
+  }
 }
 
 function formatDateTime(value) {

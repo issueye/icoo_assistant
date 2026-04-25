@@ -1,5 +1,5 @@
 import { defineStore } from "pinia";
-import { DeleteAuthKey, ListAuthKeys, ReloadProxy, SaveAuthKey } from "../../wailsjs/go/main/App";
+import { DeleteAuthKey, GetAuthKeySecret, ListAuthKeys, ReloadProxy, SaveAuthKey } from "../lib/wailsApp";
 
 const emptyForm = () => ({
   id: "",
@@ -22,6 +22,7 @@ export const useAuthKeysStore = defineStore("authKeys", {
     saving: false,
     deleting: "",
     reloading: false,
+    copying: "",
     error: "",
     items: [],
     form: emptyForm(),
@@ -90,6 +91,22 @@ export const useAuthKeysStore = defineStore("authKeys", {
         this.error = error?.message || String(error);
       } finally {
         this.reloading = false;
+      }
+    },
+    async copySecret(id) {
+      this.copying = id;
+      this.error = "";
+      try {
+        const secret = await GetAuthKeySecret(id);
+        if (secret) {
+          await navigator.clipboard.writeText(secret);
+        }
+        return secret;
+      } catch (error) {
+        this.error = error?.message || String(error);
+        return "";
+      } finally {
+        this.copying = "";
       }
     },
   },

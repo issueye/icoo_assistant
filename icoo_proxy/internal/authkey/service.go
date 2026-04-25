@@ -157,6 +157,21 @@ func (s *Service) Delete(id string) error {
 	return nil
 }
 
+func (s *Service) GetSecret(id string) (string, error) {
+	id = strings.TrimSpace(id)
+	if id == "" {
+		return "", fmt.Errorf("auth key id is required")
+	}
+	var item keyModel
+	if err := s.db.First(&item, "id = ?", id).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return "", fmt.Errorf("auth key not found")
+		}
+		return "", err
+	}
+	return item.Secret, nil
+}
+
 func toRecord(item keyModel) Record {
 	return Record{
 		ID:           item.ID,

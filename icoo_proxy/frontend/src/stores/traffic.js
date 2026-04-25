@@ -1,5 +1,5 @@
 import { defineStore } from "pinia";
-import { GetOverview } from "../../wailsjs/go/main/App";
+import { GetOverview } from "../lib/wailsApp";
 
 export const useTrafficStore = defineStore("traffic", {
   state: () => ({
