@@ -66,12 +66,58 @@ func (c *AnthropicClient) CreateMessage(system string, messages []Message, tools
 	if err != nil {
 		return Response{}, err
 	}
-	requestTools := c.buildTools(tools)
+	params := c.buildMessageParams(system, requestMessages, c.buildTools(tools))
+	resp, err := c.client.Messages.New(context.Background(), params)
+	if err != nil {
+		return Response{}, err
+	}
+	return c.buildResponseFromMessage(*resp)
+}
+
+func (c *AnthropicClient) CreateMessageStream(system string, messages []Message, tools []Tool, onText func(string)) (Response, error) {
+	requestMessages, err := c.buildMessages(messages)
+	if err != nil {
+		return Response{}, err
+	}
+	params := c.buildMessageParams(system, requestMessages, c.buildTools(tools))
+	stream := c.client.Messages.NewStreaming(context.Background(), params)
+	accumulated := anthropic.Message{}
+	streamedText := false
+	for stream.Next() {
+		event := stream.Current()
+		if err := accumulated.Accumulate(event); err != nil {
+			return Response{}, err
+		}
+		if onText == nil {
+			continue
+		}
+		switch variant := event.AsAny().(type) {
+		case anthropic.ContentBlockDeltaEvent:
+			if text := strings.TrimSpace(variant.Delta.Text); text != "" || variant.Delta.Text != "" {
+				onText(variant.Delta.Text)
+				streamedText = streamedText || variant.Delta.Text != ""
+			}
+		}
+	}
+	if err := stream.Err(); err != nil {
+		return Response{}, err
+	}
+	result, err := c.buildResponseFromMessage(accumulated)
+	if err != nil {
+		return Response{}, err
+	}
+	if onText != nil && !streamedText && result.Text != "" {
+		onText(result.Text)
+	}
+	return result, nil
+}
+
+func (c *AnthropicClient) buildMessageParams(system string, messages []anthropic.MessageParam, tools []anthropic.ToolUnionParam) anthropic.MessageNewParams {
 	params := anthropic.MessageNewParams{
 		Model:     anthropic.Model(c.config.Model),
 		MaxTokens: c.config.MaxTokens,
-		Messages:  requestMessages,
-		Tools:     requestTools,
+		Messages:  messages,
+		Tools:     tools,
 	}
 	if strings.TrimSpace(system) != "" {
 		block := anthropic.TextBlockParam{Text: system}
@@ -87,10 +133,10 @@ func (c *AnthropicClient) CreateMessage(system string, messages []Message, tools
 			},
 		}
 	}
-	resp, err := c.client.Messages.New(context.Background(), params)
-	if err != nil {
-		return Response{}, err
-	}
+	return params
+}
+
+func (c *AnthropicClient) buildResponseFromMessage(resp anthropic.Message) (Response, error) {
 	result := Response{
 		StopReason: string(resp.StopReason),
 		Raw:        resp.ToParam(),

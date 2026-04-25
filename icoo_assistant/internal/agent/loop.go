@@ -33,6 +33,7 @@ type Runner struct {
 	Transcript     TranscriptRecorder
 	SubagentRunner SubagentRunner
 	Background     BackgroundNotifier
+	StreamHandler  func(string)
 	Hooks          []Hook
 	Config         Config
 	now            func() time.Time
@@ -117,7 +118,12 @@ func (r *Runner) Run(messages []llm.Message) (_ []llm.Message, err error) {
 				"tool_count":    len(r.Registry.Tools()),
 			},
 		})
-		resp, err := r.Client.CreateMessage(r.Config.SystemPrompt, messages, r.Registry.Tools())
+		var resp llm.Response
+		if r.StreamHandler != nil {
+			resp, err = r.Client.CreateMessageStream(r.Config.SystemPrompt, messages, r.Registry.Tools(), r.StreamHandler)
+		} else {
+			resp, err = r.Client.CreateMessage(r.Config.SystemPrompt, messages, r.Registry.Tools())
+		}
 		if err != nil {
 			return nil, err
 		}

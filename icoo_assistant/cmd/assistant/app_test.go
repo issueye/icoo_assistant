@@ -89,6 +89,32 @@ func TestRunOnceWithFakeClientProducesGuidance(t *testing.T) {
 	}
 }
 
+func TestRunOnceStreamsWithoutDuplicatingOutput(t *testing.T) {
+	client := &llm.FakeClient{Responses: []llm.Response{
+		{StopReason: "end", Text: "streamed hello"},
+	}}
+	registry, err := tools.NewRegistry()
+	if err != nil {
+		t.Fatal(err)
+	}
+	app := &app{
+		runner: &agent.Runner{
+			Client:   client,
+			Registry: registry,
+			Config:   agent.Config{SystemPrompt: "test", MaxRounds: 2},
+		},
+		mode: "anthropic",
+	}
+	var out bytes.Buffer
+	if err := app.runOnce(&out, "hello"); err != nil {
+		t.Fatal(err)
+	}
+	output := out.String()
+	if strings.Count(output, "streamed hello") != 1 {
+		t.Fatalf("expected streamed output once, got %q", output)
+	}
+}
+
 func TestRunREPLRetainsConversationHistory(t *testing.T) {
 	client := &llm.FakeClient{Responses: []llm.Response{
 		{StopReason: "end", Text: "记住了，你叫小明。"},
@@ -132,5 +158,35 @@ func TestRunREPLRetainsConversationHistory(t *testing.T) {
 	}
 	if !strings.Contains(client.Snapshots[1], "我叫什么？") {
 		t.Fatalf("expected second snapshot to contain second user turn, got %q", client.Snapshots[1])
+	}
+}
+
+func TestRunREPLStreamsWithoutDuplicatingTurnOutput(t *testing.T) {
+	client := &llm.FakeClient{Responses: []llm.Response{
+		{StopReason: "end", Text: "第一轮流式回复"},
+		{StopReason: "end", Text: "第二轮流式回复"},
+	}}
+	registry, err := tools.NewRegistry()
+	if err != nil {
+		t.Fatal(err)
+	}
+	app := &app{
+		runner: &agent.Runner{
+			Client:   client,
+			Registry: registry,
+			Config:   agent.Config{SystemPrompt: "test", MaxRounds: 2},
+		},
+		mode: "anthropic",
+	}
+	in := strings.NewReader("hello\nagain\nexit\n")
+	var out bytes.Buffer
+	if err := app.runREPL(in, &out); err != nil {
+		t.Fatal(err)
+	}
+	output := out.String()
+	for _, snippet := range []string{"第一轮流式回复", "第二轮流式回复"} {
+		if strings.Count(output, snippet) != 1 {
+			t.Fatalf("expected %q once, got %q", snippet, output)
+		}
 	}
 }

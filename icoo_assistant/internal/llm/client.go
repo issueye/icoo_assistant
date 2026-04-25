@@ -40,6 +40,7 @@ type Response struct {
 
 type Client interface {
 	CreateMessage(system string, messages []Message, tools []Tool) (Response, error)
+	CreateMessageStream(system string, messages []Message, tools []Tool, onText func(string)) (Response, error)
 }
 
 type FakeClient struct {
@@ -58,5 +59,16 @@ func (f *FakeClient) CreateMessage(system string, messages []Message, tools []To
 	}
 	resp := f.Responses[0]
 	f.Responses = f.Responses[1:]
+	return resp, nil
+}
+
+func (f *FakeClient) CreateMessageStream(system string, messages []Message, tools []Tool, onText func(string)) (Response, error) {
+	resp, err := f.CreateMessage(system, messages, tools)
+	if err != nil {
+		return Response{}, err
+	}
+	if onText != nil && resp.Text != "" {
+		onText(resp.Text)
+	}
 	return resp, nil
 }

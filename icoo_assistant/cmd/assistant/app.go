@@ -25,6 +25,28 @@ type app struct {
 	mode   string
 }
 
+type streamedOutput struct {
+	writer      io.Writer
+	wroteText   bool
+	lastChunkLF bool
+}
+
+func (s *streamedOutput) Write(chunk string) {
+	if s == nil || chunk == "" {
+		return
+	}
+	_, _ = io.WriteString(s.writer, chunk)
+	s.wroteText = true
+	s.lastChunkLF = strings.HasSuffix(chunk, "\n")
+}
+
+func (s *streamedOutput) Finish() {
+	if s == nil || !s.wroteText || s.lastChunkLF {
+		return
+	}
+	_, _ = fmt.Fprintln(s.writer)
+}
+
 func (a *app) isFakeMode() bool {
 	return strings.EqualFold(strings.TrimSpace(a.mode), "fake")
 }
@@ -147,6 +169,15 @@ func newApp(cfg config.Config) (*app, error) {
 	}, nil
 }
 
+func (a *app) withStreamHandler(handler func(string), fn func() error) error {
+	previous := a.runner.StreamHandler
+	a.runner.StreamHandler = handler
+	defer func() {
+		a.runner.StreamHandler = previous
+	}()
+	return fn()
+}
+
 func (a *app) execute(query string) (string, error) {
 	_, result, err := a.executeMessages(nil, query)
 	if err != nil {
@@ -188,9 +219,19 @@ func renderLatestAssistantContent(messages []llm.Message) string {
 
 func (a *app) runOnce(out io.Writer, query string) error {
 	a.writeDegradedModeHint(out)
-	result, err := a.execute(strings.TrimSpace(query))
+	stream := &streamedOutput{writer: out}
+	var result string
+	err := a.withStreamHandler(stream.Write, func() error {
+		var runErr error
+		result, runErr = a.execute(strings.TrimSpace(query))
+		return runErr
+	})
 	if err != nil {
 		return err
+	}
+	if stream.wroteText {
+		stream.Finish()
+		return nil
 	}
 	if result != "" {
 		_, _ = fmt.Fprintln(out, result)
@@ -217,12 +258,25 @@ func (a *app) runREPL(in io.Reader, out io.Writer) error {
 		if query == "" || query == "exit" {
 			break
 		}
-		nextConversation, result, err := a.executeMessages(conversation, query)
+		stream := &streamedOutput{writer: out}
+		var (
+			nextConversation []llm.Message
+			result           string
+		)
+		err := a.withStreamHandler(stream.Write, func() error {
+			var runErr error
+			nextConversation, result, runErr = a.executeMessages(conversation, query)
+			return runErr
+		})
 		if err != nil {
 			_, _ = fmt.Fprintf(out, "error: %v\n", err)
 			continue
 		}
 		conversation = nextConversation
+		if stream.wroteText {
+			stream.Finish()
+			continue
+		}
 		if result != "" {
 			_, _ = fmt.Fprintln(out, result)
 			continue

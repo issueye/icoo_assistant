@@ -31,3 +31,6 @@ learn-claude-code/*
 .tasks/
 .team/
 .transcripts/
+
+*.exe
+*.log
