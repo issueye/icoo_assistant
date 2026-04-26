@@ -14,13 +14,6 @@ type Values struct {
 	ProxyReadTimeoutSeconds     int    `json:"proxy_read_timeout_seconds"`
 	ProxyWriteTimeoutSeconds    int    `json:"proxy_write_timeout_seconds"`
 	ProxyShutdownTimeoutSeconds int    `json:"proxy_shutdown_timeout_seconds"`
-	ProxyAllowUnauthenticated   bool   `json:"proxy_allow_unauthenticated_local"`
-	ProxyAPIKey                 string `json:"proxy_api_key"`
-	ProxyAPIKeys                string `json:"proxy_api_keys"`
-	ProxyDefaultAnthropicRoute  string `json:"proxy_default_anthropic_route"`
-	ProxyDefaultChatRoute       string `json:"proxy_default_chat_route"`
-	ProxyDefaultResponsesRoute  string `json:"proxy_default_responses_route"`
-	ProxyModelRoutes            string `json:"proxy_model_routes"`
 	ProxyChainLogPath           string `json:"proxy_chain_log_path"`
 	ProxyChainLogBodies         bool   `json:"proxy_chain_log_bodies"`
 	ProxyChainLogMaxBodyBytes   int    `json:"proxy_chain_log_max_body_bytes"`
@@ -37,13 +30,6 @@ func Load(root string) (Values, error) {
 		ProxyReadTimeoutSeconds:     intWithDefault(env, "PROXY_READ_TIMEOUT_SECONDS", 15),
 		ProxyWriteTimeoutSeconds:    intWithDefault(env, "PROXY_WRITE_TIMEOUT_SECONDS", 300),
 		ProxyShutdownTimeoutSeconds: intWithDefault(env, "PROXY_SHUTDOWN_TIMEOUT_SECONDS", 10),
-		ProxyAllowUnauthenticated:   boolWithDefault(env, "PROXY_ALLOW_UNAUTHENTICATED_LOCAL", true),
-		ProxyAPIKey:                 strings.TrimSpace(env["PROXY_API_KEY"]),
-		ProxyAPIKeys:                strings.TrimSpace(env["PROXY_API_KEYS"]),
-		ProxyDefaultAnthropicRoute:  strings.TrimSpace(env["PROXY_DEFAULT_ANTHROPIC_ROUTE"]),
-		ProxyDefaultChatRoute:       strings.TrimSpace(env["PROXY_DEFAULT_CHAT_ROUTE"]),
-		ProxyDefaultResponsesRoute:  strings.TrimSpace(env["PROXY_DEFAULT_RESPONSES_ROUTE"]),
-		ProxyModelRoutes:            strings.TrimSpace(env["PROXY_MODEL_ROUTES"]),
 		ProxyChainLogPath:           stringWithDefault(env, "PROXY_CHAIN_LOG_PATH", filepath.Join(root, ".data", "icoo_proxy-chain.log")),
 		ProxyChainLogBodies:         boolWithDefault(env, "PROXY_CHAIN_LOG_BODIES", true),
 		ProxyChainLogMaxBodyBytes:   intWithDefault(env, "PROXY_CHAIN_LOG_MAX_BODY_BYTES", 0),
@@ -96,20 +82,6 @@ func buildEnv(values Values) string {
 		"PROXY_CHAIN_LOG_BODIES=" + formatBool(values.ProxyChainLogBodies),
 		"PROXY_CHAIN_LOG_MAX_BODY_BYTES=" + strconv.Itoa(values.ProxyChainLogMaxBodyBytes),
 		"",
-		"# Optional downstream key for local clients.",
-		"# If empty and PROXY_ALLOW_UNAUTHENTICATED_LOCAL=true, local clients may call without auth.",
-		"PROXY_API_KEY=" + strings.TrimSpace(values.ProxyAPIKey),
-		"PROXY_API_KEYS=" + strings.TrimSpace(values.ProxyAPIKeys),
-		"PROXY_ALLOW_UNAUTHENTICATED_LOCAL=" + formatBool(values.ProxyAllowUnauthenticated),
-		"",
-		"# Defaults: <protocol>:<real-model>",
-		"PROXY_DEFAULT_ANTHROPIC_ROUTE=" + strings.TrimSpace(values.ProxyDefaultAnthropicRoute),
-		"PROXY_DEFAULT_CHAT_ROUTE=" + strings.TrimSpace(values.ProxyDefaultChatRoute),
-		"PROXY_DEFAULT_RESPONSES_ROUTE=" + strings.TrimSpace(values.ProxyDefaultResponsesRoute),
-		"",
-		"# Aliases: alias=<protocol>:<real-model>,alias2=<protocol>:<real-model>",
-		"PROXY_MODEL_ROUTES=" + strings.TrimSpace(values.ProxyModelRoutes),
-		"",
 	}
 	return strings.Join(lines, "\n")
 }
@@ -130,13 +102,6 @@ func applyProcessEnv(values Values) {
 	set("PROXY_READ_TIMEOUT_SECONDS", strconv.Itoa(values.ProxyReadTimeoutSeconds))
 	set("PROXY_WRITE_TIMEOUT_SECONDS", strconv.Itoa(values.ProxyWriteTimeoutSeconds))
 	set("PROXY_SHUTDOWN_TIMEOUT_SECONDS", strconv.Itoa(values.ProxyShutdownTimeoutSeconds))
-	set("PROXY_ALLOW_UNAUTHENTICATED_LOCAL", formatBool(values.ProxyAllowUnauthenticated))
-	set("PROXY_API_KEY", strings.TrimSpace(values.ProxyAPIKey))
-	set("PROXY_API_KEYS", strings.TrimSpace(values.ProxyAPIKeys))
-	set("PROXY_DEFAULT_ANTHROPIC_ROUTE", strings.TrimSpace(values.ProxyDefaultAnthropicRoute))
-	set("PROXY_DEFAULT_CHAT_ROUTE", strings.TrimSpace(values.ProxyDefaultChatRoute))
-	set("PROXY_DEFAULT_RESPONSES_ROUTE", strings.TrimSpace(values.ProxyDefaultResponsesRoute))
-	set("PROXY_MODEL_ROUTES", strings.TrimSpace(values.ProxyModelRoutes))
 	set("PROXY_CHAIN_LOG_PATH", strings.TrimSpace(values.ProxyChainLogPath))
 	set("PROXY_CHAIN_LOG_BODIES", formatBool(values.ProxyChainLogBodies))
 	set("PROXY_CHAIN_LOG_MAX_BODY_BYTES", strconv.Itoa(values.ProxyChainLogMaxBodyBytes))

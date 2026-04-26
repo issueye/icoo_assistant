@@ -3,7 +3,13 @@
     <Teleport to="#app-topbar-actions">
       <div class="app-topbar-actions__group">
         <button class="btn btn-primary" @click="openCreate">新增端点</button>
-        <button class="btn btn-secondary" :disabled="store.reloading" @click="store.reloadProxy">
+        <button
+          class="btn btn-secondary"
+          :class="{ 'is-loading': store.reloading }"
+          :disabled="store.reloading"
+          @click="store.reloadProxy"
+        >
+          <span v-if="store.reloading" class="btn__spinner" />
           {{ store.reloading ? "重载中..." : "重载代理生效" }}
         </button>
       </div>
@@ -53,9 +59,11 @@
             <button class="btn btn-secondary" @click="openEdit(row)">编辑</button>
             <button
               class="btn btn-error"
+              :class="{ 'is-loading': store.deleting === row.id }"
               :disabled="row.built_in || store.deleting === row.id"
-              @click="remove(row)"
+              @click="openDeleteConfirm(row)"
             >
+              <span v-if="store.deleting === row.id" class="btn__spinner" />
               {{ store.deleting === row.id ? "删除中..." : "删除" }}
             </button>
           </div>
@@ -85,20 +93,39 @@
       <template #footer>
         <div class="flex justify-end gap-2">
           <button type="button" class="btn btn-secondary" @click="closeModal">取消</button>
-          <button form="endpoint-form" class="btn btn-primary" :disabled="store.saving">
+          <button
+            form="endpoint-form"
+            class="btn btn-primary"
+            :class="{ 'is-loading': store.saving }"
+            :disabled="store.saving"
+          >
+            <span v-if="store.saving" class="btn__spinner" />
             {{ store.saving ? "保存中..." : "保存端点" }}
           </button>
         </div>
       </template>
     </UModal>
+
+    <UConfirmDialog
+      v-model:open="confirmState.open"
+      title="确认删除端点"
+      :message="confirmState.message"
+      description="删除后该端点路径将不再可用，保存后请重载代理生效。"
+      confirm-text="确认删除"
+      cancel-text="取消"
+      :loading="Boolean(store.deleting)"
+      danger
+      @confirm="confirmDelete"
+    />
   </section>
 </template>
 
 <script setup>
-import { onMounted, ref } from "vue";
+import { onMounted, reactive, ref } from "vue";
 import FieldLabel from "../components/FieldLabel.vue";
 import PanelBlock from "../components/PanelBlock.vue";
 import StatCard from "../components/StatCard.vue";
+import UConfirmDialog from "../components/ued/UConfirmDialog.vue";
 import UModal from "../components/ued/UModal.vue";
 import USelect from "../components/ued/USelect.vue";
 import UTable from "../components/ued/UTable.vue";
@@ -107,6 +134,11 @@ import { useEndpointsStore } from "../stores/endpoints";
 
 const store = useEndpointsStore();
 const modalOpen = ref(false);
+const confirmState = reactive({
+  open: false,
+  id: "",
+  message: "",
+});
 const tableColumns = [
   { key: "path", title: "路径", width: "22%" },
   { key: "protocol", title: "协议", width: "16%" },
@@ -137,8 +169,20 @@ async function submit() {
   }
 }
 
-async function remove(item) {
-  await store.remove(item.id);
+function openDeleteConfirm(item) {
+  confirmState.open = true;
+  confirmState.id = item.id;
+  confirmState.message = `确定要删除端点“${item.path}”吗？`;
+}
+
+async function confirmDelete() {
+  if (!confirmState.id) {
+    return;
+  }
+  await store.remove(confirmState.id);
+  confirmState.open = false;
+  confirmState.id = "";
+  confirmState.message = "";
 }
 
 function formatDateTime(value) {

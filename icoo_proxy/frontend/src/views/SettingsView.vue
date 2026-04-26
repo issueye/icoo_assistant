@@ -2,10 +2,22 @@
   <section class="page-section">
     <Teleport to="#app-topbar-actions">
       <div class="app-topbar-actions__group">
-        <button class="btn btn-secondary" :disabled="store.loading || store.saving" @click="store.load">
+        <button
+          class="btn btn-secondary"
+          :class="{ 'is-loading': store.loading }"
+          :disabled="store.loading || store.saving"
+          @click="store.load"
+        >
+          <span v-if="store.loading" class="btn__spinner" />
           {{ store.loading ? "刷新中..." : "重新读取" }}
         </button>
-        <button class="btn btn-primary" :disabled="store.loading || store.saving" @click="submit">
+        <button
+          class="btn btn-primary"
+          :class="{ 'is-loading': store.saving }"
+          :disabled="store.loading || store.saving"
+          @click="submit"
+        >
+          <span v-if="store.saving" class="btn__spinner" />
           {{ store.saving ? "保存中..." : "保存并重载" }}
         </button>
       </div>
@@ -23,9 +35,8 @@
     </div>
 
     <template v-else>
-      <div class="section-grid xl:grid-cols-3">
+      <div class="section-grid xl:grid-cols-2">
         <StatCard label="代理监听" :value="`${store.form.proxy_host}:${store.form.proxy_port}`" />
-        <StatCard label="访问模式" :value="store.form.proxy_allow_unauthenticated_local ? '本地信任模式' : '需要授权 Key'" />
         <StatCard label="链路日志" :value="store.form.proxy_chain_log_bodies ? '记录请求与响应体' : '仅记录元数据'" />
       </div>
 
@@ -46,44 +57,6 @@
             </FieldLabel>
             <FieldLabel label="PROXY_SHUTDOWN_TIMEOUT_SECONDS">
               <input v-model="store.form.proxy_shutdown_timeout_seconds" type="number" min="1" class="field-input" />
-            </FieldLabel>
-          </div>
-          <div class="mt-3">
-            <label class="field-toggle">
-              <input v-model="store.form.proxy_allow_unauthenticated_local" type="checkbox" class="field-checkbox" />
-              允许本地未鉴权访问
-            </label>
-          </div>
-        </PanelBlock>
-
-        <PanelBlock title="下游鉴权">
-          <div class="grid gap-3">
-            <FieldLabel label="PROXY_API_KEY">
-              <input v-model="store.form.proxy_api_key" class="field-input" placeholder="单个下游访问密钥，可留空" />
-            </FieldLabel>
-            <FieldLabel label="PROXY_API_KEYS">
-              <textarea
-                v-model="store.form.proxy_api_keys"
-                class="field-input min-h-24"
-                placeholder="多个访问密钥，使用逗号分隔"
-              />
-            </FieldLabel>
-          </div>
-        </PanelBlock>
-
-        <PanelBlock title="默认路由">
-          <div class="grid gap-3">
-            <FieldLabel label="PROXY_DEFAULT_ANTHROPIC_ROUTE">
-              <input v-model="store.form.proxy_default_anthropic_route" class="field-input" placeholder="anthropic:claude-sonnet-4" />
-            </FieldLabel>
-            <FieldLabel label="PROXY_DEFAULT_CHAT_ROUTE">
-              <input v-model="store.form.proxy_default_chat_route" class="field-input" placeholder="openai-chat:gpt-4o-mini" />
-            </FieldLabel>
-            <FieldLabel label="PROXY_DEFAULT_RESPONSES_ROUTE">
-              <input v-model="store.form.proxy_default_responses_route" class="field-input" placeholder="openai-responses:gpt-4.1-mini" />
-            </FieldLabel>
-            <FieldLabel label="PROXY_MODEL_ROUTES">
-              <textarea v-model="store.form.proxy_model_routes" class="field-input min-h-24" placeholder="alias=openai-responses:gpt-4.1-mini,alias2=anthropic:claude-sonnet-4" />
             </FieldLabel>
           </div>
         </PanelBlock>

@@ -15,11 +15,6 @@ func TestLoadAndSave(t *testing.T) {
 		ProxyReadTimeoutSeconds:     10,
 		ProxyWriteTimeoutSeconds:    60,
 		ProxyShutdownTimeoutSeconds: 5,
-		ProxyAllowUnauthenticated:   false,
-		ProxyDefaultAnthropicRoute:  "anthropic:claude-test",
-		ProxyDefaultChatRoute:       "openai-chat:gpt-test",
-		ProxyDefaultResponsesRoute:  "openai-responses:gpt-resp",
-		ProxyModelRoutes:            "alias=openai-responses:gpt-resp",
 		ProxyChainLogPath:           ".data/test.log",
 		ProxyChainLogBodies:         true,
 		ProxyChainLogMaxBodyBytes:   123,
@@ -35,10 +30,22 @@ func TestLoadAndSave(t *testing.T) {
 	for _, needle := range []string{
 		"PROXY_PORT=19191",
 		"PROXY_CHAIN_LOG_MAX_BODY_BYTES=123",
-		"PROXY_DEFAULT_CHAT_ROUTE=openai-chat:gpt-test",
 	} {
 		if !strings.Contains(text, needle) {
 			t.Fatalf("expected env file to contain %q, got %s", needle, text)
+		}
+	}
+	for _, needle := range []string{
+		"PROXY_API_KEY",
+		"PROXY_API_KEYS",
+		"PROXY_ALLOW_UNAUTHENTICATED_LOCAL",
+		"PROXY_DEFAULT_ANTHROPIC_ROUTE",
+		"PROXY_DEFAULT_CHAT_ROUTE",
+		"PROXY_DEFAULT_RESPONSES_ROUTE",
+		"PROXY_MODEL_ROUTES",
+	} {
+		if strings.Contains(text, needle) {
+			t.Fatalf("expected env file to omit migrated setting %q, got %s", needle, text)
 		}
 	}
 	loaded, err := Load(root)

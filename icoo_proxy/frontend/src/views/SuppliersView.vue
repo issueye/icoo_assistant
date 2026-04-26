@@ -89,11 +89,23 @@
           </template>
           <template #actions="{ row }">
             <div class="table-actions">
-              <button class="btn btn-info" :disabled="store.checking === row.id" @click="store.check(row.id)">
+              <button
+                class="btn btn-info"
+                :class="{ 'is-loading': store.checking === row.id }"
+                :disabled="store.checking === row.id"
+                @click="store.check(row.id)"
+              >
+                <span v-if="store.checking === row.id" class="btn__spinner" />
                 {{ store.checking === row.id ? "检查中..." : "检查" }}
               </button>
               <button class="btn btn-secondary" @click="openSupplierEdit(row)">编辑</button>
-              <button class="btn btn-error" :disabled="store.deleting === row.id" @click="openDeleteConfirm(row)">
+              <button
+                class="btn btn-error"
+                :class="{ 'is-loading': store.deleting === row.id }"
+                :disabled="store.deleting === row.id"
+                @click="openDeleteConfirm(row)"
+              >
+                <span v-if="store.deleting === row.id" class="btn__spinner" />
                 {{ store.deleting === row.id ? "删除中..." : "删除" }}
               </button>
             </div>
@@ -272,7 +284,13 @@
       <template #footer>
         <div class="flex justify-end gap-2">
           <button type="button" class="btn btn-secondary" @click="closeSupplierModal">取消</button>
-          <button form="supplier-form" class="btn btn-primary" :disabled="store.saving">
+          <button
+            form="supplier-form"
+            class="btn btn-primary"
+            :class="{ 'is-loading': store.saving }"
+            :disabled="store.saving"
+          >
+            <span v-if="store.saving" class="btn__spinner" />
             {{ store.saving ? "保存中..." : store.form.id ? "更新供应商" : "创建供应商" }}
           </button>
         </div>
@@ -303,7 +321,13 @@
       <template #footer>
         <div class="flex justify-end gap-2">
           <button type="button" class="btn btn-secondary" @click="closePolicyModal">取消</button>
-          <button form="policy-form" class="btn btn-primary" :disabled="store.saving">
+          <button
+            form="policy-form"
+            class="btn btn-primary"
+            :class="{ 'is-loading': store.saving }"
+            :disabled="store.saving"
+          >
+            <span v-if="store.saving" class="btn__spinner" />
             {{ store.saving ? "保存中..." : "保存路由策略" }}
           </button>
         </div>

@@ -3,7 +3,13 @@
     <Teleport to="#app-topbar-actions">
       <div class="app-topbar-actions__group">
         <button class="btn btn-primary" @click="openCreate">新增 Key</button>
-        <button class="btn btn-secondary" :disabled="store.reloading" @click="store.reloadProxy">
+        <button
+          class="btn btn-secondary"
+          :class="{ 'is-loading': store.reloading }"
+          :disabled="store.reloading"
+          @click="store.reloadProxy"
+        >
+          <span v-if="store.reloading" class="btn__spinner" />
           {{ store.reloading ? "重载中..." : "重载代理生效" }}
         </button>
       </div>
@@ -46,13 +52,21 @@
           <div class="table-actions">
             <button
               class="btn btn-info"
+              :class="{ 'is-loading': store.copying === row.id }"
               :disabled="store.copying === row.id"
               @click="copyKey(row)"
             >
+              <span v-if="store.copying === row.id" class="btn__spinner" />
               {{ store.copying === row.id ? "复制中..." : "复制" }}
             </button>
             <button class="btn btn-secondary" @click="openEdit(row)">编辑</button>
-            <button class="btn btn-error" :disabled="store.deleting === row.id" @click="remove(row)">
+            <button
+              class="btn btn-error"
+              :class="{ 'is-loading': store.deleting === row.id }"
+              :disabled="store.deleting === row.id"
+              @click="openDeleteConfirm(row)"
+            >
+              <span v-if="store.deleting === row.id" class="btn__spinner" />
               {{ store.deleting === row.id ? "删除中..." : "删除" }}
             </button>
           </div>
@@ -82,20 +96,39 @@
       <template #footer>
         <div class="flex justify-end gap-2">
           <button type="button" class="btn btn-secondary" @click="closeModal">取消</button>
-          <button form="auth-key-form" class="btn btn-primary" :disabled="store.saving">
+          <button
+            form="auth-key-form"
+            class="btn btn-primary"
+            :class="{ 'is-loading': store.saving }"
+            :disabled="store.saving"
+          >
+            <span v-if="store.saving" class="btn__spinner" />
             {{ store.saving ? "保存中..." : "保存 Key" }}
           </button>
         </div>
       </template>
     </UModal>
+
+    <UConfirmDialog
+      v-model:open="confirmState.open"
+      title="确认删除授权 Key"
+      :message="confirmState.message"
+      description="删除后该 Key 将无法继续访问本地代理。"
+      confirm-text="确认删除"
+      cancel-text="取消"
+      :loading="Boolean(store.deleting)"
+      danger
+      @confirm="confirmDelete"
+    />
   </section>
 </template>
 
 <script setup>
-import { onMounted, ref } from "vue";
+import { onMounted, reactive, ref } from "vue";
 import FieldLabel from "../components/FieldLabel.vue";
 import PanelBlock from "../components/PanelBlock.vue";
 import StatCard from "../components/StatCard.vue";
+import UConfirmDialog from "../components/ued/UConfirmDialog.vue";
 import UModal from "../components/ued/UModal.vue";
 import UTable from "../components/ued/UTable.vue";
 import UTag from "../components/ued/UTag.vue";
@@ -103,6 +136,11 @@ import { useAuthKeysStore } from "../stores/authKeys";
 
 const store = useAuthKeysStore();
 const modalOpen = ref(false);
+const confirmState = reactive({
+  open: false,
+  id: "",
+  message: "",
+});
 const tableColumns = [
   { key: "name", title: "名称", width: "22%" },
   { key: "secret", title: "Key", width: "22%" },
@@ -132,8 +170,20 @@ async function submit() {
   }
 }
 
-async function remove(item) {
-  await store.remove(item.id);
+function openDeleteConfirm(item) {
+  confirmState.open = true;
+  confirmState.id = item.id;
+  confirmState.message = `确定要删除授权 Key“${item.name}”吗？`;
+}
+
+async function confirmDelete() {
+  if (!confirmState.id) {
+    return;
+  }
+  await store.remove(confirmState.id);
+  confirmState.open = false;
+  confirmState.id = "";
+  confirmState.message = "";
 }
 
 async function copyKey(item) {

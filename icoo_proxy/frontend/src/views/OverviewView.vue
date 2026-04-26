@@ -2,7 +2,13 @@
   <section class="page-section">
     <Teleport to="#app-topbar-actions">
       <div class="app-topbar-actions__group">
-        <button class="btn btn-primary" :disabled="store.refreshing" @click="store.reloadProxy">
+        <button
+          class="btn btn-primary"
+          :class="{ 'is-loading': store.refreshing }"
+          :disabled="store.refreshing"
+          @click="store.reloadProxy"
+        >
+          <span v-if="store.refreshing" class="btn__spinner" />
           {{ store.refreshing ? "重载中..." : "重载代理" }}
         </button>
         <span class="badge" :class="store.data?.running ? 'badge-success' : 'badge-error'">

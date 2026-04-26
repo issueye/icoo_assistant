@@ -2,7 +2,13 @@
   <section class="page-section">
     <Teleport to="#app-topbar-actions">
       <div class="app-topbar-actions__group">
-        <button class="btn btn-primary" :disabled="store.refreshing" @click="store.refresh">
+        <button
+          class="btn btn-primary"
+          :class="{ 'is-loading': store.refreshing }"
+          :disabled="store.refreshing"
+          @click="store.refresh"
+        >
+          <span v-if="store.refreshing" class="btn__spinner" />
           {{ store.refreshing ? "刷新中..." : "刷新流量" }}
         </button>
         <label class="field-toggle rounded-lg">
