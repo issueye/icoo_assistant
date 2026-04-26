@@ -37,12 +37,14 @@
         </div>
       </main>
     </div>
+    <UMessage />
   </div>
 </template>
 
 <script setup>
 import { computed } from "vue";
 import { RouterLink, RouterView, useRoute } from "vue-router";
+import UMessage from "./components/ued/UMessage.vue";
 
 const route = useRoute();
 

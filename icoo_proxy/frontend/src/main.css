@@ -1100,6 +1100,184 @@ body {
     text-overflow: ellipsis;
   }
 
+.ued-alert {
+    @apply relative flex w-full items-start gap-2 rounded-md border px-3 py-2 text-sm;
+  }
+
+.ued-alert--with-description {
+    @apply px-4 py-3;
+  }
+
+.ued-alert--banner {
+    @apply rounded-none border-x-0 border-t-0;
+  }
+
+.ued-alert--success {
+    @apply border-[#b7eb8f] bg-[#f6ffed] text-[#389e0d];
+  }
+
+.ued-alert--info {
+    @apply border-[#91caff] bg-[#e6f4ff] text-[#0958d9];
+  }
+
+.ued-alert--warning {
+    @apply border-[#ffe58f] bg-[#fffbe6] text-[#d48806];
+  }
+
+.ued-alert--error {
+    @apply border-[#ffccc7] bg-[#fff2f0] text-[#cf1322];
+  }
+
+.ued-alert__icon {
+    @apply mt-0.5 inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-xs font-semibold leading-none;
+  }
+
+.ued-alert--success .ued-alert__icon {
+    @apply bg-[#52c41a] text-white;
+  }
+
+.ued-alert--info .ued-alert__icon {
+    @apply bg-[#1677ff] text-white;
+  }
+
+.ued-alert--warning .ued-alert__icon {
+    @apply bg-[#faad14] text-white;
+  }
+
+.ued-alert--error .ued-alert__icon {
+    @apply bg-[#ff4d4f] text-white;
+  }
+
+.ued-alert__content {
+    @apply min-w-0 flex-1;
+  }
+
+.ued-alert__message {
+    @apply text-sm leading-5 text-[#262626];
+  }
+
+.ued-alert__description {
+    @apply mt-1 text-sm leading-6 text-[#595959];
+  }
+
+.ued-alert__action {
+    @apply ml-3 shrink-0;
+  }
+
+.ued-alert__close {
+    @apply -mr-1 ml-2 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded border-0 bg-transparent p-0 text-base leading-none text-[#8c8c8c] transition hover:bg-black/5 hover:text-[#262626];
+  }
+
+.ued-message {
+    @apply pointer-events-none fixed left-0 right-0 top-5 z-[80] flex flex-col items-center gap-2 px-4;
+  }
+
+.ued-message__notice {
+    @apply pointer-events-auto inline-flex max-w-[min(520px,calc(100vw-32px))] items-center gap-2 rounded-md border border-[#f0f0f0] bg-white px-3 py-2 text-sm leading-5 text-[#262626];
+    box-shadow: var(--ued-shadow-popup);
+  }
+
+.ued-message__icon {
+    @apply inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-xs font-semibold leading-none text-white;
+  }
+
+.ued-message__notice--success .ued-message__icon {
+    @apply bg-[#52c41a];
+  }
+
+.ued-message__notice--info .ued-message__icon {
+    @apply bg-[#1677ff];
+  }
+
+.ued-message__notice--warning .ued-message__icon {
+    @apply bg-[#faad14];
+  }
+
+.ued-message__notice--error .ued-message__icon {
+    @apply bg-[#ff4d4f];
+  }
+
+.ued-message__notice--loading .ued-message__icon {
+    @apply bg-[#1677ff];
+  }
+
+.ued-message__content {
+    @apply min-w-0 truncate;
+  }
+
+.ued-message__close {
+    @apply -mr-1 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded border-0 bg-transparent p-0 text-base leading-none text-[#8c8c8c] transition hover:bg-[#f5f5f5] hover:text-[#262626];
+  }
+
+.ued-message-enter-active,
+.ued-message-leave-active {
+    transition: opacity 0.2s ease, transform 0.2s ease;
+  }
+
+.ued-message-enter-from,
+.ued-message-leave-to {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+
+.ued-loading {
+    @apply inline-flex items-center justify-center gap-2 text-[#1677ff];
+  }
+
+.ued-loading__spinner {
+    @apply inline-block shrink-0 animate-spin rounded-full border-2 border-current border-r-transparent;
+  }
+
+.ued-loading--sm .ued-loading__spinner {
+    @apply h-4 w-4;
+  }
+
+.ued-loading--md .ued-loading__spinner {
+    @apply h-5 w-5;
+  }
+
+.ued-loading--lg .ued-loading__spinner {
+    @apply h-7 w-7;
+  }
+
+.ued-loading__tip {
+    @apply text-sm leading-5 text-[#1677ff];
+  }
+
+.ued-loading--lg {
+    @apply flex-col gap-3;
+  }
+
+.ued-loading--lg .ued-loading__tip {
+    @apply text-base;
+  }
+
+.ued-loading-container {
+    @apply relative min-h-0;
+  }
+
+.ued-loading-container.is-loading {
+    @apply overflow-hidden;
+  }
+
+.ued-loading-overlay {
+    @apply absolute inset-0 z-10 flex items-center justify-center bg-white/70 backdrop-blur-[1px];
+  }
+
+.ued-loading-fullscreen {
+    @apply fixed inset-0 z-[90] flex items-center justify-center bg-white/70 backdrop-blur-[1px];
+  }
+
+.ued-loading-fade-enter-active,
+.ued-loading-fade-leave-active {
+    transition: opacity 0.2s ease;
+  }
+
+.ued-loading-fade-enter-from,
+.ued-loading-fade-leave-to {
+    opacity: 0;
+  }
+
 .notice-error {
     @apply rounded-lg border border-[#ffccc7] bg-[#fff2f0] px-4 py-3 text-sm text-[#cf1322];
   }

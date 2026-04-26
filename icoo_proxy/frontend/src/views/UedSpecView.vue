@@ -67,6 +67,46 @@
     </div>
 
     <div class="section-grid xl:grid-cols-2">
+      <PanelBlock title="Alert 警告提示">
+        <div class="space-y-3">
+          <UAlert type="success" message="保存成功，配置已写入本地代理。" />
+          <UAlert type="info" message="提示信息" description="用于承载页面内常驻的说明、状态变更或轻量引导。" />
+          <UAlert type="warning" message="代理尚未重载" description="保存端点后需要重载代理，新的路由配置才会生效。" closable />
+          <UAlert type="error" message="连接失败" description="请检查供应商地址、鉴权 Key 和网络连通性。" />
+        </div>
+      </PanelBlock>
+
+      <PanelBlock title="Message 全局提示">
+        <div class="flex flex-wrap gap-2">
+          <UButton variant="success" @click="showMessage('success')">Success</UButton>
+          <UButton variant="info" @click="showMessage('info')">Info</UButton>
+          <UButton variant="warning" @click="showMessage('warning')">Warning</UButton>
+          <UButton variant="error" @click="showMessage('error')">Error</UButton>
+          <UButton variant="secondary" @click="showLoadingMessage">Loading</UButton>
+        </div>
+      </PanelBlock>
+    </div>
+
+    <div class="section-grid xl:grid-cols-2">
+      <PanelBlock title="Loading 加载">
+        <div class="space-y-4">
+          <div class="flex flex-wrap items-center gap-5">
+            <ULoading size="sm" />
+            <ULoading />
+            <ULoading size="lg" tip="加载中" />
+          </div>
+          <ULoading tip="正在加载端点数据..." :spinning="true">
+            <div class="rounded-md border border-[#f0f0f0] bg-[#fafafa] p-4">
+              <p class="text-sm font-medium text-[#262626]">代理端点</p>
+              <p class="mt-2 text-sm leading-6 text-[#8c8c8c]">
+                区域加载用于表格、详情面板或配置块刷新，不打断当前页面上下文。
+              </p>
+            </div>
+          </ULoading>
+          <UButton variant="secondary" @click="showFullscreenLoading">全屏 Loading</UButton>
+        </div>
+      </PanelBlock>
+
       <PanelBlock title="标签">
         <div class="space-y-3">
           <div class="flex flex-wrap gap-2">
@@ -86,7 +126,9 @@
           </div>
         </div>
       </PanelBlock>
+    </div>
 
+    <div class="section-grid xl:grid-cols-2">
       <PanelBlock title="输入与下拉">
         <div class="space-y-3">
           <UInput v-model="form.name" label="名称" placeholder="请输入供应商名称" hint="表单项采用上 label、下控件布局。" />
@@ -173,24 +215,29 @@
       danger
       @confirm="showConfirm = false"
     />
+    <ULoading fullscreen tip="正在加载页面..." :spinning="fullscreenLoading" />
   </section>
 </template>
 
 <script setup>
 import { reactive, ref } from "vue";
 import PanelBlock from "../components/PanelBlock.vue";
+import UAlert from "../components/ued/UAlert.vue";
 import UButton from "../components/ued/UButton.vue";
 import UConfirmDialog from "../components/ued/UConfirmDialog.vue";
 import UInput from "../components/ued/UInput.vue";
+import ULoading from "../components/ued/ULoading.vue";
 import UModal from "../components/ued/UModal.vue";
 import USelect from "../components/ued/USelect.vue";
 import USwitch from "../components/ued/USwitch.vue";
 import UTable from "../components/ued/UTable.vue";
 import UTag from "../components/ued/UTag.vue";
 import UTooltip from "../components/ued/UTooltip.vue";
+import { message } from "../components/ued/message";
 
 const showModal = ref(false);
 const showConfirm = ref(false);
+const fullscreenLoading = ref(false);
 const switchValue = ref(true);
 
 const form = reactive({
@@ -204,6 +251,32 @@ const protocolOptions = [
   { label: "openai-chat", value: "openai-chat" },
   { label: "openai-responses", value: "openai-responses" },
 ];
+
+const messageText = {
+  success: "操作成功，配置已保存。",
+  info: "这是一条普通提示信息。",
+  warning: "请先重载代理使配置生效。",
+  error: "操作失败，请检查输入后重试。",
+};
+
+function showMessage(type) {
+  message[type](messageText[type]);
+}
+
+function showLoadingMessage() {
+  const key = "ued-loading-demo";
+  message.loading({ key, content: "正在同步配置..." });
+  window.setTimeout(() => {
+    message.success({ key, content: "配置同步完成。" });
+  }, 1200);
+}
+
+function showFullscreenLoading() {
+  fullscreenLoading.value = true;
+  window.setTimeout(() => {
+    fullscreenLoading.value = false;
+  }, 1200);
+}
 
 const columns = [
   { key: "name", title: "名称" },
