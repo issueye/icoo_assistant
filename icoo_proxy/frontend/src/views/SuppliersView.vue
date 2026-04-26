@@ -54,6 +54,7 @@
               <UTag code>{{ row.api_key_masked || "未保存 API Key" }}</UTag>
               <UTag v-if="row.only_stream" variant="warning">only_stream</UTag>
             </div>
+            <p v-if="row.user_agent" class="mt-1 table-meta table-cell-wrap">UA: {{ row.user_agent }}</p>
           </template>
           <template #cell-models="{ row }">
             <div class="flex flex-wrap gap-2">
@@ -208,6 +209,10 @@
 
         <FieldLabel label="API Key">
           <input v-model="store.form.api_key" class="field-input" placeholder="编辑时留空则保留已有密钥" />
+        </FieldLabel>
+
+        <FieldLabel label="User-Agent">
+          <input v-model="store.form.user_agent" class="field-input" placeholder="留空则使用默认上游 UA" />
         </FieldLabel>
 
         <FieldLabel label="描述">

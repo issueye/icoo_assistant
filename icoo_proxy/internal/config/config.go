@@ -23,9 +23,11 @@ type Config struct {
 	AnthropicAPIKey           string
 	AnthropicVersion          string
 	AnthropicOnlyStream       bool
+	AnthropicUserAgent        string
 	OpenAIBaseURL             string
 	OpenAIApiKey              string
 	OpenAIOnlyStream          bool
+	OpenAIUserAgent           string
 	DefaultAnthropicRoute     string
 	DefaultChatRoute          string
 	DefaultResponsesRoute     string
@@ -52,9 +54,11 @@ func Load(workdir string) (Config, error) {
 		AnthropicAPIKey:           strings.TrimSpace(os.Getenv("ANTHROPIC_API_KEY")),
 		AnthropicVersion:          strings.TrimSpace(os.Getenv("ANTHROPIC_VERSION")),
 		AnthropicOnlyStream:       boolFromEnv("ANTHROPIC_ONLY_STREAM", false),
+		AnthropicUserAgent:        strings.TrimSpace(os.Getenv("ANTHROPIC_USER_AGENT")),
 		OpenAIBaseURL:             strings.TrimSpace(os.Getenv("OPENAI_BASE_URL")),
 		OpenAIApiKey:              strings.TrimSpace(os.Getenv("OPENAI_API_KEY")),
 		OpenAIOnlyStream:          boolFromEnv("OPENAI_ONLY_STREAM", false),
+		OpenAIUserAgent:           strings.TrimSpace(os.Getenv("OPENAI_USER_AGENT")),
 		DefaultAnthropicRoute:     strings.TrimSpace(os.Getenv("PROXY_DEFAULT_ANTHROPIC_ROUTE")),
 		DefaultChatRoute:          strings.TrimSpace(os.Getenv("PROXY_DEFAULT_CHAT_ROUTE")),
 		DefaultResponsesRoute:     strings.TrimSpace(os.Getenv("PROXY_DEFAULT_RESPONSES_ROUTE")),

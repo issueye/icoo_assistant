@@ -47,6 +47,7 @@ type SupplierSnapshot struct {
 	BaseURL    string
 	APIKey     string
 	OnlyStream bool
+	UserAgent  string
 	IsEnabled  bool
 }
 

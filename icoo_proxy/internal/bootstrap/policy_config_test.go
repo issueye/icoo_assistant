@@ -21,6 +21,7 @@ func TestApplyRoutePolicies(t *testing.T) {
 		BaseURL:    "https://example.com",
 		APIKey:     "secret-key",
 		OnlyStream: true,
+		UserAgent:  "PolicyUA/1.0",
 		Enabled:    true,
 		Models:     "gpt-4.1-mini",
 	})
@@ -55,5 +56,8 @@ func TestApplyRoutePolicies(t *testing.T) {
 	}
 	if !cfg.OpenAIOnlyStream {
 		t.Fatalf("expected openai only_stream from supplier policy")
+	}
+	if cfg.OpenAIUserAgent != "PolicyUA/1.0" {
+		t.Fatalf("expected openai user agent from supplier policy, got %q", cfg.OpenAIUserAgent)
 	}
 }

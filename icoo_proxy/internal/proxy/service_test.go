@@ -80,6 +80,42 @@ func TestSanitizedHeadersRedactsSecrets(t *testing.T) {
 	}
 }
 
+func TestHandleAppliesConfiguredUpstreamUserAgent(t *testing.T) {
+	var gotUserAgent string
+
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotUserAgent = r.Header.Get("User-Agent")
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"id":"resp_ua","object":"response","status":"completed","output_text":"ok","output":[]}`))
+	}))
+	defer upstream.Close()
+
+	cfg := config.Config{
+		AllowUnauthenticatedLocal: true,
+		OpenAIBaseURL:             upstream.URL,
+		OpenAIApiKey:              "test-openai-key",
+		OpenAIUserAgent:           "SupplierUA/2.0",
+		DefaultResponsesRoute:     "openai-responses:gpt-4.1-mini",
+	}
+	cat, err := catalog.New(cfg)
+	if err != nil {
+		t.Fatalf("new catalog: %v", err)
+	}
+	service := New(cfg, cat)
+
+	req := httptest.NewRequest(http.MethodPost, "/v1/responses", bytes.NewBufferString(`{"model":"gpt-4.1-mini","input":"hello"}`))
+	rec := httptest.NewRecorder()
+
+	service.Handle(rec, req, catalog.ProtocolOpenAIResponse)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d body=%s", rec.Code, rec.Body.String())
+	}
+	if gotUserAgent != "SupplierUA/2.0" {
+		t.Fatalf("expected configured upstream user agent, got %q", gotUserAgent)
+	}
+}
+
 func TestHandleAnthropicPassthroughRewritesAliasModel(t *testing.T) {
 	var gotAuth string
 	var gotVersion string

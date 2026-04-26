@@ -61,6 +61,9 @@ func (s *HealthService) Check(id string) (HealthRecord, error) {
 	if err != nil {
 		return HealthRecord{}, err
 	}
+	if userAgent := strings.TrimSpace(supplier.UserAgent); userAgent != "" {
+		req.Header.Set("User-Agent", userAgent)
+	}
 	resp, err := s.client.Do(req)
 	if err != nil {
 		record := HealthRecord{

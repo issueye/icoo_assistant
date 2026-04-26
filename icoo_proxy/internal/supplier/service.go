@@ -19,6 +19,7 @@ type Record struct {
 	BaseURL      string   `json:"base_url"`
 	APIKeyMasked string   `json:"api_key_masked"`
 	OnlyStream   bool     `json:"only_stream"`
+	UserAgent    string   `json:"user_agent"`
 	Enabled      bool     `json:"enabled"`
 	Description  string   `json:"description"`
 	Models       []string `json:"models"`
@@ -34,6 +35,7 @@ type supplierModel struct {
 	BaseURL     string
 	APIKey      string
 	OnlyStream  bool
+	UserAgent   string
 	Enabled     bool
 	Description string
 	Models      string
@@ -53,6 +55,7 @@ type UpsertInput struct {
 	BaseURL     string `json:"base_url"`
 	APIKey      string `json:"api_key"`
 	OnlyStream  bool   `json:"only_stream"`
+	UserAgent   string `json:"user_agent"`
 	Enabled     bool   `json:"enabled"`
 	Description string `json:"description"`
 	Models      string `json:"models"`
@@ -110,6 +113,7 @@ func (s *Service) Resolve(id string) (routepolicy.SupplierSnapshot, bool) {
 		BaseURL:    item.BaseURL,
 		APIKey:     item.APIKey,
 		OnlyStream: item.OnlyStream,
+		UserAgent:  item.UserAgent,
 		IsEnabled:  item.Enabled,
 	}, true
 }
@@ -143,6 +147,7 @@ func (s *Service) Upsert(input UpsertInput) (Record, error) {
 		BaseURL:     baseURL,
 		APIKey:      strings.TrimSpace(input.APIKey),
 		OnlyStream:  input.OnlyStream,
+		UserAgent:   strings.TrimSpace(input.UserAgent),
 		Enabled:     input.Enabled,
 		Description: strings.TrimSpace(input.Description),
 		Models:      strings.Join(splitCSVLike(input.Models), ","),
@@ -204,6 +209,7 @@ func toRecord(item supplierModel) Record {
 		BaseURL:      item.BaseURL,
 		APIKeyMasked: maskSecret(item.APIKey),
 		OnlyStream:   item.OnlyStream,
+		UserAgent:    item.UserAgent,
 		Enabled:      item.Enabled,
 		Description:  item.Description,
 		Models:       slices.Clone(splitCSVLike(item.Models)),

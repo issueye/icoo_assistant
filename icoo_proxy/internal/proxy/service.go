@@ -637,11 +637,17 @@ func (s *Service) applyRequestHeaders(target *http.Request, source *http.Request
 	case catalog.ProtocolAnthropic:
 		target.Header.Set("x-api-key", s.cfg.AnthropicAPIKey)
 		target.Header.Set("anthropic-version", s.cfg.AnthropicVersion)
+		if userAgent := strings.TrimSpace(s.cfg.AnthropicUserAgent); userAgent != "" {
+			target.Header.Set("User-Agent", userAgent)
+		}
 		if beta := strings.TrimSpace(source.Header.Get("anthropic-beta")); beta != "" {
 			target.Header.Set("anthropic-beta", beta)
 		}
 	case catalog.ProtocolOpenAIChat, catalog.ProtocolOpenAIResponse:
 		target.Header.Set("Authorization", "Bearer "+s.cfg.OpenAIApiKey)
+		if userAgent := strings.TrimSpace(s.cfg.OpenAIUserAgent); userAgent != "" {
+			target.Header.Set("User-Agent", userAgent)
+		}
 		if value := strings.TrimSpace(source.Header.Get("OpenAI-Beta")); value != "" {
 			target.Header.Set("OpenAI-Beta", value)
 		}

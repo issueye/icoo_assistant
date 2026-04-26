@@ -23,6 +23,7 @@ func TestUpsertListDelete(t *testing.T) {
 		BaseURL:     "https://example.com",
 		APIKey:      "secret-key-123456",
 		OnlyStream:  true,
+		UserAgent:   "CustomVendor/1.0",
 		Enabled:     true,
 		Description: "Test vendor",
 		Models:      "model-a,model-b",
@@ -37,6 +38,9 @@ func TestUpsertListDelete(t *testing.T) {
 	if !record.OnlyStream {
 		t.Fatalf("expected only_stream to round-trip")
 	}
+	if record.UserAgent != "CustomVendor/1.0" {
+		t.Fatalf("expected user agent to round-trip, got %q", record.UserAgent)
+	}
 
 	items := svc.List()
 	if len(items) != len(initial)+1 {
@@ -49,6 +53,9 @@ func TestUpsertListDelete(t *testing.T) {
 	if !resolved.OnlyStream {
 		t.Fatalf("expected resolved supplier snapshot to preserve only_stream")
 	}
+	if resolved.UserAgent != "CustomVendor/1.0" {
+		t.Fatalf("expected resolved supplier snapshot to preserve user agent, got %q", resolved.UserAgent)
+	}
 
 	if err := svc.Delete(record.ID); err != nil {
 		t.Fatalf("delete: %v", err)
@@ -60,7 +67,9 @@ func TestUpsertListDelete(t *testing.T) {
 }
 
 func TestHealthCheck(t *testing.T) {
+	var gotUserAgent string
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotUserAgent = r.Header.Get("User-Agent")
 		w.WriteHeader(http.StatusOK)
 	}))
 	defer server.Close()
@@ -71,10 +80,11 @@ func TestHealthCheck(t *testing.T) {
 	}
 	t.Cleanup(func() { _ = svc.Close() })
 	record, err := svc.Upsert(UpsertInput{
-		Name:     "Health Vendor",
-		Protocol: "openai-responses",
-		BaseURL:  server.URL,
-		Enabled:  true,
+		Name:      "Health Vendor",
+		Protocol:  "openai-responses",
+		BaseURL:   server.URL,
+		UserAgent: "HealthCheckUA/1.0",
+		Enabled:   true,
 	})
 	if err != nil {
 		t.Fatalf("upsert: %v", err)
@@ -90,5 +100,8 @@ func TestHealthCheck(t *testing.T) {
 	}
 	if result.Status != "reachable" {
 		t.Fatalf("expected reachable status, got %q", result.Status)
+	}
+	if gotUserAgent != "HealthCheckUA/1.0" {
+		t.Fatalf("expected health check user agent, got %q", gotUserAgent)
 	}
 }
