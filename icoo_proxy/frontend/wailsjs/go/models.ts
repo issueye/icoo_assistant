@@ -279,6 +279,69 @@ export namespace endpoint {
 
 }
 
+export namespace projectsettings {
+	
+	export class Values {
+	    proxy_host: string;
+	    proxy_port: number;
+	    proxy_read_timeout_seconds: number;
+	    proxy_write_timeout_seconds: number;
+	    proxy_shutdown_timeout_seconds: number;
+	    proxy_allow_unauthenticated_local: boolean;
+	    proxy_api_key: string;
+	    proxy_api_keys: string;
+	    proxy_default_anthropic_route: string;
+	    proxy_default_chat_route: string;
+	    proxy_default_responses_route: string;
+	    proxy_model_routes: string;
+	    proxy_chain_log_path: string;
+	    proxy_chain_log_bodies: boolean;
+	    proxy_chain_log_max_body_bytes: number;
+	    anthropic_base_url: string;
+	    anthropic_api_key: string;
+	    anthropic_version: string;
+	    anthropic_only_stream: boolean;
+	    anthropic_user_agent: string;
+	    openai_base_url: string;
+	    openai_api_key: string;
+	    openai_only_stream: boolean;
+	    openai_user_agent: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new Values(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.proxy_host = source["proxy_host"];
+	        this.proxy_port = source["proxy_port"];
+	        this.proxy_read_timeout_seconds = source["proxy_read_timeout_seconds"];
+	        this.proxy_write_timeout_seconds = source["proxy_write_timeout_seconds"];
+	        this.proxy_shutdown_timeout_seconds = source["proxy_shutdown_timeout_seconds"];
+	        this.proxy_allow_unauthenticated_local = source["proxy_allow_unauthenticated_local"];
+	        this.proxy_api_key = source["proxy_api_key"];
+	        this.proxy_api_keys = source["proxy_api_keys"];
+	        this.proxy_default_anthropic_route = source["proxy_default_anthropic_route"];
+	        this.proxy_default_chat_route = source["proxy_default_chat_route"];
+	        this.proxy_default_responses_route = source["proxy_default_responses_route"];
+	        this.proxy_model_routes = source["proxy_model_routes"];
+	        this.proxy_chain_log_path = source["proxy_chain_log_path"];
+	        this.proxy_chain_log_bodies = source["proxy_chain_log_bodies"];
+	        this.proxy_chain_log_max_body_bytes = source["proxy_chain_log_max_body_bytes"];
+	        this.anthropic_base_url = source["anthropic_base_url"];
+	        this.anthropic_api_key = source["anthropic_api_key"];
+	        this.anthropic_version = source["anthropic_version"];
+	        this.anthropic_only_stream = source["anthropic_only_stream"];
+	        this.anthropic_user_agent = source["anthropic_user_agent"];
+	        this.openai_base_url = source["openai_base_url"];
+	        this.openai_api_key = source["openai_api_key"];
+	        this.openai_only_stream = source["openai_only_stream"];
+	        this.openai_user_agent = source["openai_user_agent"];
+	    }
+	}
+
+}
+
 export namespace routepolicy {
 	
 	export class Record {
@@ -370,6 +433,8 @@ export namespace supplier {
 	    protocol: string;
 	    base_url: string;
 	    api_key_masked: string;
+	    only_stream: boolean;
+	    user_agent: string;
 	    enabled: boolean;
 	    description: string;
 	    models: string[];
@@ -388,6 +453,8 @@ export namespace supplier {
 	        this.protocol = source["protocol"];
 	        this.base_url = source["base_url"];
 	        this.api_key_masked = source["api_key_masked"];
+	        this.only_stream = source["only_stream"];
+	        this.user_agent = source["user_agent"];
 	        this.enabled = source["enabled"];
 	        this.description = source["description"];
 	        this.models = source["models"];
@@ -402,6 +469,8 @@ export namespace supplier {
 	    protocol: string;
 	    base_url: string;
 	    api_key: string;
+	    only_stream: boolean;
+	    user_agent: string;
 	    enabled: boolean;
 	    description: string;
 	    models: string;
@@ -418,6 +487,8 @@ export namespace supplier {
 	        this.protocol = source["protocol"];
 	        this.base_url = source["base_url"];
 	        this.api_key = source["api_key"];
+	        this.only_stream = source["only_stream"];
+	        this.user_agent = source["user_agent"];
 	        this.enabled = source["enabled"];
 	        this.description = source["description"];
 	        this.models = source["models"];

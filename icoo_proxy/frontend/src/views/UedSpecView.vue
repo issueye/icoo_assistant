@@ -3,9 +3,38 @@
     <div class="page-header">
       <h2 class="page-title">UED 组件</h2>
       <p class="page-description">
-        简洁、明亮、低内边距。组件以细边框、小圆角和紧凑间距为主。
+        参考 Ant Design 的中后台设计语言：清晰层级、32px 基础控件高度、6px 圆角、蓝色主操作、轻量边框和明确状态反馈。
       </p>
     </div>
+
+    <PanelBlock title="设计 Token">
+      <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+        <div class="sub-card">
+          <p class="text-sm font-medium text-slate-900">主色</p>
+          <div class="mt-3 flex items-center gap-2">
+            <span class="h-6 w-10 rounded bg-[#1677ff]"></span>
+            <span class="font-mono text-xs text-slate-600">#1677ff</span>
+          </div>
+        </div>
+        <div class="sub-card">
+          <p class="text-sm font-medium text-slate-900">圆角</p>
+          <p class="mt-3 text-sm text-slate-600">基础 6px，面板 8px，标签 4px。</p>
+        </div>
+        <div class="sub-card">
+          <p class="text-sm font-medium text-slate-900">控件高度</p>
+          <p class="mt-3 text-sm text-slate-600">XS 24 / SM 28 / MD 32 / LG 40。</p>
+        </div>
+        <div class="sub-card">
+          <p class="text-sm font-medium text-slate-900">状态色</p>
+          <div class="mt-3 flex flex-wrap gap-2">
+            <UTag variant="success">Success</UTag>
+            <UTag variant="warning">Warning</UTag>
+            <UTag variant="error">Error</UTag>
+            <UTag variant="info">Info</UTag>
+          </div>
+        </div>
+      </div>
+    </PanelBlock>
 
     <div class="section-grid xl:grid-cols-2">
       <PanelBlock title="按钮">
@@ -31,8 +60,8 @@
 
       <PanelBlock title="开关">
         <div class="space-y-3">
-          <USwitch v-model="switchValue" label="启用功能" hint="配置类开关" />
-          <USwitch :model-value="true" label="已启用" hint="禁用态示例" :disabled="true" />
+          <USwitch v-model="switchValue" label="启用自动健康检查" hint="配置类开关用于开关型参数，文案保持动宾结构。" />
+          <USwitch :model-value="true" label="保留系统默认路由" hint="禁用态示例" :disabled="true" />
         </div>
       </PanelBlock>
     </div>
@@ -60,9 +89,9 @@
 
       <PanelBlock title="输入与下拉">
         <div class="space-y-3">
-          <UInput v-model="form.name" label="名称" placeholder="请输入名称" />
+          <UInput v-model="form.name" label="名称" placeholder="请输入供应商名称" hint="表单项采用上 label、下控件布局。" />
           <USelect v-model="form.protocol" label="协议" :options="protocolOptions" />
-          <UInput v-model="form.description" label="描述" placeholder="请输入描述" textarea />
+          <UInput v-model="form.description" label="描述" placeholder="请输入用途说明" textarea />
         </div>
       </PanelBlock>
 
@@ -89,7 +118,7 @@
 
     <PanelBlock title="现代化表格">
       <p class="mb-3 text-xs text-zinc-500">
-        演示固定列、文字溢出省略 + Tooltip、斑马纹、列对齐等特性。
+        表格沿用 Ant Design 的浅表头、行 hover、高密度信息展示，并保留固定列、文字省略、Tooltip 和列对齐能力。
       </p>
       <UTable
         :columns="advancedColumns"

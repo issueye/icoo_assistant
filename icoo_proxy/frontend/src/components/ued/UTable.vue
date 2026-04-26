@@ -1,92 +1,83 @@
 <template>
-  <div class="table-shell" :class="{ 'is-sticky-header': stickyHeader }">
-    <div class="table-scroll">
+  <div class="table-shell" :class="shellClasses">
+    <div class="table-scroll" :style="scrollStyle">
       <table :class="tableClasses">
-        <colgroup v-if="hasColumnSizing">
+        <colgroup v-if="tableColumns.length">
           <col
-            v-for="column in columns"
-            :key="column.key"
-            :style="column.width ? { width: column.width } : undefined"
+            v-for="column in tableColumns"
+            :key="column.uid"
+            :style="getColStyle(column)"
           />
-          <col v-if="$slots.actions" :style="actionWidth ? { width: actionWidth } : undefined" />
         </colgroup>
-        <thead>
+
+        <thead v-if="showHeader">
           <tr>
             <th
-              v-for="(column, index) in columns"
-              :key="column.key"
-              :class="[
-                column.headerClass,
-                getAlignClass(column.align),
-                { 'is-sticky': isStickyColumn(column) },
-                { 'is-sticky-left': column.fixed === 'left' },
-                { 'is-sticky-right': column.fixed === 'right' },
-              ]"
-              :style="getStickyStyle(column, index)"
+              v-for="column in tableColumns"
+              :key="column.uid"
+              scope="col"
+              :class="getHeaderClasses(column)"
+              :style="getStickyStyle(column)"
             >
-              {{ column.title }}
-            </th>
-            <th
-              v-if="$slots.actions"
-              :class="[
-                'actions-header',
-                getAlignClass(actionAlign),
-                { 'is-sticky': true, 'is-sticky-right': true },
-              ]"
-              :style="getActionStickyStyle()"
-            >
-              {{ actionTitle }}
+              <slot
+                v-if="!column.isAction"
+                :name="`header-${column.key}`"
+                :column="column.raw"
+              >
+                {{ column.title }}
+              </slot>
+              <template v-else>{{ column.title }}</template>
             </th>
           </tr>
         </thead>
-        <tbody v-if="rows.length">
+
+        <tbody v-if="hasRows">
           <tr
-            v-for="row in rows"
-            :key="resolveRowKey(row)"
-            :class="{ 'is-striped': stripe }"
+            v-for="(row, rowIndex) in rows"
+            :key="resolveRowKey(row, rowIndex)"
+            :class="getRowClasses(row, rowIndex)"
           >
             <td
-              v-for="(column, index) in columns"
-              :key="column.key"
-              :class="[
-                column.cellClass,
-                getAlignClass(column.align),
-                { 'is-sticky': isStickyColumn(column) },
-                { 'is-sticky-left': column.fixed === 'left' },
-                { 'is-sticky-right': column.fixed === 'right' },
-                { 'is-ellipsis': column.ellipsis },
-              ]"
-              :style="getStickyStyle(column, index)"
+              v-for="column in tableColumns"
+              :key="column.uid"
+              :class="getCellClasses(column, row, rowIndex)"
+              :style="getStickyStyle(column)"
             >
-              <template v-if="column.ellipsis && !slots[`cell-${column.key}`]">
+              <slot
+                v-if="column.isAction"
+                name="actions"
+                :row="row"
+                :index="rowIndex"
+              />
+
+              <template v-else-if="column.ellipsis && !hasCellSlot(column)">
                 <UTooltip
-                  :content="resolveTooltipContent(column, row)"
+                  :content="resolveTooltipContent(column, row, rowIndex)"
                   :disabled="!column.tooltip"
                 >
-                  <span class="table-cell-ellipsis">{{ row[column.key] ?? "-" }}</span>
+                  <span class="table-cell-ellipsis">
+                    {{ formatCellValue(resolveCellValue(column, row, rowIndex)) }}
+                  </span>
                 </UTooltip>
               </template>
-              <template v-else>
-                <slot :name="`cell-${column.key}`" :row="row" :value="row[column.key]">
-                  {{ row[column.key] ?? "-" }}
-                </slot>
-              </template>
-            </td>
-            <td
-              v-if="$slots.actions"
-              :class="[
-                getAlignClass(actionAlign),
-                { 'is-sticky': true, 'is-sticky-right': true },
-              ]"
-              :style="getActionStickyStyle()"
-            >
-              <slot name="actions" :row="row" />
+
+              <slot
+                v-else
+                :name="`cell-${column.key}`"
+                :row="row"
+                :value="resolveCellValue(column, row, rowIndex)"
+                :column="column.raw"
+                :index="rowIndex"
+              >
+                {{ formatCellValue(resolveCellValue(column, row, rowIndex)) }}
+              </slot>
             </td>
           </tr>
         </tbody>
       </table>
-      <div v-if="!rows.length" class="empty-state rounded-none border-0">
-        {{ emptyText }}
+
+      <div v-if="!hasRows" class="empty-state rounded-none border-0">
+        <slot name="empty">{{ emptyText }}</slot>
       </div>
     </div>
   </div>
@@ -114,7 +105,7 @@ const props = defineProps({
     default: "操作",
   },
   actionWidth: {
-    type: String,
+    type: [String, Number],
     default: "",
   },
   actionAlign: {
@@ -141,9 +132,71 @@ const props = defineProps({
     type: Boolean,
     default: true,
   },
+  showHeader: {
+    type: Boolean,
+    default: true,
+  },
+  maxHeight: {
+    type: [String, Number],
+    default: "",
+  },
+  size: {
+    type: String,
+    default: "middle",
+  },
+  rowClassName: {
+    type: [String, Function],
+    default: "",
+  },
 });
 
 const slots = useSlots();
+
+const normalizedColumns = computed(() =>
+  props.columns
+    .filter((column) => !column.hidden)
+    .map((column, index) => normalizeColumn(column, index)),
+);
+
+const actionColumn = computed(() => {
+  if (!slots.actions) return null;
+  return {
+    uid: "__actions__",
+    key: "actions",
+    title: props.actionTitle,
+    width: normalizeCssSize(props.actionWidth),
+    minWidth: "",
+    align: props.actionAlign,
+    fixed: "right",
+    ellipsis: false,
+    tooltip: false,
+    isAction: true,
+    raw: {
+      key: "actions",
+      title: props.actionTitle,
+    },
+  };
+});
+
+const tableColumns = computed(() => {
+  const columns = [...normalizedColumns.value];
+  if (actionColumn.value) {
+    columns.push(actionColumn.value);
+  }
+  return withStickyOffsets(columns);
+});
+
+const hasRows = computed(() => props.rows.length > 0);
+
+const hasColumnSizing = computed(() =>
+  tableColumns.value.some((column) => Boolean(column.width || column.minWidth)),
+);
+
+const shellClasses = computed(() => ({
+  "table-shell--empty": !hasRows.value,
+  "table-shell--fixed": props.fixed,
+  "table-shell--sticky-header": props.stickyHeader,
+}));
 
 const tableClasses = computed(() => [
   "admin-table",
@@ -151,75 +204,191 @@ const tableClasses = computed(() => [
   props.tableClass,
   props.stripe ? "admin-table--stripe" : "",
   props.stickyHeader ? "admin-table--sticky-header" : "",
+  `admin-table--${normalizeSize(props.size)}`,
 ]);
 
-const hasColumnSizing = computed(() =>
-  props.columns.some((column) => Boolean(column.width)) || Boolean(props.actionWidth),
-);
+const scrollStyle = computed(() => {
+  const style = {};
+  const maxHeight = normalizeCssSize(props.maxHeight);
+  if (maxHeight) {
+    style.maxHeight = maxHeight;
+  }
+  return style;
+});
 
-function resolveRowKey(row) {
+function normalizeColumn(column, index) {
+  const key = String(column.key ?? column.dataIndex ?? `column-${index}`);
+  return {
+    uid: `${key}-${index}`,
+    key,
+    title: column.title ?? "",
+    dataIndex: column.dataIndex ?? column.key,
+    width: normalizeCssSize(column.width),
+    minWidth: normalizeCssSize(column.minWidth),
+    align: normalizeAlign(column.align),
+    fixed: normalizeFixed(column.fixed),
+    ellipsis: Boolean(column.ellipsis),
+    tooltip: column.tooltip,
+    className: column.className,
+    headerClass: column.headerClass,
+    cellClass: column.cellClass,
+    isAction: false,
+    raw: column,
+  };
+}
+
+function withStickyOffsets(columns) {
+  const next = columns.map((column) => ({ ...column, stickyStyle: {} }));
+  let leftOffset = "0px";
+  for (const column of next) {
+    if (column.fixed !== "left") continue;
+    column.stickyStyle.left = leftOffset;
+    leftOffset = appendCssSize(leftOffset, column.width);
+  }
+
+  let rightOffset = "0px";
+  for (let index = next.length - 1; index >= 0; index -= 1) {
+    const column = next[index];
+    if (column.fixed !== "right") continue;
+    column.stickyStyle.right = rightOffset;
+    rightOffset = appendCssSize(rightOffset, column.width);
+  }
+
+  return next;
+}
+
+function appendCssSize(base, size) {
+  if (!size) return base;
+  if (base === "0px") return size;
+  return `calc(${base} + ${size})`;
+}
+
+function normalizeCssSize(value) {
+  if (value === 0) return "0px";
+  if (!value) return "";
+  return typeof value === "number" ? `${value}px` : String(value);
+}
+
+function normalizeAlign(value) {
+  if (value === "center" || value === "right") return value;
+  return "left";
+}
+
+function normalizeFixed(value) {
+  if (value === "left" || value === true) return "left";
+  if (value === "right") return "right";
+  return "";
+}
+
+function normalizeSize(value) {
+  return ["small", "middle", "large"].includes(value) ? value : "middle";
+}
+
+function resolveRowKey(row, rowIndex) {
   if (typeof props.rowKey === "function") {
-    return props.rowKey(row);
+    return props.rowKey(row, rowIndex);
   }
-  return row?.[props.rowKey] ?? JSON.stringify(row);
+  return row?.[props.rowKey] ?? rowIndex;
 }
 
-function resolveTooltipContent(column, row) {
+function resolveCellValue(column, row, rowIndex) {
+  if (typeof column.raw.render === "function") {
+    return column.raw.render(row, rowIndex);
+  }
+
+  const dataIndex = column.dataIndex;
+  if (Array.isArray(dataIndex)) {
+    return dataIndex.reduce((value, key) => value?.[key], row);
+  }
+
+  return row?.[dataIndex];
+}
+
+function resolveTooltipContent(column, row, rowIndex) {
   if (typeof column.tooltip === "function") {
-    return column.tooltip(row);
+    return column.tooltip(row, rowIndex);
   }
-  return String(row[column.key] ?? "-");
+  return formatCellValue(resolveCellValue(column, row, rowIndex));
 }
 
-function getAlignClass(align) {
-  if (align === "center") return "is-align-center";
-  if (align === "right") return "is-align-right";
-  return "is-align-left";
+function formatCellValue(value) {
+  if (value === null || value === undefined || value === "") {
+    return "-";
+  }
+  return String(value);
+}
+
+function hasCellSlot(column) {
+  return Boolean(slots[`cell-${column.key}`]);
 }
 
 function isStickyColumn(column) {
   return column.fixed === "left" || column.fixed === "right";
 }
 
-function getStickyStyle(column, index) {
+function getColStyle(column) {
+  if (!hasColumnSizing.value) return undefined;
   const style = {};
-  if (!isStickyColumn(column)) return style;
-
-  // Calculate left offset for left-fixed columns
-  if (column.fixed === "left") {
-    const parts = [];
-    for (let i = 0; i < index; i++) {
-      const prev = props.columns[i];
-      if (prev.fixed === "left" && prev.width) {
-        parts.push(prev.width);
-      }
-    }
-    style.left = parts.length ? `calc(${parts.join(" + ")})` : "0px";
+  if (column.width) {
+    style.width = column.width;
   }
-
-  // Calculate right offset for right-fixed columns
-  if (column.fixed === "right") {
-    const parts = [];
-    for (let i = props.columns.length - 1; i > index; i--) {
-      const next = props.columns[i];
-      if (next.fixed === "right" && next.width) {
-        parts.push(next.width);
-      }
-    }
-    // Also account for actions column if it exists
-    if (slots.actions && props.actionWidth) {
-      parts.push(props.actionWidth);
-    }
-    style.right = parts.length ? `calc(${parts.join(" + ")})` : "0px";
+  if (column.minWidth) {
+    style.minWidth = column.minWidth;
   }
-
-  return style;
+  return Object.keys(style).length ? style : undefined;
 }
 
-function getActionStickyStyle() {
-  const style = {};
-  if (!slots.actions) return style;
-  style.right = "0px";
-  return style;
+function getStickyStyle(column) {
+  if (!isStickyColumn(column)) return undefined;
+  return column.stickyStyle;
+}
+
+function getHeaderClasses(column) {
+  return [
+    column.headerClass,
+    column.className,
+    getAlignClass(column.align),
+    {
+      "is-sticky": isStickyColumn(column),
+      "is-sticky-left": column.fixed === "left",
+      "is-sticky-right": column.fixed === "right",
+      "actions-header": column.isAction,
+    },
+  ];
+}
+
+function getCellClasses(column, row, rowIndex) {
+  return [
+    column.cellClass,
+    column.className,
+    getAlignClass(column.align),
+    {
+      "is-sticky": isStickyColumn(column),
+      "is-sticky-left": column.fixed === "left",
+      "is-sticky-right": column.fixed === "right",
+      "is-ellipsis": column.ellipsis,
+      "actions-header": column.isAction,
+    },
+    typeof column.raw.cellClassName === "function"
+      ? column.raw.cellClassName(row, rowIndex)
+      : "",
+  ];
+}
+
+function getRowClasses(row, rowIndex) {
+  return [
+    {
+      "is-striped": props.stripe,
+    },
+    typeof props.rowClassName === "function"
+      ? props.rowClassName(row, rowIndex)
+      : props.rowClassName,
+  ];
+}
+
+function getAlignClass(align) {
+  if (align === "center") return "is-align-center";
+  if (align === "right") return "is-align-right";
+  return "is-align-left";
 }
 </script>

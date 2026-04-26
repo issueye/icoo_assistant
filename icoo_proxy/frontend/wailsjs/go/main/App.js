@@ -26,6 +26,10 @@ export function GetOverview() {
   return window['go']['main']['App']['GetOverview']();
 }
 
+export function GetProjectSettings() {
+  return window['go']['main']['App']['GetProjectSettings']();
+}
+
 export function ListAuthKeys() {
   return window['go']['main']['App']['ListAuthKeys']();
 }
@@ -56,6 +60,10 @@ export function SaveAuthKey(arg1) {
 
 export function SaveEndpoint(arg1) {
   return window['go']['main']['App']['SaveEndpoint'](arg1);
+}
+
+export function SaveProjectSettings(arg1) {
+  return window['go']['main']['App']['SaveProjectSettings'](arg1);
 }
 
 export function SaveRoutePolicy(arg1) {
