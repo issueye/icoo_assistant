@@ -39,6 +39,10 @@ export function GetOverview() {
   return invoke("GetOverview");
 }
 
+export function GetProjectSettings() {
+  return invoke("GetProjectSettings");
+}
+
 export function ListAuthKeys() {
   return invoke("ListAuthKeys");
 }
@@ -77,6 +81,10 @@ export function SaveRoutePolicy(arg1) {
 
 export function SaveSupplier(arg1) {
   return invoke("SaveSupplier", arg1);
+}
+
+export function SaveProjectSettings(arg1) {
+  return invoke("SaveProjectSettings", arg1);
 }
 
 export function State() {

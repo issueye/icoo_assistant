@@ -67,6 +67,10 @@ const navItems = computed(() => [
     label: "流量监控",
   },
   {
+    to: "/settings",
+    label: "项目设置",
+  },
+  {
     to: "/ued",
     label: "UED 规范",
   },

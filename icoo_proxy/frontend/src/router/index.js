@@ -4,6 +4,7 @@ import OverviewView from "../views/OverviewView.vue";
 import AuthKeysView from "../views/AuthKeysView.vue";
 import EndpointsView from "../views/EndpointsView.vue";
 import SuppliersView from "../views/SuppliersView.vue";
+import SettingsView from "../views/SettingsView.vue";
 import TrafficView from "../views/TrafficView.vue";
 import UedSpecView from "../views/UedSpecView.vue";
 
@@ -34,6 +35,11 @@ export default createRouter({
       path: "/traffic",
       name: "traffic",
       component: TrafficView,
+    },
+    {
+      path: "/settings",
+      name: "settings",
+      component: SettingsView,
     },
     {
       path: "/ued",

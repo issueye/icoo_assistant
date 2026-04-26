@@ -16,6 +16,7 @@ import (
 	"icoo_proxy/internal/catalog"
 	"icoo_proxy/internal/config"
 	"icoo_proxy/internal/endpoint"
+	"icoo_proxy/internal/projectsettings"
 	"icoo_proxy/internal/proxy"
 	"icoo_proxy/internal/routepolicy"
 	"icoo_proxy/internal/server"
@@ -101,6 +102,26 @@ func (a *App) shutdown(ctx context.Context) {
 
 func (a *App) GetOverview() map[string]interface{} {
 	return stateToMap(a.State())
+}
+
+func (a *App) GetProjectSettings() (projectsettings.Values, error) {
+	if strings.TrimSpace(a.root) == "" {
+		return projectsettings.Values{}, context.Canceled
+	}
+	return projectsettings.Load(a.root)
+}
+
+func (a *App) SaveProjectSettings(input projectsettings.Values) (projectsettings.Values, error) {
+	if strings.TrimSpace(a.root) == "" {
+		return projectsettings.Values{}, context.Canceled
+	}
+	if err := projectsettings.Save(a.root, input); err != nil {
+		return projectsettings.Values{}, err
+	}
+	if _, err := a.ReloadProxy(); err != nil {
+		return projectsettings.Values{}, err
+	}
+	return projectsettings.Load(a.root)
 }
 
 func (a *App) ReloadProxy() (map[string]interface{}, error) {
@@ -289,8 +310,8 @@ func (a *App) State() api.State {
 			"Current build also supports non-streaming chat/completions <-> responses translation.",
 			"Current build also supports non-streaming anthropic messages <-> responses translation.",
 			"Current build also supports non-streaming anthropic messages <-> chat/completions translation.",
+			"Current build also supports streaming anthropic messages -> responses translation.",
 			"Basic function tool definitions and non-streaming tool call/result mapping are now supported.",
-			"Streaming cross-protocol translation is still planned.",
 			"The desktop app starts the local proxy automatically during startup.",
 		},
 		Checks: map[string]interface{}{
