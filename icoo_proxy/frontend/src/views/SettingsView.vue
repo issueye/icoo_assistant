@@ -17,11 +17,6 @@
     <div v-if="store.success" class="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
       {{ store.success }}
     </div>
-    <UAlert
-      type="info"
-      message="上游供应商配置已迁移"
-      description="Base URL、API Key、User-Agent、仅流式等上游参数请在供应商管理中维护，项目设置只保留本地网关运行参数。"
-    />
 
     <div v-if="store.loading" class="empty-state">
       正在加载项目设置...
