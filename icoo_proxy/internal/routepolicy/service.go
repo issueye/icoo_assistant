@@ -41,12 +41,13 @@ type SupplierResolver interface {
 }
 
 type SupplierSnapshot struct {
-	ID        string
-	Name      string
-	Protocol  string
-	BaseURL   string
-	APIKey    string
-	IsEnabled bool
+	ID         string
+	Name       string
+	Protocol   string
+	BaseURL    string
+	APIKey     string
+	OnlyStream bool
+	IsEnabled  bool
 }
 
 type UpsertInput struct {

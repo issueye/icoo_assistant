@@ -22,12 +22,17 @@ type Config struct {
 	AnthropicBaseURL          string
 	AnthropicAPIKey           string
 	AnthropicVersion          string
+	AnthropicOnlyStream       bool
 	OpenAIBaseURL             string
 	OpenAIApiKey              string
+	OpenAIOnlyStream          bool
 	DefaultAnthropicRoute     string
 	DefaultChatRoute          string
 	DefaultResponsesRoute     string
 	ModelRoutes               string
+	ChainLogPath              string
+	ChainLogBodies            bool
+	ChainLogMaxBodyBytes      int
 }
 
 func Load(workdir string) (Config, error) {
@@ -46,12 +51,17 @@ func Load(workdir string) (Config, error) {
 		AnthropicBaseURL:          strings.TrimSpace(os.Getenv("ANTHROPIC_BASE_URL")),
 		AnthropicAPIKey:           strings.TrimSpace(os.Getenv("ANTHROPIC_API_KEY")),
 		AnthropicVersion:          strings.TrimSpace(os.Getenv("ANTHROPIC_VERSION")),
+		AnthropicOnlyStream:       boolFromEnv("ANTHROPIC_ONLY_STREAM", false),
 		OpenAIBaseURL:             strings.TrimSpace(os.Getenv("OPENAI_BASE_URL")),
 		OpenAIApiKey:              strings.TrimSpace(os.Getenv("OPENAI_API_KEY")),
+		OpenAIOnlyStream:          boolFromEnv("OPENAI_ONLY_STREAM", false),
 		DefaultAnthropicRoute:     strings.TrimSpace(os.Getenv("PROXY_DEFAULT_ANTHROPIC_ROUTE")),
 		DefaultChatRoute:          strings.TrimSpace(os.Getenv("PROXY_DEFAULT_CHAT_ROUTE")),
 		DefaultResponsesRoute:     strings.TrimSpace(os.Getenv("PROXY_DEFAULT_RESPONSES_ROUTE")),
 		ModelRoutes:               strings.TrimSpace(os.Getenv("PROXY_MODEL_ROUTES")),
+		ChainLogPath:              strings.TrimSpace(os.Getenv("PROXY_CHAIN_LOG_PATH")),
+		ChainLogBodies:            boolFromEnv("PROXY_CHAIN_LOG_BODIES", true),
+		ChainLogMaxBodyBytes:      nonNegativeIntFromEnv("PROXY_CHAIN_LOG_MAX_BODY_BYTES", 0),
 	}
 	if cfg.Host == "" {
 		cfg.Host = "127.0.0.1"
@@ -64,6 +74,9 @@ func Load(workdir string) (Config, error) {
 	}
 	if cfg.AnthropicVersion == "" {
 		cfg.AnthropicVersion = "2023-06-01"
+	}
+	if cfg.ChainLogPath == "" {
+		cfg.ChainLogPath = filepath.Join(workdir, ".data", "icoo_proxy-chain.log")
 	}
 	return cfg, nil
 }
@@ -123,6 +136,18 @@ func intFromEnv(key string, fallback int) int {
 	}
 	value, err := strconv.Atoi(raw)
 	if err != nil || value <= 0 {
+		return fallback
+	}
+	return value
+}
+
+func nonNegativeIntFromEnv(key string, fallback int) int {
+	raw := strings.TrimSpace(os.Getenv(key))
+	if raw == "" {
+		return fallback
+	}
+	value, err := strconv.Atoi(raw)
+	if err != nil || value < 0 {
 		return fallback
 	}
 	return value

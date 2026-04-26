@@ -50,8 +50,9 @@
           <template #cell-protocol="{ row }">
             <p class="font-medium text-slate-900">{{ row.protocol }}</p>
             <p class="mt-1 break-all table-meta table-cell-wrap">{{ row.base_url }}</p>
-            <div class="mt-1">
+            <div class="mt-1 flex flex-wrap gap-1.5">
               <UTag code>{{ row.api_key_masked || "未保存 API Key" }}</UTag>
+              <UTag v-if="row.only_stream" variant="warning">only_stream</UTag>
             </div>
           </template>
           <template #cell-models="{ row }">
@@ -245,10 +246,16 @@
           </FieldLabel>
         </div>
 
-        <label class="field-toggle">
-          <input v-model="store.form.enabled" type="checkbox" class="field-checkbox" />
-          启用该供应商配置
-        </label>
+        <div class="grid gap-3 md:grid-cols-2">
+          <label class="field-toggle">
+            <input v-model="store.form.enabled" type="checkbox" class="field-checkbox" />
+            启用该供应商配置
+          </label>
+          <label class="field-toggle">
+            <input v-model="store.form.only_stream" type="checkbox" class="field-checkbox" />
+            仅流式上游
+          </label>
+        </div>
       </form>
       <template #footer>
         <div class="flex justify-end gap-2">

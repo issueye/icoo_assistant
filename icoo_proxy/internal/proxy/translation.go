@@ -7,19 +7,21 @@ import (
 	"time"
 )
 
+const defaultResponsesReasoningEffort = "medium"
+
 func translateAnthropicToResponsesRequest(body []byte, model string) ([]byte, error) {
 	var payload map[string]interface{}
 	if err := json.Unmarshal(body, &payload); err != nil {
 		return nil, fmt.Errorf("invalid json body")
-	}
-	if stream, _ := payload["stream"].(bool); stream {
-		return nil, fmt.Errorf("streaming cross protocol translation is not implemented yet")
 	}
 
 	messages, _ := payload["messages"].([]interface{})
 	request := map[string]interface{}{
 		"model": model,
 		"input": normalizeAnthropicMessages(messages),
+	}
+	if stream, _ := payload["stream"].(bool); stream {
+		request["stream"] = true
 	}
 	if system := anthropicSystemToInstructions(payload["system"]); system != "" {
 		request["instructions"] = system
@@ -31,6 +33,7 @@ func translateAnthropicToResponsesRequest(body []byte, model string) ([]byte, er
 	if value, ok := payload["tools"]; ok {
 		request["tools"] = anthropicToolsToResponsesTools(value)
 	}
+	applyDefaultResponsesReasoning(request)
 	return json.Marshal(request)
 }
 
@@ -112,6 +115,7 @@ func translateChatToResponsesRequest(body []byte, model string) ([]byte, error) 
 	if value, ok := payload["tools"]; ok {
 		request["tools"] = chatToolsToResponsesTools(value)
 	}
+	applyDefaultResponsesReasoning(request)
 	return json.Marshal(request)
 }
 
@@ -155,7 +159,7 @@ func translateResponsesToChatResponse(body []byte, model string) ([]byte, error)
 		return nil, fmt.Errorf("invalid upstream json body")
 	}
 
-	content := extractResponsesOutputText(payload["output"])
+	content := extractResponsesText(payload)
 	toolCalls := extractResponsesFunctionCalls(payload["output"])
 	message := map[string]interface{}{
 		"role":    "assistant",
@@ -251,7 +255,7 @@ func translateResponsesToAnthropicResponse(body []byte, model string) ([]byte, e
 		return nil, fmt.Errorf("invalid upstream json body")
 	}
 
-	text := extractResponsesOutputText(payload["output"])
+	text := extractResponsesText(payload)
 	content := make([]map[string]interface{}, 0)
 	if text != "" {
 		content = append(content, map[string]interface{}{
@@ -663,6 +667,32 @@ func extractResponsesOutputText(raw interface{}) string {
 		}
 	}
 	return strings.Join(parts, "\n")
+}
+
+func applyDefaultResponsesReasoning(payload map[string]interface{}) {
+	if payload == nil {
+		return
+	}
+	raw, ok := payload["reasoning"]
+	if !ok || raw == nil {
+		payload["reasoning"] = map[string]interface{}{"effort": defaultResponsesReasoningEffort}
+		return
+	}
+	reasoning, ok := raw.(map[string]interface{})
+	if !ok {
+		return
+	}
+	if strings.TrimSpace(stringValue(reasoning["effort"], "")) == "" {
+		reasoning["effort"] = defaultResponsesReasoningEffort
+	}
+	payload["reasoning"] = reasoning
+}
+
+func extractResponsesText(payload map[string]interface{}) string {
+	if text := strings.TrimSpace(extractResponsesOutputText(payload["output"])); text != "" {
+		return text
+	}
+	return strings.TrimSpace(stringValue(payload["output_text"], ""))
 }
 
 func extractResponsesFunctionCalls(raw interface{}) []map[string]interface{} {

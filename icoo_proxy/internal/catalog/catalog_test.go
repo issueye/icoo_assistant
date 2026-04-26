@@ -41,3 +41,21 @@ func TestResolveUsesAliasAndDefaults(t *testing.T) {
 		t.Fatalf("unexpected passthrough route: %+v", route)
 	}
 }
+
+func TestResolveUsesDefaultWhenRequestedModelMatchesDefaultTarget(t *testing.T) {
+	cfg := config.Config{
+		DefaultAnthropicRoute: "openai-responses:gpt-5.4",
+	}
+	cat, err := New(cfg)
+	if err != nil {
+		t.Fatalf("new catalog: %v", err)
+	}
+
+	route, err := cat.Resolve(ProtocolAnthropic, "gpt-5.4")
+	if err != nil {
+		t.Fatalf("resolve default target model: %v", err)
+	}
+	if route.Upstream != ProtocolOpenAIResponse || route.Model != "gpt-5.4" {
+		t.Fatalf("unexpected default target route: %+v", route)
+	}
+}

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"icoo_proxy/internal/catalog"
@@ -58,6 +59,24 @@ func TestHandleAcceptsConfiguredAuthKeyList(t *testing.T) {
 	}
 	if !bytes.Contains(rec.Body.Bytes(), []byte("invalid proxy api key")) {
 		t.Fatalf("expected invalid key error, got %s", rec.Body.String())
+	}
+}
+
+func TestSanitizedHeadersRedactsSecrets(t *testing.T) {
+	headers := http.Header{}
+	headers.Set("Authorization", "Bearer secret")
+	headers.Set("x-api-key", "secret")
+	headers.Set("Content-Type", "application/json")
+
+	got := sanitizedHeaders(headers)
+	if got["Authorization"][0] != "<redacted>" {
+		t.Fatalf("expected authorization redacted, got %#v", got["Authorization"])
+	}
+	if got["X-Api-Key"][0] != "<redacted>" {
+		t.Fatalf("expected api key redacted, got %#v", got["X-Api-Key"])
+	}
+	if got["Content-Type"][0] != "application/json" {
+		t.Fatalf("expected content type preserved, got %#v", got["Content-Type"])
 	}
 }
 
@@ -243,6 +262,7 @@ func TestHandleTranslatesAnthropicToResponses(t *testing.T) {
 	var gotInstructions string
 	var gotInput []interface{}
 	var gotTools []interface{}
+	var gotReasoning map[string]interface{}
 
 	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var payload map[string]interface{}
@@ -253,6 +273,7 @@ func TestHandleTranslatesAnthropicToResponses(t *testing.T) {
 		gotInstructions, _ = payload["instructions"].(string)
 		gotInput, _ = payload["input"].([]interface{})
 		gotTools, _ = payload["tools"].([]interface{})
+		gotReasoning, _ = payload["reasoning"].(map[string]interface{})
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(`{"id":"resp_456","status":"completed","output":[{"type":"message","role":"assistant","content":[{"type":"output_text","text":"hello from responses for anthropic"}]},{"type":"function_call","call_id":"tool_123","name":"lookup_docs","arguments":"{\"topic\":\"proxy\"}"}],"usage":{"input_tokens":15,"output_tokens":9,"total_tokens":24}}`))
 	}))
@@ -290,6 +311,9 @@ func TestHandleTranslatesAnthropicToResponses(t *testing.T) {
 	if len(gotTools) != 1 {
 		t.Fatalf("expected one translated responses tool, got %d", len(gotTools))
 	}
+	if gotReasoning["effort"] != defaultResponsesReasoningEffort {
+		t.Fatalf("expected default reasoning effort %q, got %#v", defaultResponsesReasoningEffort, gotReasoning)
+	}
 	var payload map[string]interface{}
 	if err := json.Unmarshal(rec.Body.Bytes(), &payload); err != nil {
 		t.Fatalf("decode response: %v", err)
@@ -300,6 +324,374 @@ func TestHandleTranslatesAnthropicToResponses(t *testing.T) {
 	content, _ := payload["content"].([]interface{})
 	if len(content) != 2 {
 		t.Fatalf("expected text + tool_use anthropic content, got %d", len(content))
+	}
+}
+
+func TestHandleStreamsAnthropicToResponsesAsAnthropicSSE(t *testing.T) {
+	var gotStream bool
+	var gotReasoning map[string]interface{}
+
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var payload map[string]interface{}
+		if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+			t.Fatalf("decode upstream body: %v", err)
+		}
+		gotStream, _ = payload["stream"].(bool)
+		gotReasoning, _ = payload["reasoning"].(map[string]interface{})
+		w.Header().Set("Content-Type", "text/event-stream")
+		_, _ = w.Write([]byte(strings.Join([]string{
+			`data: {"type":"response.created","response":{"id":"resp_stream_123","object":"response","model":"gpt-4.1-mini","status":"in_progress","usage":{"input_tokens":12,"output_tokens":0}}}`,
+			"",
+			`data: {"type":"response.output_text.delta","response_id":"resp_stream_123","item_id":"msg_stream_1","output_index":0,"content_index":0,"delta":"你"}`,
+			"",
+			`data: {"type":"response.output_text.delta","response_id":"resp_stream_123","item_id":"msg_stream_1","output_index":0,"content_index":0,"delta":"好"}`,
+			"",
+			`data: {"type":"response.completed","response":{"id":"resp_stream_123","object":"response","model":"gpt-4.1-mini","status":"completed","output":[{"type":"message","id":"msg_stream_1","role":"assistant","content":[{"type":"output_text","text":"你好"}]}],"usage":{"input_tokens":12,"output_tokens":2,"total_tokens":14}}}`,
+			"",
+			`data: [DONE]`,
+			"",
+		}, "\n")))
+	}))
+	defer upstream.Close()
+
+	cfg := config.Config{
+		AllowUnauthenticatedLocal: true,
+		OpenAIBaseURL:             upstream.URL,
+		OpenAIApiKey:              "test-openai-key",
+		ModelRoutes:               "anthropic-default=openai-responses:gpt-4.1-mini",
+	}
+	cat, err := catalog.New(cfg)
+	if err != nil {
+		t.Fatalf("new catalog: %v", err)
+	}
+	service := New(cfg, cat)
+
+	req := httptest.NewRequest(http.MethodPost, "/v1/messages", bytes.NewBufferString(`{"model":"anthropic-default","messages":[{"role":"user","content":[{"type":"text","text":"hello"}]}],"max_tokens":64,"stream":true}`))
+	rec := httptest.NewRecorder()
+
+	service.Handle(rec, req, catalog.ProtocolAnthropic)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d body=%s", rec.Code, rec.Body.String())
+	}
+	if !gotStream {
+		t.Fatalf("expected translated stream=true request")
+	}
+	if gotReasoning["effort"] != defaultResponsesReasoningEffort {
+		t.Fatalf("expected default reasoning effort %q, got %#v", defaultResponsesReasoningEffort, gotReasoning)
+	}
+	if contentType := rec.Header().Get("Content-Type"); !strings.Contains(contentType, "text/event-stream") {
+		t.Fatalf("expected text/event-stream content type, got %q", contentType)
+	}
+	body := rec.Body.String()
+	for _, needle := range []string{
+		"event: message_start",
+		"event: content_block_start",
+		`"type":"text_delta"`,
+		`"text":"你"`,
+		`"text":"好"`,
+		`"stop_reason":"end_turn"`,
+		`"output_tokens":2`,
+		"event: message_stop",
+	} {
+		if !strings.Contains(body, needle) {
+			t.Fatalf("expected stream body to contain %q, got %s", needle, body)
+		}
+	}
+}
+
+func TestHandleStreamsAnthropicToResponsesToolUseAsAnthropicSSE(t *testing.T) {
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/event-stream")
+		_, _ = w.Write([]byte(strings.Join([]string{
+			`data: {"type":"response.created","response":{"id":"resp_stream_tool","object":"response","model":"gpt-4.1-mini","status":"in_progress","usage":{"input_tokens":10,"output_tokens":0}}}`,
+			"",
+			`data: {"type":"response.output_item.added","response_id":"resp_stream_tool","output_index":0,"item":{"type":"function_call","id":"fc_1","call_id":"call_1","name":"lookup_docs","arguments":""}}`,
+			"",
+			`data: {"type":"response.function_call_arguments.delta","response_id":"resp_stream_tool","item_id":"fc_1","output_index":0,"delta":"{\"topic\":\"pro"}`,
+			"",
+			`data: {"type":"response.function_call_arguments.delta","response_id":"resp_stream_tool","item_id":"fc_1","output_index":0,"delta":"xy\"}"}`,
+			"",
+			`data: {"type":"response.function_call_arguments.done","response_id":"resp_stream_tool","item_id":"fc_1","output_index":0,"name":"lookup_docs","arguments":"{\"topic\":\"proxy\"}"}`,
+			"",
+			`data: {"type":"response.completed","response":{"id":"resp_stream_tool","object":"response","model":"gpt-4.1-mini","status":"completed","output":[{"type":"function_call","id":"fc_1","call_id":"call_1","name":"lookup_docs","arguments":"{\"topic\":\"proxy\"}"}],"usage":{"input_tokens":10,"output_tokens":4,"total_tokens":14}}}`,
+			"",
+			`data: [DONE]`,
+			"",
+		}, "\n")))
+	}))
+	defer upstream.Close()
+
+	cfg := config.Config{
+		AllowUnauthenticatedLocal: true,
+		OpenAIBaseURL:             upstream.URL,
+		OpenAIApiKey:              "test-openai-key",
+		ModelRoutes:               "anthropic-default=openai-responses:gpt-4.1-mini",
+	}
+	cat, err := catalog.New(cfg)
+	if err != nil {
+		t.Fatalf("new catalog: %v", err)
+	}
+	service := New(cfg, cat)
+
+	req := httptest.NewRequest(http.MethodPost, "/v1/messages", bytes.NewBufferString(`{"model":"anthropic-default","messages":[{"role":"user","content":[{"type":"text","text":"call the tool"}]}],"max_tokens":64,"stream":true}`))
+	rec := httptest.NewRecorder()
+
+	service.Handle(rec, req, catalog.ProtocolAnthropic)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d body=%s", rec.Code, rec.Body.String())
+	}
+	body := rec.Body.String()
+	for _, needle := range []string{
+		`"type":"tool_use"`,
+		`"name":"lookup_docs"`,
+		`"type":"input_json_delta"`,
+		`"stop_reason":"tool_use"`,
+		"event: message_stop",
+	} {
+		if !strings.Contains(body, needle) {
+			t.Fatalf("expected stream body to contain %q, got %s", needle, body)
+		}
+	}
+}
+
+func TestHandleForcesOnlyStreamResponsesForAnthropicNonStream(t *testing.T) {
+	var gotStream bool
+
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var payload map[string]interface{}
+		if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+			t.Fatalf("decode upstream body: %v", err)
+		}
+		gotStream, _ = payload["stream"].(bool)
+		w.Header().Set("Content-Type", "text/event-stream")
+		_, _ = w.Write([]byte(strings.Join([]string{
+			`data: {"type":"response.created","response":{"id":"resp_force_123","object":"response","model":"gpt-4.1-mini","status":"in_progress"}}`,
+			"",
+			`data: {"type":"response.output_item.done","output_index":0,"item":{"type":"message","id":"msg_force_1","role":"assistant","content":[{"type":"output_text","text":"hello from forced stream"}]}}`,
+			"",
+			`data: {"type":"response.output_text.done","output_index":0,"item_id":"msg_force_1","content_index":0,"text":"hello from forced stream"}`,
+			"",
+			`data: {"type":"response.completed","response":{"id":"resp_force_123","object":"response","model":"gpt-4.1-mini","status":"completed","output":[],"usage":{"input_tokens":10,"output_tokens":4,"total_tokens":14}}}`,
+			"",
+			`data: [DONE]`,
+			"",
+		}, "\n")))
+	}))
+	defer upstream.Close()
+
+	cfg := config.Config{
+		AllowUnauthenticatedLocal: true,
+		OpenAIBaseURL:             upstream.URL,
+		OpenAIApiKey:              "test-openai-key",
+		OpenAIOnlyStream:          true,
+		ModelRoutes:               "anthropic-default=openai-responses:gpt-4.1-mini",
+	}
+	cat, err := catalog.New(cfg)
+	if err != nil {
+		t.Fatalf("new catalog: %v", err)
+	}
+	service := New(cfg, cat)
+
+	req := httptest.NewRequest(http.MethodPost, "/v1/messages", bytes.NewBufferString(`{"model":"anthropic-default","messages":[{"role":"user","content":[{"type":"text","text":"hello"}]}],"max_tokens":64}`))
+	rec := httptest.NewRecorder()
+
+	service.Handle(rec, req, catalog.ProtocolAnthropic)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d body=%s", rec.Code, rec.Body.String())
+	}
+	if !gotStream {
+		t.Fatalf("expected upstream request stream=true when only_stream is enabled")
+	}
+	var payload map[string]interface{}
+	if err := json.Unmarshal(rec.Body.Bytes(), &payload); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	content, _ := payload["content"].([]interface{})
+	if len(content) != 1 {
+		t.Fatalf("expected one anthropic text block, got %d", len(content))
+	}
+	block, _ := content[0].(map[string]interface{})
+	if block["text"] != "hello from forced stream" {
+		t.Fatalf("expected forced stream text, got %#v", block["text"])
+	}
+}
+
+func TestHandleForcesOnlyStreamResponsesForResponsesNonStream(t *testing.T) {
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/event-stream")
+		_, _ = w.Write([]byte(strings.Join([]string{
+			`data: {"type":"response.created","response":{"id":"resp_force_456","object":"response","model":"gpt-4.1-mini","status":"in_progress"}}`,
+			"",
+			`data: {"type":"response.output_item.done","output_index":0,"item":{"type":"message","id":"msg_force_2","role":"assistant","content":[{"type":"output_text","text":"hello passthrough"}]}}`,
+			"",
+			`data: {"type":"response.output_text.done","output_index":0,"item_id":"msg_force_2","content_index":0,"text":"hello passthrough"}`,
+			"",
+			`data: {"type":"response.completed","response":{"id":"resp_force_456","object":"response","model":"gpt-4.1-mini","status":"completed","output":[],"usage":{"input_tokens":8,"output_tokens":2,"total_tokens":10}}}`,
+			"",
+			`data: [DONE]`,
+			"",
+		}, "\n")))
+	}))
+	defer upstream.Close()
+
+	cfg := config.Config{
+		AllowUnauthenticatedLocal: true,
+		OpenAIBaseURL:             upstream.URL,
+		OpenAIApiKey:              "test-openai-key",
+		OpenAIOnlyStream:          true,
+		DefaultResponsesRoute:     "openai-responses:gpt-4.1-mini",
+	}
+	cat, err := catalog.New(cfg)
+	if err != nil {
+		t.Fatalf("new catalog: %v", err)
+	}
+	service := New(cfg, cat)
+
+	req := httptest.NewRequest(http.MethodPost, "/v1/responses", bytes.NewBufferString(`{"model":"gpt-4.1-mini","input":"hello"}`))
+	rec := httptest.NewRecorder()
+
+	service.Handle(rec, req, catalog.ProtocolOpenAIResponse)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d body=%s", rec.Code, rec.Body.String())
+	}
+	var payload map[string]interface{}
+	if err := json.Unmarshal(rec.Body.Bytes(), &payload); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if payload["output_text"] != "hello passthrough" {
+		t.Fatalf("expected output_text fallback, got %#v", payload["output_text"])
+	}
+	output, _ := payload["output"].([]interface{})
+	if len(output) != 1 {
+		t.Fatalf("expected one synthesized output item, got %d", len(output))
+	}
+}
+
+func TestHandleResponsesPassthroughAddsDefaultReasoning(t *testing.T) {
+	var gotModel string
+	var gotReasoning map[string]interface{}
+
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var payload map[string]interface{}
+		if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+			t.Fatalf("decode upstream body: %v", err)
+		}
+		gotModel, _ = payload["model"].(string)
+		gotReasoning, _ = payload["reasoning"].(map[string]interface{})
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"id":"resp_123","object":"response","status":"completed","output_text":"ok","output":[]}`))
+	}))
+	defer upstream.Close()
+
+	cfg := config.Config{
+		AllowUnauthenticatedLocal: true,
+		OpenAIBaseURL:             upstream.URL,
+		OpenAIApiKey:              "test-openai-key",
+		DefaultResponsesRoute:     "openai-responses:gpt-4.1-mini",
+	}
+	cat, err := catalog.New(cfg)
+	if err != nil {
+		t.Fatalf("new catalog: %v", err)
+	}
+	service := New(cfg, cat)
+
+	req := httptest.NewRequest(http.MethodPost, "/v1/responses", bytes.NewBufferString(`{"model":"gpt-4.1-mini","input":"hello"}`))
+	rec := httptest.NewRecorder()
+
+	service.Handle(rec, req, catalog.ProtocolOpenAIResponse)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d body=%s", rec.Code, rec.Body.String())
+	}
+	if gotModel != "gpt-4.1-mini" {
+		t.Fatalf("expected model rewrite, got %q", gotModel)
+	}
+	if gotReasoning["effort"] != defaultResponsesReasoningEffort {
+		t.Fatalf("expected default reasoning effort %q, got %#v", defaultResponsesReasoningEffort, gotReasoning)
+	}
+}
+
+func TestHandleResponsesPassthroughPreservesExplicitReasoning(t *testing.T) {
+	var gotReasoning map[string]interface{}
+
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var payload map[string]interface{}
+		if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+			t.Fatalf("decode upstream body: %v", err)
+		}
+		gotReasoning, _ = payload["reasoning"].(map[string]interface{})
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"id":"resp_123","object":"response","status":"completed","output_text":"ok","output":[]}`))
+	}))
+	defer upstream.Close()
+
+	cfg := config.Config{
+		AllowUnauthenticatedLocal: true,
+		OpenAIBaseURL:             upstream.URL,
+		OpenAIApiKey:              "test-openai-key",
+		DefaultResponsesRoute:     "openai-responses:gpt-4.1-mini",
+	}
+	cat, err := catalog.New(cfg)
+	if err != nil {
+		t.Fatalf("new catalog: %v", err)
+	}
+	service := New(cfg, cat)
+
+	req := httptest.NewRequest(http.MethodPost, "/v1/responses", bytes.NewBufferString(`{"model":"gpt-4.1-mini","input":"hello","reasoning":{"effort":"high"}}`))
+	rec := httptest.NewRecorder()
+
+	service.Handle(rec, req, catalog.ProtocolOpenAIResponse)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d body=%s", rec.Code, rec.Body.String())
+	}
+	if gotReasoning["effort"] != "high" {
+		t.Fatalf("expected explicit reasoning preserved, got %#v", gotReasoning)
+	}
+}
+
+func TestHandleTranslatesResponsesOutputTextFallbackToAnthropic(t *testing.T) {
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"id":"resp_fallback","status":"completed","output":[],"output_text":"hello from top-level output text"}`))
+	}))
+	defer upstream.Close()
+
+	cfg := config.Config{
+		AllowUnauthenticatedLocal: true,
+		OpenAIBaseURL:             upstream.URL,
+		OpenAIApiKey:              "test-openai-key",
+		ModelRoutes:               "anthropic-default=openai-responses:gpt-5.4",
+	}
+	cat, err := catalog.New(cfg)
+	if err != nil {
+		t.Fatalf("new catalog: %v", err)
+	}
+	service := New(cfg, cat)
+
+	req := httptest.NewRequest(http.MethodPost, "/v1/messages", bytes.NewBufferString(`{"model":"anthropic-default","messages":[{"role":"user","content":"hello"}],"max_tokens":64}`))
+	rec := httptest.NewRecorder()
+
+	service.Handle(rec, req, catalog.ProtocolAnthropic)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d body=%s", rec.Code, rec.Body.String())
+	}
+	var payload map[string]interface{}
+	if err := json.Unmarshal(rec.Body.Bytes(), &payload); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	content, _ := payload["content"].([]interface{})
+	if len(content) != 1 {
+		t.Fatalf("expected one anthropic text block, got %d", len(content))
+	}
+	block, _ := content[0].(map[string]interface{})
+	if block["text"] != "hello from top-level output text" {
+		t.Fatalf("expected fallback output_text, got %#v", block["text"])
 	}
 }
 

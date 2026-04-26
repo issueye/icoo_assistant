@@ -32,6 +32,9 @@ func TestLoadReadsDotEnvWithoutOverridingExistingEnv(t *testing.T) {
 	if !cfg.EnablePromptCache {
 		t.Fatal("expected prompt cache to be enabled")
 	}
+	if !cfg.EnableStreaming {
+		t.Fatal("expected streaming to be enabled by default")
+	}
 }
 
 func TestLoadAppliesDefaults(t *testing.T) {
@@ -42,6 +45,7 @@ func TestLoadAppliesDefaults(t *testing.T) {
 	t.Setenv("AGENT_SYSTEM_PROMPT", "")
 	t.Setenv("ANTHROPIC_ENABLE_PROMPT_CACHE", "")
 	t.Setenv("ANTHROPIC_ENABLE_THINKING", "")
+	t.Setenv("ANTHROPIC_ENABLE_STREAMING", "")
 	t.Setenv("ANTHROPIC_MAX_TOKENS", "")
 	t.Setenv("ANTHROPIC_BASE_URL", "")
 	cfg, err := config.Load(root)
@@ -62,5 +66,24 @@ func TestLoadAppliesDefaults(t *testing.T) {
 	}
 	if cfg.SystemPrompt == "" {
 		t.Fatal("expected default system prompt")
+	}
+	if !cfg.EnableStreaming {
+		t.Fatal("expected streaming to be enabled by default")
+	}
+}
+
+func TestLoadCanDisableStreaming(t *testing.T) {
+	root := t.TempDir()
+	content := "ANTHROPIC_ENABLE_STREAMING=false\n"
+	if err := os.WriteFile(filepath.Join(root, ".env"), []byte(content), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	cfg, err := config.Load(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.EnableStreaming {
+		t.Fatal("expected streaming to be disabled")
 	}
 }

@@ -86,6 +86,9 @@ func (c *Catalog) Resolve(downstream Protocol, requestedModel string) (Route, er
 	if route, ok := c.aliases[model]; ok {
 		return route, nil
 	}
+	if route, ok := c.defaults[downstream]; ok && route.Model == model {
+		return route, nil
+	}
 	return Route{
 		Name:     model,
 		Upstream: downstream,

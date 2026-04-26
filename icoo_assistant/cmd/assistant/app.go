@@ -21,8 +21,9 @@ import (
 )
 
 type app struct {
-	runner *agent.Runner
-	mode   string
+	runner            *agent.Runner
+	mode              string
+	streamingDisabled bool
 }
 
 type streamedOutput struct {
@@ -65,6 +66,15 @@ func (a *app) writeFakeModeNoOutputHint(out io.Writer) {
 	}
 	_, _ = fmt.Fprintln(out, "warning: no model output was produced because the fake client returns empty responses by design.")
 	_, _ = fmt.Fprintln(out, "hint: this is expected in fake mode; set ANTHROPIC_API_KEY for real answers, or keep following the minimal_happy_path as a local dry run.")
+}
+
+func (a *app) writeNoOutputHint(out io.Writer) {
+	if a.isFakeMode() {
+		a.writeFakeModeNoOutputHint(out)
+		return
+	}
+	_, _ = fmt.Fprintln(out, "warning: model call completed but returned no text content.")
+	_, _ = fmt.Fprintln(out, "hint: if you are using icoo_proxy for cross-protocol routing, restart the rebuilt proxy and check /admin/requests for the upstream route.")
 }
 
 func newApp(cfg config.Config) (*app, error) {
@@ -165,11 +175,15 @@ func newApp(cfg config.Config) (*app, error) {
 				MaxRounds:    cfg.MaxRounds,
 			},
 		},
-		mode: mode,
+		mode:              mode,
+		streamingDisabled: !cfg.EnableStreaming,
 	}, nil
 }
 
 func (a *app) withStreamHandler(handler func(string), fn func() error) error {
+	if a.streamingDisabled {
+		return fn()
+	}
 	previous := a.runner.StreamHandler
 	a.runner.StreamHandler = handler
 	defer func() {
@@ -212,7 +226,7 @@ func renderLatestAssistantContent(messages []llm.Message) string {
 		if text, ok := content.(string); ok {
 			return text
 		}
-		return fmt.Sprintf("%v", content)
+		return ""
 	}
 	return ""
 }
@@ -237,7 +251,7 @@ func (a *app) runOnce(out io.Writer, query string) error {
 		_, _ = fmt.Fprintln(out, result)
 		return nil
 	}
-	a.writeFakeModeNoOutputHint(out)
+	a.writeNoOutputHint(out)
 	return nil
 }
 
@@ -281,7 +295,7 @@ func (a *app) runREPL(in io.Reader, out io.Writer) error {
 			_, _ = fmt.Fprintln(out, result)
 			continue
 		}
-		a.writeFakeModeNoOutputHint(out)
+		a.writeNoOutputHint(out)
 	}
 	return scanner.Err()
 }

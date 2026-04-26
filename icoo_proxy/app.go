@@ -2,9 +2,11 @@ package main
 
 import (
 	"context"
+	"log/slog"
 	"net"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 
@@ -33,6 +35,7 @@ type App struct {
 	policies   *routepolicy.Service
 	endpoints  *endpoint.Service
 	httpServer *http.Server
+	chainLog   *os.File
 	listenAddr string
 	running    bool
 	lastError  string
@@ -369,10 +372,18 @@ func (a *App) startProxy() error {
 		return err
 	}
 	service := proxy.New(cfg, cat)
+	chainLogger, chainLog, err := openChainLog(cfg.ChainLogPath)
+	if err != nil {
+		return err
+	}
+	service.SetChainLogger(chainLogger)
 	handler := api.NewMux(a, service, a.endpointRoutes())
 	srv := server.New(cfg, handler)
 	listener, err := net.Listen("tcp", cfg.Addr())
 	if err != nil {
+		if chainLog != nil {
+			_ = chainLog.Close()
+		}
 		return err
 	}
 	listenAddr := listener.Addr().String()
@@ -382,6 +393,7 @@ func (a *App) startProxy() error {
 	a.catalog = cat
 	a.service = service
 	a.httpServer = srv
+	a.chainLog = chainLog
 	a.listenAddr = listenAddr
 	a.running = true
 	a.lastError = ""
@@ -393,6 +405,20 @@ func (a *App) startProxy() error {
 		}
 	}()
 	return nil
+}
+
+func openChainLog(path string) (*slog.Logger, *os.File, error) {
+	if strings.TrimSpace(path) == "" {
+		return slog.Default(), nil, nil
+	}
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		return nil, nil, err
+	}
+	file, err := os.OpenFile(path, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o644)
+	if err != nil {
+		return nil, nil, err
+	}
+	return slog.New(slog.NewTextHandler(file, &slog.HandlerOptions{Level: slog.LevelDebug})), file, nil
 }
 
 func (a *App) endpointRoutes() []api.EndpointRoute {
@@ -444,7 +470,9 @@ func defaultEndpointRoutes() []api.EndpointRoute {
 func (a *App) stopProxy(ctx context.Context) error {
 	a.mu.Lock()
 	srv := a.httpServer
+	chainLog := a.chainLog
 	a.httpServer = nil
+	a.chainLog = nil
 	a.running = false
 	a.listenAddr = ""
 	a.mu.Unlock()
@@ -455,7 +483,13 @@ func (a *App) stopProxy(ctx context.Context) error {
 	if ctx == nil {
 		ctx = context.Background()
 	}
-	return srv.Shutdown(ctx)
+	err := srv.Shutdown(ctx)
+	if chainLog != nil {
+		if closeErr := chainLog.Close(); err == nil {
+			err = closeErr
+		}
+	}
+	return err
 }
 
 func (a *App) setLastError(message string) {

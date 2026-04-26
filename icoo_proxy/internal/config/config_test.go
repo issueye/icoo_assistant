@@ -13,7 +13,7 @@ func TestLoadUsesEnvFileAndDefaults(t *testing.T) {
 
 	dir := t.TempDir()
 	envPath := filepath.Join(dir, ".env")
-	data := []byte("PROXY_PORT=19191\nPROXY_ALLOW_UNAUTHENTICATED_LOCAL=false\nOPENAI_API_KEY=test-key\n")
+	data := []byte("PROXY_PORT=19191\nPROXY_ALLOW_UNAUTHENTICATED_LOCAL=false\nOPENAI_API_KEY=test-key\nOPENAI_ONLY_STREAM=true\n")
 	if err := os.WriteFile(envPath, data, 0o644); err != nil {
 		t.Fatalf("write env: %v", err)
 	}
@@ -33,6 +33,9 @@ func TestLoadUsesEnvFileAndDefaults(t *testing.T) {
 	}
 	if cfg.OpenAIApiKey != "test-key" {
 		t.Fatalf("expected openai key from env file, got %q", cfg.OpenAIApiKey)
+	}
+	if !cfg.OpenAIOnlyStream {
+		t.Fatalf("expected openai only_stream from env file")
 	}
 }
 

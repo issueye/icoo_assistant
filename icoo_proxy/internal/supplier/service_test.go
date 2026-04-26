@@ -22,6 +22,7 @@ func TestUpsertListDelete(t *testing.T) {
 		Protocol:    "openai-chat",
 		BaseURL:     "https://example.com",
 		APIKey:      "secret-key-123456",
+		OnlyStream:  true,
 		Enabled:     true,
 		Description: "Test vendor",
 		Models:      "model-a,model-b",
@@ -33,10 +34,20 @@ func TestUpsertListDelete(t *testing.T) {
 	if record.APIKeyMasked == "" {
 		t.Fatalf("expected masked key")
 	}
+	if !record.OnlyStream {
+		t.Fatalf("expected only_stream to round-trip")
+	}
 
 	items := svc.List()
 	if len(items) != len(initial)+1 {
 		t.Fatalf("expected one more supplier, got %d", len(items))
+	}
+	resolved, ok := svc.Resolve(record.ID)
+	if !ok {
+		t.Fatalf("expected supplier to resolve")
+	}
+	if !resolved.OnlyStream {
+		t.Fatalf("expected resolved supplier snapshot to preserve only_stream")
 	}
 
 	if err := svc.Delete(record.ID); err != nil {

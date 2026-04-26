@@ -18,6 +18,7 @@ type Record struct {
 	Protocol     string   `json:"protocol"`
 	BaseURL      string   `json:"base_url"`
 	APIKeyMasked string   `json:"api_key_masked"`
+	OnlyStream   bool     `json:"only_stream"`
 	Enabled      bool     `json:"enabled"`
 	Description  string   `json:"description"`
 	Models       []string `json:"models"`
@@ -32,6 +33,7 @@ type supplierModel struct {
 	Protocol    string
 	BaseURL     string
 	APIKey      string
+	OnlyStream  bool
 	Enabled     bool
 	Description string
 	Models      string
@@ -50,6 +52,7 @@ type UpsertInput struct {
 	Protocol    string `json:"protocol"`
 	BaseURL     string `json:"base_url"`
 	APIKey      string `json:"api_key"`
+	OnlyStream  bool   `json:"only_stream"`
 	Enabled     bool   `json:"enabled"`
 	Description string `json:"description"`
 	Models      string `json:"models"`
@@ -101,12 +104,13 @@ func (s *Service) Resolve(id string) (routepolicy.SupplierSnapshot, bool) {
 		return routepolicy.SupplierSnapshot{}, false
 	}
 	return routepolicy.SupplierSnapshot{
-		ID:        item.ID,
-		Name:      item.Name,
-		Protocol:  item.Protocol,
-		BaseURL:   item.BaseURL,
-		APIKey:    item.APIKey,
-		IsEnabled: item.Enabled,
+		ID:         item.ID,
+		Name:       item.Name,
+		Protocol:   item.Protocol,
+		BaseURL:    item.BaseURL,
+		APIKey:     item.APIKey,
+		OnlyStream: item.OnlyStream,
+		IsEnabled:  item.Enabled,
 	}, true
 }
 
@@ -138,6 +142,7 @@ func (s *Service) Upsert(input UpsertInput) (Record, error) {
 		Protocol:    protocol,
 		BaseURL:     baseURL,
 		APIKey:      strings.TrimSpace(input.APIKey),
+		OnlyStream:  input.OnlyStream,
 		Enabled:     input.Enabled,
 		Description: strings.TrimSpace(input.Description),
 		Models:      strings.Join(splitCSVLike(input.Models), ","),
@@ -198,6 +203,7 @@ func toRecord(item supplierModel) Record {
 		Protocol:     item.Protocol,
 		BaseURL:      item.BaseURL,
 		APIKeyMasked: maskSecret(item.APIKey),
+		OnlyStream:   item.OnlyStream,
 		Enabled:      item.Enabled,
 		Description:  item.Description,
 		Models:       slices.Clone(splitCSVLike(item.Models)),

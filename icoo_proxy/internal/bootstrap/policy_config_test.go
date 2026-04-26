@@ -16,12 +16,13 @@ func TestApplyRoutePolicies(t *testing.T) {
 	}
 	t.Cleanup(func() { _ = suppliers.Close() })
 	record, err := suppliers.Upsert(supplier.UpsertInput{
-		Name:     "Test OpenAI",
-		Protocol: "openai-responses",
-		BaseURL:  "https://example.com",
-		APIKey:   "secret-key",
-		Enabled:  true,
-		Models:   "gpt-4.1-mini",
+		Name:       "Test OpenAI",
+		Protocol:   "openai-responses",
+		BaseURL:    "https://example.com",
+		APIKey:     "secret-key",
+		OnlyStream: true,
+		Enabled:    true,
+		Models:     "gpt-4.1-mini",
 	})
 	if err != nil {
 		t.Fatalf("upsert supplier: %v", err)
@@ -51,5 +52,8 @@ func TestApplyRoutePolicies(t *testing.T) {
 	}
 	if cfg.OpenAIApiKey != "secret-key" {
 		t.Fatalf("unexpected openai api key")
+	}
+	if !cfg.OpenAIOnlyStream {
+		t.Fatalf("expected openai only_stream from supplier policy")
 	}
 }

@@ -21,6 +21,7 @@ type Config struct {
 	AnthropicMaxTokens int64
 	EnablePromptCache  bool
 	EnableThinking     bool
+	EnableStreaming    bool
 	CompactThreshold   int
 	TranscriptDir      string
 }
@@ -38,6 +39,7 @@ func Load(workdir string) (Config, error) {
 		AnthropicModel:     strings.TrimSpace(os.Getenv("ANTHROPIC_MODEL")),
 		EnablePromptCache:  boolFromEnv("ANTHROPIC_ENABLE_PROMPT_CACHE", false),
 		EnableThinking:     boolFromEnv("ANTHROPIC_ENABLE_THINKING", true),
+		EnableStreaming:    boolFromEnv("ANTHROPIC_ENABLE_STREAMING", true),
 		CommandTimeout:     durationFromEnv("AGENT_COMMAND_TIMEOUT_SECONDS", 120*time.Second),
 		MaxRounds:          intFromEnv("AGENT_MAX_ROUNDS", 20),
 		AnthropicMaxTokens: int64(intFromEnv("ANTHROPIC_MAX_TOKENS", 16000)),
