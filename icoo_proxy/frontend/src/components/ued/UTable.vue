@@ -1,7 +1,7 @@
 <template>
   <div class="table-shell" :class="shellClasses">
     <div class="table-scroll" :style="scrollStyle">
-      <table :class="tableClasses">
+      <table :class="tableClasses" :style="tableStyle">
         <colgroup v-if="tableColumns.length">
           <col
             v-for="column in tableColumns"
@@ -140,6 +140,10 @@ const props = defineProps({
     type: [String, Number],
     default: "",
   },
+  minWidth: {
+    type: [String, Number],
+    default: "",
+  },
   size: {
     type: String,
     default: "middle",
@@ -160,12 +164,13 @@ const normalizedColumns = computed(() =>
 
 const actionColumn = computed(() => {
   if (!slots.actions) return null;
+  const actionWidth = normalizeCssSize(props.actionWidth) || "180px";
   return {
     uid: "__actions__",
     key: "actions",
     title: props.actionTitle,
-    width: normalizeCssSize(props.actionWidth),
-    minWidth: "",
+    width: actionWidth,
+    minWidth: actionWidth,
     align: props.actionAlign,
     fixed: "right",
     ellipsis: false,
@@ -216,6 +221,15 @@ const scrollStyle = computed(() => {
   return style;
 });
 
+const tableStyle = computed(() => {
+  const style = {};
+  const minWidth = resolveTableMinWidth();
+  if (minWidth) {
+    style.minWidth = minWidth;
+  }
+  return style;
+});
+
 function normalizeColumn(column, index) {
   const key = String(column.key ?? column.dataIndex ?? `column-${index}`);
   return {
@@ -240,6 +254,18 @@ function normalizeColumn(column, index) {
 function withStickyOffsets(columns) {
   const next = columns.map((column) => ({ ...column, stickyStyle: {} }));
   let leftOffset = "0px";
+  let lastLeftIndex = -1;
+  let firstRightIndex = -1;
+
+  next.forEach((column, index) => {
+    if (column.fixed === "left") {
+      lastLeftIndex = index;
+    }
+    if (column.fixed === "right" && firstRightIndex === -1) {
+      firstRightIndex = index;
+    }
+  });
+
   for (const column of next) {
     if (column.fixed !== "left") continue;
     column.stickyStyle.left = leftOffset;
@@ -252,6 +278,13 @@ function withStickyOffsets(columns) {
     if (column.fixed !== "right") continue;
     column.stickyStyle.right = rightOffset;
     rightOffset = appendCssSize(rightOffset, column.width);
+  }
+
+  if (lastLeftIndex >= 0) {
+    next[lastLeftIndex].isStickyLeftLast = true;
+  }
+  if (firstRightIndex >= 0) {
+    next[firstRightIndex].isStickyRightFirst = true;
   }
 
   return next;
@@ -267,6 +300,39 @@ function normalizeCssSize(value) {
   if (value === 0) return "0px";
   if (!value) return "";
   return typeof value === "number" ? `${value}px` : String(value);
+}
+
+function resolveTableMinWidth() {
+  const explicitMinWidth = normalizeCssSize(props.minWidth);
+  if (explicitMinWidth) {
+    return explicitMinWidth;
+  }
+  if (!props.fixed) {
+    return "";
+  }
+
+  const total = tableColumns.value.reduce((sum, column) => {
+    return sum + estimateColumnWidth(column);
+  }, 0);
+  return total > 0 ? `${Math.max(total, 960)}px` : "960px";
+}
+
+function estimateColumnWidth(column) {
+  const minWidth = parsePixelSize(column.minWidth);
+  if (minWidth) return minWidth;
+
+  const width = parsePixelSize(column.width);
+  if (width) return width;
+
+  if (column.isAction) return 180;
+  if (column.ellipsis) return 220;
+  return 180;
+}
+
+function parsePixelSize(value) {
+  if (!value) return 0;
+  const match = String(value).match(/^(\d+(?:\.\d+)?)px$/);
+  return match ? Number(match[1]) : 0;
 }
 
 function normalizeAlign(value) {
@@ -351,7 +417,9 @@ function getHeaderClasses(column) {
     {
       "is-sticky": isStickyColumn(column),
       "is-sticky-left": column.fixed === "left",
+      "is-sticky-left-last": column.isStickyLeftLast,
       "is-sticky-right": column.fixed === "right",
+      "is-sticky-right-first": column.isStickyRightFirst,
       "actions-header": column.isAction,
     },
   ];
@@ -365,7 +433,9 @@ function getCellClasses(column, row, rowIndex) {
     {
       "is-sticky": isStickyColumn(column),
       "is-sticky-left": column.fixed === "left",
+      "is-sticky-left-last": column.isStickyLeftLast,
       "is-sticky-right": column.fixed === "right",
+      "is-sticky-right-first": column.isStickyRightFirst,
       "is-ellipsis": column.ellipsis,
       "actions-header": column.isAction,
     },

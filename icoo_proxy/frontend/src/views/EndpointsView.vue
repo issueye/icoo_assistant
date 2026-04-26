@@ -1,14 +1,13 @@
 <template>
   <section class="page-section">
-    <div class="page-header">
-      <h2 class="page-title">端点管理</h2>
-      <div class="toolbar">
+    <Teleport to="#app-topbar-actions">
+      <div class="app-topbar-actions__group">
         <button class="btn btn-primary" @click="openCreate">新增端点</button>
         <button class="btn btn-secondary" :disabled="store.reloading" @click="store.reloadProxy">
           {{ store.reloading ? "重载中..." : "重载代理生效" }}
         </button>
       </div>
-    </div>
+    </Teleport>
 
     <div v-if="store.error" class="notice-error">
       {{ store.error }}
@@ -28,7 +27,7 @@
       <div v-else-if="!store.items.length" class="empty-state">
         当前尚未配置端点。
       </div>
-      <UTable v-else :columns="tableColumns" :rows="store.items" action-width="132px" fixed>
+      <UTable v-else :columns="tableColumns" :rows="store.items" action-width="168px" fixed>
         <template #cell-path="{ row }">
           <UTag code>{{ row.path }}</UTag>
         </template>

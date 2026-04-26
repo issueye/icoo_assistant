@@ -832,6 +832,20 @@ body {
     box-shadow: 0 1px 4px rgba(0, 21, 41, 0.04);
   }
 
+.app-topbar-actions,
+.app-topbar-actions__group {
+    @apply flex min-w-0 items-center justify-end gap-2;
+  }
+
+.app-topbar-actions {
+    @apply ml-4 shrink-0;
+  }
+
+.app-topbar-actions .btn {
+    @apply whitespace-nowrap;
+    min-height: 32px;
+  }
+
 .app-content {
     @apply min-h-0 flex-1 overflow-y-auto px-6 py-5;
     background: var(--ued-color-bg-page);
@@ -1032,11 +1046,58 @@ body {
   }
 
 .ued-tag {
-    @apply inline-flex max-w-full items-center rounded border font-medium leading-none;
+    @apply inline-flex max-w-full items-center border font-normal leading-none transition-colors;
+    min-width: 0;
+    border-radius: 4px;
+    vertical-align: middle;
+    white-space: nowrap;
+  }
+
+.ued-tag--xs {
+    height: 20px;
+    padding: 0 7px;
+    font-size: 12px;
+    line-height: 18px;
+  }
+
+.ued-tag--sm {
+    min-height: 22px;
+    padding: 1px 7px;
+    font-size: 12px;
+    line-height: 18px;
+  }
+
+.ued-tag--md {
+    min-height: 24px;
+    padding: 2px 8px;
+    font-size: 13px;
+    line-height: 18px;
+  }
+
+.ued-tag--lg {
+    min-height: 28px;
+    padding: 4px 10px;
+    font-size: 14px;
+    line-height: 18px;
   }
 
 .ued-tag--primary {
     @apply border-[#91caff] bg-[#e6f4ff] text-[#0958d9];
+  }
+
+.ued-tag--neutral {
+    @apply border-[#d9d9d9] bg-[#fafafa] text-[#595959];
+  }
+
+.ued-tag--code {
+    font-family: "Cascadia Code", "SFMono-Regular", Consolas, monospace;
+    font-weight: 400;
+    color: #0958d9;
+    background: #e6f4ff;
+    border-color: #91caff;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
 .notice-error {
@@ -1057,6 +1118,35 @@ body {
     border-color: var(--ued-color-divider);
   }
 
+.table-scroll {
+    overflow-x: auto;
+    overflow-y: hidden;
+    overscroll-behavior-x: contain;
+    scrollbar-color: #d9d9d9 transparent;
+    scrollbar-width: thin;
+  }
+
+.table-scroll::-webkit-scrollbar {
+    height: 10px;
+  }
+
+.table-scroll::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+.table-scroll::-webkit-scrollbar-thumb {
+    background: #d9d9d9;
+    border: 3px solid transparent;
+    border-radius: 999px;
+    background-clip: content-box;
+  }
+
+.table-scroll::-webkit-scrollbar-thumb:hover {
+    background: #bfbfbf;
+    border: 3px solid transparent;
+    background-clip: content-box;
+  }
+
 .admin-table {
     @apply min-w-full border-collapse bg-white text-[#595959];
   }
@@ -1066,15 +1156,17 @@ body {
   }
 
 .admin-table th {
-    @apply h-10 border-b border-[#f0f0f0] px-4 py-2 text-left text-xs font-semibold leading-4 text-[#8c8c8c];
+    @apply h-10 border-b border-[#f0f0f0] px-4 py-2 text-left text-xs font-semibold leading-4 text-[#595959];
+    background: #fafafa;
   }
 
 .admin-table td {
     @apply h-12 border-b border-[#f0f0f0] px-4 py-2 align-middle text-sm leading-5 text-[#595959];
+    background: #ffffff;
   }
 
 .admin-table tbody tr:hover {
-    @apply bg-[#e6f4ff]/50;
+    background: #fafafa;
   }
 
 .admin-table--stripe tbody tr:nth-child(even) {
@@ -1092,7 +1184,7 @@ body {
 
 .admin-table tbody tr:hover td.is-sticky,
 .admin-table tbody tr:hover th.is-sticky {
-    background: #f0f8ff;
+    background: #fafafa;
   }
 
 .admin-table--stripe tbody tr:nth-child(even) td.is-sticky,
@@ -1102,17 +1194,38 @@ body {
 
 .admin-table--stripe tbody tr:nth-child(even):hover td.is-sticky,
 .admin-table--stripe tbody tr:nth-child(even):hover th.is-sticky {
-    background: #e6f4ff;
+    background: #fafafa;
   }
 
 .admin-table td.is-sticky-left,
 .admin-table th.is-sticky-left {
-    box-shadow: inset -8px 0 8px -8px rgba(0, 0, 0, 0.12);
+    box-shadow: none;
   }
 
 .admin-table td.is-sticky-right,
 .admin-table th.is-sticky-right {
-    box-shadow: inset 8px 0 8px -8px rgba(0, 0, 0, 0.12);
+    box-shadow: none;
+  }
+
+.admin-table .is-sticky-left-last::after,
+.admin-table .is-sticky-right-first::before {
+    position: absolute;
+    top: 0;
+    bottom: -1px;
+    width: 16px;
+    pointer-events: none;
+    transition: box-shadow 0.2s ease;
+    content: "";
+  }
+
+.admin-table .is-sticky-left-last::after {
+    right: -16px;
+    background: linear-gradient(90deg, rgba(5, 5, 5, 0.08), rgba(5, 5, 5, 0));
+  }
+
+.admin-table .is-sticky-right-first::before {
+    left: -16px;
+    background: linear-gradient(90deg, rgba(5, 5, 5, 0), rgba(5, 5, 5, 0.08));
   }
 
 .table-meta {
@@ -1120,24 +1233,32 @@ body {
   }
 
 .table-actions {
-    @apply flex flex-wrap items-center justify-center gap-1.5;
+    @apply flex flex-nowrap items-center justify-center gap-1.5;
   }
 
 .table-actions .btn {
-    @apply h-7 min-h-0 rounded px-2.5 py-0 text-xs leading-none;
+    @apply h-7 min-h-0 rounded border-transparent bg-transparent px-1.5 py-0 text-xs leading-none text-[#1677ff] hover:bg-[#e6f4ff] hover:text-[#0958d9];
   }
 
 .table-actions .btn-danger,
 .table-actions .btn-error {
-    @apply border-[#ffccc7] bg-white text-[#cf1322] hover:border-[#ff7875] hover:bg-[#fff2f0];
+    @apply border-transparent bg-transparent text-[#ff4d4f] hover:border-transparent hover:bg-[#fff2f0] hover:text-[#cf1322];
   }
 
 .admin-table td.actions-header {
     white-space: nowrap;
   }
 
+.admin-table td.actions-header > .table-actions {
+    display: inline-flex;
+    flex-wrap: nowrap;
+    width: max-content;
+    min-width: 100%;
+  }
+
 .admin-table td.actions-header .btn,
 .admin-table td.actions-header .ued-button {
+    flex: 0 0 auto;
     white-space: nowrap;
   }
 

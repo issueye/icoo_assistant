@@ -31,8 +31,9 @@
           v-else
           :columns="supplierTableColumns"
           :rows="store.items"
-          action-width="132px"
+          action-width="220px"
           fixed
+          min-width="1360px"
           table-class="supplier-table"
         >
           <template #cell-supplier="{ row }">
@@ -160,7 +161,14 @@
           <div v-if="!store.policies.length" class="empty-state">
           当前尚未配置路由策略。
           </div>
-          <UTable v-else :columns="policyTableColumns" :rows="store.policies" action-width="96px" fixed>
+          <UTable
+            v-else
+            :columns="policyTableColumns"
+            :rows="store.policies"
+            action-width="120px"
+            fixed
+            min-width="1080px"
+          >
             <template #cell-downstream="{ row }">
               <UTag code>{{ row.downstream_protocol }}</UTag>
             </template>
@@ -350,17 +358,17 @@ const supplierOptions = computed(() =>
   })),
 );
 const supplierTableColumns = [
-  { key: "supplier", title: "供应商", width: "20%" },
-  { key: "protocol", title: "协议 / 地址", width: "34%" },
-  { key: "models", title: "模型 / 标签", width: "18%" },
-  { key: "health", title: "健康状态", width: "18%" },
+  { key: "supplier", title: "供应商", width: "220px" },
+  { key: "protocol", title: "协议 / 地址", width: "560px" },
+  { key: "models", title: "模型 / 标签", width: "260px" },
+  { key: "health", title: "健康状态", width: "220px" },
 ];
 const policyTableColumns = [
-  { key: "downstream", title: "下游协议", width: "18%" },
-  { key: "supplier", title: "供应商", width: "30%" },
-  { key: "upstream", title: "上游协议", width: "18%" },
-  { key: "model", title: "目标模型", width: "22%" },
-  { key: "enabled", title: "状态", width: "12%" },
+  { key: "downstream", title: "下游协议", width: "160px" },
+  { key: "supplier", title: "供应商", width: "320px" },
+  { key: "upstream", title: "上游协议", width: "180px" },
+  { key: "model", title: "目标模型", width: "260px" },
+  { key: "enabled", title: "状态", width: "120px" },
 ];
 
 function healthTone(record) {

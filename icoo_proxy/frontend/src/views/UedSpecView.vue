@@ -126,7 +126,7 @@
         row-key="id"
         fixed
         stripe
-        action-width="120px"
+        action-width="160px"
       >
         <template #cell-status="{ value }">
           <UTag :variant="value === '启用' ? 'success' : 'error'">{{ value }}</UTag>

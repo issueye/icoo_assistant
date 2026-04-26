@@ -26,9 +26,10 @@
 
       <main class="app-main">
         <header class="app-topbar">
-          <div>
-            <p class="text-base font-semibold text-zinc-900">{{ currentTitle }}</p>
+          <div class="min-w-0">
+            <p class="truncate text-base font-semibold text-zinc-900">{{ currentTitle }}</p>
           </div>
+          <div id="app-topbar-actions" class="app-topbar-actions" />
         </header>
 
         <div class="app-content">
