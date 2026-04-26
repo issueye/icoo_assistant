@@ -846,6 +846,17 @@ body {
     min-height: 32px;
   }
 
+.app-topbar-actions .badge,
+.app-topbar-actions .field-toggle {
+    @apply whitespace-nowrap;
+  }
+
+.app-topbar-actions .field-toggle {
+    min-height: 32px;
+    padding-top: 4px;
+    padding-bottom: 4px;
+  }
+
 .app-content {
     @apply min-h-0 flex-1 overflow-y-auto px-6 py-5;
     background: var(--ued-color-bg-page);

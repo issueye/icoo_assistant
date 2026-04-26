@@ -1,8 +1,7 @@
 <template>
   <section class="page-section">
-    <div class="page-header">
-      <h2 class="page-title">本地 AI 网关运行概览</h2>
-      <div class="toolbar">
+    <Teleport to="#app-topbar-actions">
+      <div class="app-topbar-actions__group">
         <button class="btn btn-primary" :disabled="store.refreshing" @click="store.reloadProxy">
           {{ store.refreshing ? "重载中..." : "重载代理" }}
         </button>
@@ -10,7 +9,7 @@
           {{ store.data?.running ? "运行中" : "已停止" }}
         </span>
       </div>
-    </div>
+    </Teleport>
 
     <div v-if="store.error" class="notice-error">
       {{ store.error }}

@@ -1,14 +1,13 @@
 <template>
   <section class="page-section">
-    <div class="page-header">
-      <h2 class="page-title">授权 Key</h2>
-      <div class="toolbar">
+    <Teleport to="#app-topbar-actions">
+      <div class="app-topbar-actions__group">
         <button class="btn btn-primary" @click="openCreate">新增 Key</button>
         <button class="btn btn-secondary" :disabled="store.reloading" @click="store.reloadProxy">
           {{ store.reloading ? "重载中..." : "重载代理生效" }}
         </button>
       </div>
-    </div>
+    </Teleport>
 
     <div v-if="store.error" class="notice-error">
       {{ store.error }}

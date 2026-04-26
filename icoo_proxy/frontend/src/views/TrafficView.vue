@@ -1,8 +1,7 @@
 <template>
   <section class="page-section">
-    <div class="page-header">
-      <h2 class="page-title">请求流量监控</h2>
-      <div class="toolbar">
+    <Teleport to="#app-topbar-actions">
+      <div class="app-topbar-actions__group">
         <button class="btn btn-primary" :disabled="store.refreshing" @click="store.refresh">
           {{ store.refreshing ? "刷新中..." : "刷新流量" }}
         </button>
@@ -11,7 +10,7 @@
           每 6 秒自动刷新
         </label>
       </div>
-    </div>
+    </Teleport>
 
     <div v-if="store.error" class="notice-error">
       {{ store.error }}

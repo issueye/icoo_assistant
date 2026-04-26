@@ -1,8 +1,7 @@
 <template>
   <section class="page-section">
-    <div class="page-header">
-      <h2 class="page-title">项目设置</h2>
-      <div class="toolbar">
+    <Teleport to="#app-topbar-actions">
+      <div class="app-topbar-actions__group">
         <button class="btn btn-secondary" :disabled="store.loading || store.saving" @click="store.load">
           {{ store.loading ? "刷新中..." : "重新读取" }}
         </button>
@@ -10,7 +9,7 @@
           {{ store.saving ? "保存中..." : "保存并重载" }}
         </button>
       </div>
-    </div>
+    </Teleport>
 
     <div v-if="store.error" class="notice-error">
       {{ store.error }}

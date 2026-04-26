@@ -1,12 +1,11 @@
 <template>
   <section class="page-section">
-    <div class="page-header">
-      <h2 class="page-title">供应商与路由策略管理</h2>
-      <div class="toolbar">
+    <Teleport to="#app-topbar-actions">
+      <div class="app-topbar-actions__group">
         <button class="btn btn-primary" @click="openSupplierCreate">新建供应商</button>
         <button class="btn btn-secondary" @click="openPolicyCreate">新建路由策略</button>
       </div>
-    </div>
+    </Teleport>
 
     <div v-if="store.error" class="notice-error">
       {{ store.error }}
