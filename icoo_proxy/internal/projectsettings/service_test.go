@@ -23,15 +23,6 @@ func TestLoadAndSave(t *testing.T) {
 		ProxyChainLogPath:           ".data/test.log",
 		ProxyChainLogBodies:         true,
 		ProxyChainLogMaxBodyBytes:   123,
-		AnthropicBaseURL:            "https://anthropic.example",
-		AnthropicAPIKey:             "anth-key",
-		AnthropicVersion:            "2023-06-01",
-		AnthropicOnlyStream:         true,
-		AnthropicUserAgent:          "AnthUA/1.0",
-		OpenAIBaseURL:               "https://openai.example",
-		OpenAIApiKey:                "openai-key",
-		OpenAIOnlyStream:            true,
-		OpenAIUserAgent:             "OpenAIUA/2.0",
 	}
 	if err := Save(root, values); err != nil {
 		t.Fatalf("save settings: %v", err)
@@ -43,9 +34,8 @@ func TestLoadAndSave(t *testing.T) {
 	text := string(data)
 	for _, needle := range []string{
 		"PROXY_PORT=19191",
-		"ANTHROPIC_ONLY_STREAM=true",
-		"ANTHROPIC_USER_AGENT=AnthUA/1.0",
-		"OPENAI_USER_AGENT=OpenAIUA/2.0",
+		"PROXY_CHAIN_LOG_MAX_BODY_BYTES=123",
+		"PROXY_DEFAULT_CHAT_ROUTE=openai-chat:gpt-test",
 	} {
 		if !strings.Contains(text, needle) {
 			t.Fatalf("expected env file to contain %q, got %s", needle, text)
@@ -58,10 +48,7 @@ func TestLoadAndSave(t *testing.T) {
 	if loaded.ProxyPort != 19191 {
 		t.Fatalf("expected port to round-trip, got %d", loaded.ProxyPort)
 	}
-	if loaded.OpenAIUserAgent != "OpenAIUA/2.0" {
-		t.Fatalf("expected openai user agent to round-trip, got %q", loaded.OpenAIUserAgent)
-	}
-	if !loaded.OpenAIOnlyStream {
-		t.Fatalf("expected openai only_stream to round-trip")
+	if loaded.ProxyChainLogMaxBodyBytes != 123 {
+		t.Fatalf("expected log body limit to round-trip, got %d", loaded.ProxyChainLogMaxBodyBytes)
 	}
 }

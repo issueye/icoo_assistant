@@ -24,15 +24,6 @@ type Values struct {
 	ProxyChainLogPath           string `json:"proxy_chain_log_path"`
 	ProxyChainLogBodies         bool   `json:"proxy_chain_log_bodies"`
 	ProxyChainLogMaxBodyBytes   int    `json:"proxy_chain_log_max_body_bytes"`
-	AnthropicBaseURL            string `json:"anthropic_base_url"`
-	AnthropicAPIKey             string `json:"anthropic_api_key"`
-	AnthropicVersion            string `json:"anthropic_version"`
-	AnthropicOnlyStream         bool   `json:"anthropic_only_stream"`
-	AnthropicUserAgent          string `json:"anthropic_user_agent"`
-	OpenAIBaseURL               string `json:"openai_base_url"`
-	OpenAIApiKey                string `json:"openai_api_key"`
-	OpenAIOnlyStream            bool   `json:"openai_only_stream"`
-	OpenAIUserAgent             string `json:"openai_user_agent"`
 }
 
 func Load(root string) (Values, error) {
@@ -56,15 +47,6 @@ func Load(root string) (Values, error) {
 		ProxyChainLogPath:           stringWithDefault(env, "PROXY_CHAIN_LOG_PATH", filepath.Join(root, ".data", "icoo_proxy-chain.log")),
 		ProxyChainLogBodies:         boolWithDefault(env, "PROXY_CHAIN_LOG_BODIES", true),
 		ProxyChainLogMaxBodyBytes:   intWithDefault(env, "PROXY_CHAIN_LOG_MAX_BODY_BYTES", 0),
-		AnthropicBaseURL:            stringWithDefault(env, "ANTHROPIC_BASE_URL", "https://api.anthropic.com"),
-		AnthropicAPIKey:             strings.TrimSpace(env["ANTHROPIC_API_KEY"]),
-		AnthropicVersion:            stringWithDefault(env, "ANTHROPIC_VERSION", "2023-06-01"),
-		AnthropicOnlyStream:         boolWithDefault(env, "ANTHROPIC_ONLY_STREAM", false),
-		AnthropicUserAgent:          strings.TrimSpace(env["ANTHROPIC_USER_AGENT"]),
-		OpenAIBaseURL:               stringWithDefault(env, "OPENAI_BASE_URL", "https://api.openai.com"),
-		OpenAIApiKey:                strings.TrimSpace(env["OPENAI_API_KEY"]),
-		OpenAIOnlyStream:            boolWithDefault(env, "OPENAI_ONLY_STREAM", false),
-		OpenAIUserAgent:             strings.TrimSpace(env["OPENAI_USER_AGENT"]),
 	}, nil
 }
 
@@ -120,17 +102,6 @@ func buildEnv(values Values) string {
 		"PROXY_API_KEYS=" + strings.TrimSpace(values.ProxyAPIKeys),
 		"PROXY_ALLOW_UNAUTHENTICATED_LOCAL=" + formatBool(values.ProxyAllowUnauthenticated),
 		"",
-		"ANTHROPIC_BASE_URL=" + strings.TrimSpace(values.AnthropicBaseURL),
-		"ANTHROPIC_API_KEY=" + strings.TrimSpace(values.AnthropicAPIKey),
-		"ANTHROPIC_VERSION=" + strings.TrimSpace(values.AnthropicVersion),
-		"ANTHROPIC_ONLY_STREAM=" + formatBool(values.AnthropicOnlyStream),
-		"ANTHROPIC_USER_AGENT=" + strings.TrimSpace(values.AnthropicUserAgent),
-		"",
-		"OPENAI_BASE_URL=" + strings.TrimSpace(values.OpenAIBaseURL),
-		"OPENAI_API_KEY=" + strings.TrimSpace(values.OpenAIApiKey),
-		"OPENAI_ONLY_STREAM=" + formatBool(values.OpenAIOnlyStream),
-		"OPENAI_USER_AGENT=" + strings.TrimSpace(values.OpenAIUserAgent),
-		"",
 		"# Defaults: <protocol>:<real-model>",
 		"PROXY_DEFAULT_ANTHROPIC_ROUTE=" + strings.TrimSpace(values.ProxyDefaultAnthropicRoute),
 		"PROXY_DEFAULT_CHAT_ROUTE=" + strings.TrimSpace(values.ProxyDefaultChatRoute),
@@ -169,15 +140,6 @@ func applyProcessEnv(values Values) {
 	set("PROXY_CHAIN_LOG_PATH", strings.TrimSpace(values.ProxyChainLogPath))
 	set("PROXY_CHAIN_LOG_BODIES", formatBool(values.ProxyChainLogBodies))
 	set("PROXY_CHAIN_LOG_MAX_BODY_BYTES", strconv.Itoa(values.ProxyChainLogMaxBodyBytes))
-	set("ANTHROPIC_BASE_URL", strings.TrimSpace(values.AnthropicBaseURL))
-	set("ANTHROPIC_API_KEY", strings.TrimSpace(values.AnthropicAPIKey))
-	set("ANTHROPIC_VERSION", strings.TrimSpace(values.AnthropicVersion))
-	set("ANTHROPIC_ONLY_STREAM", formatBool(values.AnthropicOnlyStream))
-	set("ANTHROPIC_USER_AGENT", strings.TrimSpace(values.AnthropicUserAgent))
-	set("OPENAI_BASE_URL", strings.TrimSpace(values.OpenAIBaseURL))
-	set("OPENAI_API_KEY", strings.TrimSpace(values.OpenAIApiKey))
-	set("OPENAI_ONLY_STREAM", formatBool(values.OpenAIOnlyStream))
-	set("OPENAI_USER_AGENT", strings.TrimSpace(values.OpenAIUserAgent))
 }
 
 func readEnvFile(path string) (map[string]string, error) {

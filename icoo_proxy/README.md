@@ -77,14 +77,14 @@ Windows 下可以直接执行根目录构建脚本：
 通过项目目录下的 `.env` 进行配置，当前重点变量如下：
 
 - `PROXY_HOST` / `PROXY_PORT`
-- `PROXY_API_KEY`
+- `PROXY_API_KEY` / `PROXY_API_KEYS`
 - `PROXY_ALLOW_UNAUTHENTICATED_LOCAL`
-- `ANTHROPIC_BASE_URL` / `ANTHROPIC_API_KEY`
-- `OPENAI_BASE_URL` / `OPENAI_API_KEY`
 - `PROXY_DEFAULT_ANTHROPIC_ROUTE`
 - `PROXY_DEFAULT_CHAT_ROUTE`
 - `PROXY_DEFAULT_RESPONSES_ROUTE`
 - `PROXY_MODEL_ROUTES`
+
+上游供应商的 `Base URL`、`API Key`、`User-Agent`、仅流式等参数通过桌面端“供应商管理”维护，不再写入项目 `.env`。
 
 `PROXY_MODEL_ROUTES` 格式示例：
 

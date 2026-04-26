@@ -17,6 +17,11 @@
     <div v-if="store.success" class="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
       {{ store.success }}
     </div>
+    <UAlert
+      type="info"
+      message="上游供应商配置已迁移"
+      description="Base URL、API Key、User-Agent、仅流式等上游参数请在供应商管理中维护，项目设置只保留本地网关运行参数。"
+    />
 
     <div v-if="store.loading" class="empty-state">
       正在加载项目设置...
@@ -25,8 +30,8 @@
     <template v-else>
       <div class="section-grid xl:grid-cols-3">
         <StatCard label="代理监听" :value="`${store.form.proxy_host}:${store.form.proxy_port}`" />
-        <StatCard label="Anthropic 上游" :value="store.form.anthropic_base_url || '-'" />
-        <StatCard label="OpenAI 上游" :value="store.form.openai_base_url || '-'" />
+        <StatCard label="访问模式" :value="store.form.proxy_allow_unauthenticated_local ? '本地信任模式' : '需要授权 Key'" />
+        <StatCard label="链路日志" :value="store.form.proxy_chain_log_bodies ? '记录请求与响应体' : '仅记录元数据'" />
       </div>
 
       <form class="section-grid" @submit.prevent="submit">
@@ -88,49 +93,6 @@
           </div>
         </PanelBlock>
 
-        <PanelBlock title="Anthropic 上游">
-          <div class="grid gap-3 md:grid-cols-2">
-            <FieldLabel label="ANTHROPIC_BASE_URL">
-              <input v-model="store.form.anthropic_base_url" class="field-input" placeholder="https://api.anthropic.com" />
-            </FieldLabel>
-            <FieldLabel label="ANTHROPIC_VERSION">
-              <input v-model="store.form.anthropic_version" class="field-input" placeholder="2023-06-01" />
-            </FieldLabel>
-            <FieldLabel label="ANTHROPIC_API_KEY">
-              <input v-model="store.form.anthropic_api_key" class="field-input" placeholder="可直接在此维护上游密钥" />
-            </FieldLabel>
-            <FieldLabel label="ANTHROPIC_USER_AGENT">
-              <input v-model="store.form.anthropic_user_agent" class="field-input" placeholder="留空则使用默认 UA" />
-            </FieldLabel>
-          </div>
-          <div class="mt-3">
-            <label class="field-toggle">
-              <input v-model="store.form.anthropic_only_stream" type="checkbox" class="field-checkbox" />
-              仅流式上游
-            </label>
-          </div>
-        </PanelBlock>
-
-        <PanelBlock title="OpenAI 上游">
-          <div class="grid gap-3 md:grid-cols-2">
-            <FieldLabel label="OPENAI_BASE_URL">
-              <input v-model="store.form.openai_base_url" class="field-input" placeholder="https://api.openai.com" />
-            </FieldLabel>
-            <FieldLabel label="OPENAI_API_KEY">
-              <input v-model="store.form.openai_api_key" class="field-input" placeholder="可直接在此维护上游密钥" />
-            </FieldLabel>
-            <FieldLabel label="OPENAI_USER_AGENT">
-              <input v-model="store.form.openai_user_agent" class="field-input" placeholder="留空则使用默认 UA" />
-            </FieldLabel>
-          </div>
-          <div class="mt-3">
-            <label class="field-toggle">
-              <input v-model="store.form.openai_only_stream" type="checkbox" class="field-checkbox" />
-              仅流式上游
-            </label>
-          </div>
-        </PanelBlock>
-
         <PanelBlock title="日志参数">
           <div class="grid gap-3 md:grid-cols-2">
             <FieldLabel label="PROXY_CHAIN_LOG_PATH">
@@ -157,6 +119,7 @@ import { onMounted } from "vue";
 import FieldLabel from "../components/FieldLabel.vue";
 import PanelBlock from "../components/PanelBlock.vue";
 import StatCard from "../components/StatCard.vue";
+import UAlert from "../components/ued/UAlert.vue";
 import { useSettingsStore } from "../stores/settings";
 
 const store = useSettingsStore();

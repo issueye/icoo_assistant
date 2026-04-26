@@ -13,7 +13,7 @@ func TestLoadUsesEnvFileAndDefaults(t *testing.T) {
 
 	dir := t.TempDir()
 	envPath := filepath.Join(dir, ".env")
-	data := []byte("PROXY_PORT=19191\nPROXY_ALLOW_UNAUTHENTICATED_LOCAL=false\nOPENAI_API_KEY=test-key\nOPENAI_ONLY_STREAM=true\nOPENAI_USER_AGENT=ProxyTestUA/1.0\n")
+	data := []byte("PROXY_PORT=19191\nPROXY_ALLOW_UNAUTHENTICATED_LOCAL=false\n")
 	if err := os.WriteFile(envPath, data, 0o644); err != nil {
 		t.Fatalf("write env: %v", err)
 	}
@@ -31,14 +31,8 @@ func TestLoadUsesEnvFileAndDefaults(t *testing.T) {
 	if cfg.AllowUnauthenticatedLocal {
 		t.Fatalf("expected unauth local to be false")
 	}
-	if cfg.OpenAIApiKey != "test-key" {
-		t.Fatalf("expected openai key from env file, got %q", cfg.OpenAIApiKey)
-	}
-	if !cfg.OpenAIOnlyStream {
-		t.Fatalf("expected openai only_stream from env file")
-	}
-	if cfg.OpenAIUserAgent != "ProxyTestUA/1.0" {
-		t.Fatalf("expected openai user agent from env file, got %q", cfg.OpenAIUserAgent)
+	if cfg.AnthropicVersion != "2023-06-01" {
+		t.Fatalf("expected internal anthropic version default, got %q", cfg.AnthropicVersion)
 	}
 }
 

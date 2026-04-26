@@ -50,15 +50,7 @@ func Load(workdir string) (Config, error) {
 		ProxyAPIKey:               strings.TrimSpace(os.Getenv("PROXY_API_KEY")),
 		ProxyAPIKeys:              csvFromEnv("PROXY_API_KEYS"),
 		AllowUnauthenticatedLocal: boolFromEnv("PROXY_ALLOW_UNAUTHENTICATED_LOCAL", true),
-		AnthropicBaseURL:          strings.TrimSpace(os.Getenv("ANTHROPIC_BASE_URL")),
-		AnthropicAPIKey:           strings.TrimSpace(os.Getenv("ANTHROPIC_API_KEY")),
-		AnthropicVersion:          strings.TrimSpace(os.Getenv("ANTHROPIC_VERSION")),
-		AnthropicOnlyStream:       boolFromEnv("ANTHROPIC_ONLY_STREAM", false),
-		AnthropicUserAgent:        strings.TrimSpace(os.Getenv("ANTHROPIC_USER_AGENT")),
-		OpenAIBaseURL:             strings.TrimSpace(os.Getenv("OPENAI_BASE_URL")),
-		OpenAIApiKey:              strings.TrimSpace(os.Getenv("OPENAI_API_KEY")),
-		OpenAIOnlyStream:          boolFromEnv("OPENAI_ONLY_STREAM", false),
-		OpenAIUserAgent:           strings.TrimSpace(os.Getenv("OPENAI_USER_AGENT")),
+		AnthropicVersion:          "2023-06-01",
 		DefaultAnthropicRoute:     strings.TrimSpace(os.Getenv("PROXY_DEFAULT_ANTHROPIC_ROUTE")),
 		DefaultChatRoute:          strings.TrimSpace(os.Getenv("PROXY_DEFAULT_CHAT_ROUTE")),
 		DefaultResponsesRoute:     strings.TrimSpace(os.Getenv("PROXY_DEFAULT_RESPONSES_ROUTE")),
@@ -69,15 +61,6 @@ func Load(workdir string) (Config, error) {
 	}
 	if cfg.Host == "" {
 		cfg.Host = "127.0.0.1"
-	}
-	if cfg.AnthropicBaseURL == "" {
-		cfg.AnthropicBaseURL = "https://api.anthropic.com"
-	}
-	if cfg.OpenAIBaseURL == "" {
-		cfg.OpenAIBaseURL = "https://api.openai.com"
-	}
-	if cfg.AnthropicVersion == "" {
-		cfg.AnthropicVersion = "2023-06-01"
 	}
 	if cfg.ChainLogPath == "" {
 		cfg.ChainLogPath = filepath.Join(workdir, ".data", "icoo_proxy-chain.log")

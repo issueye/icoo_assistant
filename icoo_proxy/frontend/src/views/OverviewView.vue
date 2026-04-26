@@ -86,35 +86,8 @@
           </div>
         </PanelBlock>
 
-        <PanelBlock title="风险观察列表">
-          <div v-if="store.unhealthySuppliers.length === 0" class="empty-state">
-            暂无异常供应商，请在供应商页面执行健康检查后查看。
-          </div>
-          <div v-else class="divide-y divide-[#eeeeF2] border-y border-[#eeeeF2]">
-            <article v-for="item in store.unhealthySuppliers" :key="item.supplier_id" class="py-3">
-              <div class="flex flex-wrap items-center justify-between gap-2">
-                <div>
-                  <p class="text-sm font-medium text-slate-900">{{ item.supplier_name }}</p>
-                  <p class="mt-1 text-xs text-slate-500">{{ item.protocol }} | {{ item.base_url }}</p>
-                </div>
-                <UTag variant="error">{{ item.status }}</UTag>
-              </div>
-              <p class="mt-3 text-sm text-rose-700">{{ item.message }}</p>
-              <p class="mt-2 text-xs text-slate-500">
-                {{ item.status_code || "no-status" }} | {{ item.duration_ms }} ms | {{ formatDateTime(item.checked_at) }}
-              </p>
-            </article>
-          </div>
-        </PanelBlock>
-      </div>
-
-      <div class="section-grid xl:grid-cols-2">
         <PanelBlock title="默认路由">
           <RouteList :items="store.data?.defaults || []" empty-text="当前尚未配置默认路由。" />
-        </PanelBlock>
-
-        <PanelBlock title="模型别名">
-          <RouteList :items="store.data?.aliases || []" empty-text="当前尚未配置模型别名。" />
         </PanelBlock>
       </div>
 
@@ -139,34 +112,6 @@
             </UTag>
           </article>
         </div>
-      </PanelBlock>
-
-      <PanelBlock title="最近请求">
-        <div v-if="store.requests.length === 0" class="empty-state">
-          暂无请求记录。
-        </div>
-        <div v-else class="space-y-3">
-          <article v-for="request in store.requests" :key="request.request_id" class="table-row">
-            <div>
-              <p class="text-sm font-medium text-slate-900">{{ request.downstream }} -> {{ request.upstream || "-" }}</p>
-              <p class="mt-1 text-xs text-slate-500">{{ request.request_id }} | {{ request.created_at }}</p>
-            </div>
-            <div class="flex flex-wrap items-center gap-2">
-              <UTag code>{{ request.model || "-" }}</UTag>
-              <UTag :variant="request.status_code >= 400 ? 'error' : 'success'">
-                {{ request.status_code }}
-              </UTag>
-              <UTag variant="info">{{ request.duration_ms }} ms</UTag>
-            </div>
-            <p v-if="request.error" class="w-full text-sm text-rose-700">{{ request.error }}</p>
-          </article>
-        </div>
-      </PanelBlock>
-
-      <PanelBlock title="当前版本说明">
-        <ul class="space-y-2 text-sm text-slate-600">
-          <li v-for="note in store.data?.notes || []" :key="note">{{ note }}</li>
-        </ul>
       </PanelBlock>
     </template>
   </section>

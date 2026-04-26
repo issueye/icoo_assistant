@@ -15,15 +15,6 @@ const emptyForm = () => ({
   proxy_chain_log_path: ".data/icoo_proxy-chain.log",
   proxy_chain_log_bodies: true,
   proxy_chain_log_max_body_bytes: 0,
-  anthropic_base_url: "https://api.anthropic.com",
-  anthropic_api_key: "",
-  anthropic_version: "2023-06-01",
-  anthropic_only_stream: false,
-  anthropic_user_agent: "",
-  openai_base_url: "https://api.openai.com",
-  openai_api_key: "",
-  openai_only_stream: false,
-  openai_user_agent: "",
 });
 
 export const useSettingsStore = defineStore("settings", {
