@@ -51,6 +51,27 @@ wails dev
 go test ./...
 ```
 
+## 构建
+
+Windows 下可以直接执行根目录构建脚本：
+
+```powershell
+.\build.ps1
+```
+
+默认流程会：
+
+- 在缺少 `frontend/node_modules` 时安装前端依赖
+- 执行 `go test ./...`
+- 执行 `npm run build`
+- 生成 `build/bin/icoo_proxy.exe`
+
+如果还想同时执行桌面端正式构建，可以加上：
+
+```powershell
+.\build.ps1 -WailsBuild
+```
+
 ## 配置
 
 通过项目目录下的 `.env` 进行配置，当前重点变量如下：
