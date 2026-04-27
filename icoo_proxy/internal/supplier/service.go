@@ -8,30 +8,31 @@ import (
 
 	"gorm.io/gorm"
 
+	"icoo_proxy/internal/consts"
 	"icoo_proxy/internal/routepolicy"
 	"icoo_proxy/internal/storage"
 )
 
 type Record struct {
-	ID           string   `json:"id"`
-	Name         string   `json:"name"`
-	Protocol     string   `json:"protocol"`
-	BaseURL      string   `json:"base_url"`
-	APIKeyMasked string   `json:"api_key_masked"`
-	OnlyStream   bool     `json:"only_stream"`
-	UserAgent    string   `json:"user_agent"`
-	Enabled      bool     `json:"enabled"`
-	Description  string   `json:"description"`
-	Models       []string `json:"models"`
-	Tags         []string `json:"tags"`
-	UpdatedAt    string   `json:"updated_at"`
-	CreatedAt    string   `json:"created_at"`
+	ID           string          `json:"id"`
+	Name         string          `json:"name"`
+	Protocol     consts.Protocol `json:"protocol"`
+	BaseURL      string          `json:"base_url"`
+	APIKeyMasked string          `json:"api_key_masked"`
+	OnlyStream   bool            `json:"only_stream"`
+	UserAgent    string          `json:"user_agent"`
+	Enabled      bool            `json:"enabled"`
+	Description  string          `json:"description"`
+	Models       []string        `json:"models"`
+	Tags         []string        `json:"tags"`
+	UpdatedAt    string          `json:"updated_at"`
+	CreatedAt    string          `json:"created_at"`
 }
 
 type supplierModel struct {
 	ID          string `gorm:"primaryKey"`
 	Name        string `gorm:"index"`
-	Protocol    string
+	Protocol    consts.Protocol
 	BaseURL     string
 	APIKey      string
 	OnlyStream  bool
@@ -75,9 +76,6 @@ func NewService(root string) (*Service, error) {
 		return nil, err
 	}
 	svc := &Service{db: db}
-	if err := svc.seedDefaults(); err != nil {
-		return nil, err
-	}
 	return svc, nil
 }
 
@@ -124,7 +122,7 @@ func (s *Service) Upsert(input UpsertInput) (Record, error) {
 		return Record{}, fmt.Errorf("supplier name is required")
 	}
 	protocol := normalizeProtocol(input.Protocol)
-	if protocol == "" {
+	if protocol == consts.Protocol("") {
 		return Record{}, fmt.Errorf("supplier protocol is required")
 	}
 	baseURL := strings.TrimSpace(input.BaseURL)
@@ -185,22 +183,6 @@ func (s *Service) Delete(id string) error {
 	return nil
 }
 
-func (s *Service) seedDefaults() error {
-	var count int64
-	if err := s.db.Model(&supplierModel{}).Count(&count).Error; err != nil {
-		return err
-	}
-	if count > 0 {
-		return nil
-	}
-	for _, item := range defaultSuppliers() {
-		if err := s.db.Create(&item).Error; err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
 func toRecord(item supplierModel) Record {
 	return Record{
 		ID:           item.ID,
@@ -219,10 +201,10 @@ func toRecord(item supplierModel) Record {
 	}
 }
 
-func normalizeProtocol(raw string) string {
-	value := strings.TrimSpace(strings.ToLower(raw))
+func normalizeProtocol(raw string) consts.Protocol {
+	value := consts.Protocol(raw)
 	switch value {
-	case "anthropic", "openai-chat", "openai-responses", "openai":
+	case consts.ProtocolAnthropic, consts.ProtocolOpenAIChat, consts.ProtocolOpenAIResponses:
 		return value
 	default:
 		return value
@@ -262,34 +244,4 @@ func generateID(name string) string {
 		base = "supplier"
 	}
 	return fmt.Sprintf("%s-%d", base, time.Now().UnixNano())
-}
-
-func defaultSuppliers() []supplierModel {
-	now := time.Now()
-	return []supplierModel{
-		{
-			ID:          "anthropic-default",
-			Name:        "Anthropic Default",
-			Protocol:    "anthropic",
-			BaseURL:     "https://api.anthropic.com",
-			Enabled:     true,
-			Description: "Default Anthropic upstream profile for local gateway routing.",
-			Models:      "claude-sonnet-4,claude-opus-4",
-			Tags:        "official,text",
-			CreatedAt:   now,
-			UpdatedAt:   now,
-		},
-		{
-			ID:          "openai-responses-default",
-			Name:        "OpenAI Responses Default",
-			Protocol:    "openai-responses",
-			BaseURL:     "https://api.openai.com",
-			Enabled:     true,
-			Description: "Default OpenAI Responses profile for cross-protocol routing.",
-			Models:      "gpt-4.1,gpt-4.1-mini",
-			Tags:        "official,responses",
-			CreatedAt:   now,
-			UpdatedAt:   now,
-		},
-	}
 }

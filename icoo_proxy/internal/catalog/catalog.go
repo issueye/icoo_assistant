@@ -6,49 +6,42 @@ import (
 	"strings"
 
 	"icoo_proxy/internal/config"
-)
-
-type Protocol string
-
-const (
-	ProtocolAnthropic      Protocol = "anthropic"
-	ProtocolOpenAIChat     Protocol = "openai-chat"
-	ProtocolOpenAIResponse Protocol = "openai-responses"
+	"icoo_proxy/internal/consts"
 )
 
 type Route struct {
-	Name     string   `json:"name"`
-	Upstream Protocol `json:"upstream"`
-	Model    string   `json:"model"`
+	Name     string          `json:"name"`
+	Upstream consts.Protocol `json:"upstream"`
+	Model    string          `json:"model"`
 }
 
 type Catalog struct {
-	defaults map[Protocol]Route
+	defaults map[consts.Protocol]Route
 	aliases  map[string]Route
 }
 
 func New(cfg config.Config) (*Catalog, error) {
-	defaults := make(map[Protocol]Route)
+	defaults := make(map[consts.Protocol]Route)
 	if strings.TrimSpace(cfg.DefaultAnthropicRoute) != "" {
 		route, err := parseTarget("default:anthropic", cfg.DefaultAnthropicRoute)
 		if err != nil {
 			return nil, err
 		}
-		defaults[ProtocolAnthropic] = route
+		defaults[consts.ProtocolAnthropic] = route
 	}
 	if strings.TrimSpace(cfg.DefaultChatRoute) != "" {
 		route, err := parseTarget("default:chat", cfg.DefaultChatRoute)
 		if err != nil {
 			return nil, err
 		}
-		defaults[ProtocolOpenAIChat] = route
+		defaults[consts.ProtocolOpenAIChat] = route
 	}
 	if strings.TrimSpace(cfg.DefaultResponsesRoute) != "" {
 		route, err := parseTarget("default:responses", cfg.DefaultResponsesRoute)
 		if err != nil {
 			return nil, err
 		}
-		defaults[ProtocolOpenAIResponse] = route
+		defaults[consts.ProtocolOpenAIResponses] = route
 	}
 
 	aliases := make(map[string]Route)
@@ -74,7 +67,7 @@ func New(cfg config.Config) (*Catalog, error) {
 	}, nil
 }
 
-func (c *Catalog) Resolve(downstream Protocol, requestedModel string) (Route, error) {
+func (c *Catalog) Resolve(downstream consts.Protocol, requestedModel string) (Route, error) {
 	model := strings.TrimSpace(requestedModel)
 	if model == "" {
 		route, ok := c.defaults[downstream]
@@ -140,9 +133,9 @@ func parseTarget(name, raw string) (Route, error) {
 	if !found {
 		return Route{}, fmt.Errorf("invalid route %q for %s", raw, name)
 	}
-	protocol := Protocol(strings.TrimSpace(protocolRaw))
+	protocol := consts.Protocol(strings.TrimSpace(protocolRaw))
 	switch protocol {
-	case ProtocolAnthropic, ProtocolOpenAIChat, ProtocolOpenAIResponse:
+	case consts.ProtocolAnthropic, consts.ProtocolOpenAIChat, consts.ProtocolOpenAIResponses:
 	default:
 		return Route{}, fmt.Errorf("unsupported upstream protocol %q for %s", protocol, name)
 	}

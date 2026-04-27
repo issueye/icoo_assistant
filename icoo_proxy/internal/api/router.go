@@ -2,9 +2,8 @@ package api
 
 import (
 	"encoding/json"
+	"icoo_proxy/internal/consts"
 	"net/http"
-
-	"icoo_proxy/internal/catalog"
 )
 
 type State struct {
@@ -35,9 +34,9 @@ type RouteView struct {
 }
 
 type UpstreamView struct {
-	Protocol   string `json:"protocol"`
-	BaseURL    string `json:"base_url,omitempty"`
-	Configured bool   `json:"configured"`
+	Protocol   consts.Protocol `json:"protocol"`
+	BaseURL    string          `json:"base_url,omitempty"`
+	Configured bool            `json:"configured"`
 }
 
 type RequestView struct {
@@ -52,26 +51,26 @@ type RequestView struct {
 }
 
 type RoutePolicyView struct {
-	ID                 string `json:"id"`
-	DownstreamProtocol string `json:"downstream_protocol"`
-	SupplierID         string `json:"supplier_id"`
-	SupplierName       string `json:"supplier_name"`
-	UpstreamProtocol   string `json:"upstream_protocol"`
-	TargetModel        string `json:"target_model"`
-	Enabled            bool   `json:"enabled"`
-	UpdatedAt          string `json:"updated_at"`
-	CreatedAt          string `json:"created_at"`
+	ID                 string          `json:"id"`
+	DownstreamProtocol consts.Protocol `json:"downstream_protocol"`
+	SupplierID         string          `json:"supplier_id"`
+	SupplierName       string          `json:"supplier_name"`
+	UpstreamProtocol   consts.Protocol `json:"upstream_protocol"`
+	TargetModel        string          `json:"target_model"`
+	Enabled            bool            `json:"enabled"`
+	UpdatedAt          string          `json:"updated_at"`
+	CreatedAt          string          `json:"created_at"`
 }
 
 type EndpointView struct {
-	ID          string `json:"id"`
-	Path        string `json:"path"`
-	Protocol    string `json:"protocol"`
-	Description string `json:"description"`
-	Enabled     bool   `json:"enabled"`
-	BuiltIn     bool   `json:"built_in"`
-	UpdatedAt   string `json:"updated_at"`
-	CreatedAt   string `json:"created_at"`
+	ID          string          `json:"id"`
+	Path        string          `json:"path"`
+	Protocol    consts.Protocol `json:"protocol"`
+	Description string          `json:"description"`
+	Enabled     bool            `json:"enabled"`
+	BuiltIn     bool            `json:"built_in"`
+	UpdatedAt   string          `json:"updated_at"`
+	CreatedAt   string          `json:"created_at"`
 }
 
 type StateProvider interface {
@@ -79,12 +78,12 @@ type StateProvider interface {
 }
 
 type ProxyHandler interface {
-	Handle(w http.ResponseWriter, r *http.Request, downstream catalog.Protocol)
+	Handle(w http.ResponseWriter, r *http.Request, downstream consts.Protocol)
 }
 
 type EndpointRoute struct {
 	Path     string
-	Protocol catalog.Protocol
+	Protocol consts.Protocol
 }
 
 func NewMux(provider StateProvider, proxy ProxyHandler, endpoints []EndpointRoute) http.Handler {

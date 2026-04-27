@@ -16,6 +16,7 @@ import (
 	"icoo_proxy/internal/bootstrap"
 	"icoo_proxy/internal/catalog"
 	"icoo_proxy/internal/config"
+	"icoo_proxy/internal/consts"
 	"icoo_proxy/internal/endpoint"
 	"icoo_proxy/internal/projectsettings"
 	"icoo_proxy/internal/proxy"
@@ -296,17 +297,17 @@ func (a *App) State() api.State {
 		}, a.enabledEndpointPathsLocked()...),
 		Upstreams: []api.UpstreamView{
 			{
-				Protocol:   string(catalog.ProtocolAnthropic),
+				Protocol:   consts.ProtocolAnthropic,
 				BaseURL:    a.cfg.AnthropicBaseURL,
 				Configured: strings.TrimSpace(a.cfg.AnthropicAPIKey) != "",
 			},
 			{
-				Protocol:   string(catalog.ProtocolOpenAIChat),
+				Protocol:   consts.ProtocolOpenAIChat,
 				BaseURL:    a.cfg.OpenAIChatBaseURLValue(),
 				Configured: strings.TrimSpace(a.cfg.OpenAIChatAPIKeyValue()) != "",
 			},
 			{
-				Protocol:   string(catalog.ProtocolOpenAIResponse),
+				Protocol:   consts.ProtocolOpenAIResponses,
 				BaseURL:    a.cfg.OpenAIResponsesBaseURLValue(),
 				Configured: strings.TrimSpace(a.cfg.OpenAIResponsesAPIKeyValue()) != "",
 			},
@@ -454,9 +455,9 @@ func (a *App) endpointRoutes() []api.EndpointRoute {
 		defaults := endpoint.DefaultDefinitions()
 		routes := make([]api.EndpointRoute, 0, len(defaults))
 		for _, item := range defaults {
-			protocol := catalog.Protocol(item.Protocol)
+			protocol := consts.Protocol(item.Protocol)
 			switch protocol {
-			case catalog.ProtocolAnthropic, catalog.ProtocolOpenAIChat, catalog.ProtocolOpenAIResponse:
+			case consts.ProtocolAnthropic, consts.ProtocolOpenAIChat, consts.ProtocolOpenAIResponses:
 				routes = append(routes, api.EndpointRoute{
 					Path:     item.Path,
 					Protocol: protocol,
@@ -468,9 +469,9 @@ func (a *App) endpointRoutes() []api.EndpointRoute {
 	records := a.endpoints.Enabled()
 	routes := make([]api.EndpointRoute, 0, len(records))
 	for _, item := range records {
-		protocol := catalog.Protocol(item.Protocol)
+		protocol := consts.Protocol(item.Protocol)
 		switch protocol {
-		case catalog.ProtocolAnthropic, catalog.ProtocolOpenAIChat, catalog.ProtocolOpenAIResponse:
+		case consts.ProtocolAnthropic, consts.ProtocolOpenAIChat, consts.ProtocolOpenAIResponses:
 			routes = append(routes, api.EndpointRoute{
 				Path:     item.Path,
 				Protocol: protocol,

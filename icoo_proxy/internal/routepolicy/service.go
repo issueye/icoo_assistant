@@ -7,24 +7,25 @@ import (
 
 	"gorm.io/gorm"
 
+	"icoo_proxy/internal/consts"
 	"icoo_proxy/internal/storage"
 )
 
 type Record struct {
-	ID                 string `json:"id"`
-	DownstreamProtocol string `json:"downstream_protocol"`
-	SupplierID         string `json:"supplier_id"`
-	SupplierName       string `json:"supplier_name"`
-	UpstreamProtocol   string `json:"upstream_protocol"`
-	TargetModel        string `json:"target_model"`
-	Enabled            bool   `json:"enabled"`
-	UpdatedAt          string `json:"updated_at"`
-	CreatedAt          string `json:"created_at"`
+	ID                 string          `json:"id"`
+	DownstreamProtocol consts.Protocol `json:"downstream_protocol"`
+	SupplierID         string          `json:"supplier_id"`
+	SupplierName       string          `json:"supplier_name"`
+	UpstreamProtocol   consts.Protocol `json:"upstream_protocol"`
+	TargetModel        string          `json:"target_model"`
+	Enabled            bool            `json:"enabled"`
+	UpdatedAt          string          `json:"updated_at"`
+	CreatedAt          string          `json:"created_at"`
 }
 
 type policyModel struct {
-	ID                 string `gorm:"primaryKey"`
-	DownstreamProtocol string `gorm:"uniqueIndex"`
+	ID                 string          `gorm:"primaryKey"`
+	DownstreamProtocol consts.Protocol `gorm:"uniqueIndex"`
 	SupplierID         string
 	TargetModel        string
 	Enabled            bool
@@ -43,7 +44,7 @@ type SupplierResolver interface {
 type SupplierSnapshot struct {
 	ID         string
 	Name       string
-	Protocol   string
+	Protocol   consts.Protocol
 	BaseURL    string
 	APIKey     string
 	OnlyStream bool
@@ -52,11 +53,11 @@ type SupplierSnapshot struct {
 }
 
 type UpsertInput struct {
-	ID                 string `json:"id"`
-	DownstreamProtocol string `json:"downstream_protocol"`
-	SupplierID         string `json:"supplier_id"`
-	TargetModel        string `json:"target_model"`
-	Enabled            bool   `json:"enabled"`
+	ID                 string          `json:"id"`
+	DownstreamProtocol consts.Protocol `json:"downstream_protocol"`
+	SupplierID         string          `json:"supplier_id"`
+	TargetModel        string          `json:"target_model"`
+	Enabled            bool            `json:"enabled"`
 }
 
 type Service struct {
@@ -202,40 +203,40 @@ func (s *Service) toRecord(item policyModel) Record {
 	return record
 }
 
-func normalizeProtocol(raw string) string {
-	value := strings.TrimSpace(strings.ToLower(raw))
+func normalizeProtocol(raw consts.Protocol) consts.Protocol {
+	value := raw
 	switch value {
-	case "anthropic", "openai-chat", "openai-responses":
+	case consts.ProtocolAnthropic, consts.ProtocolOpenAIChat, consts.ProtocolOpenAIResponses:
 		return value
 	default:
-		return ""
+		return consts.Protocol("")
 	}
 }
 
-func buildID(downstream string) string {
-	return "policy-" + downstream
+func buildID(downstream consts.Protocol) string {
+	return "policy-" + downstream.ToString()
 }
 
 func defaultPolicies() []policyModel {
 	now := time.Now()
 	return []policyModel{
 		{
-			ID:                 buildID("anthropic"),
-			DownstreamProtocol: "anthropic",
+			ID:                 buildID(consts.ProtocolAnthropic),
+			DownstreamProtocol: consts.ProtocolAnthropic,
 			Enabled:            false,
 			UpdatedAt:          now,
 			CreatedAt:          now,
 		},
 		{
-			ID:                 buildID("openai-chat"),
-			DownstreamProtocol: "openai-chat",
+			ID:                 buildID(consts.ProtocolOpenAIChat),
+			DownstreamProtocol: consts.ProtocolOpenAIChat,
 			Enabled:            false,
 			UpdatedAt:          now,
 			CreatedAt:          now,
 		},
 		{
-			ID:                 buildID("openai-responses"),
-			DownstreamProtocol: "openai-responses",
+			ID:                 buildID(consts.ProtocolOpenAIResponses),
+			DownstreamProtocol: consts.ProtocolOpenAIResponses,
 			Enabled:            false,
 			UpdatedAt:          now,
 			CreatedAt:          now,

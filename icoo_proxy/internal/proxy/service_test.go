@@ -10,6 +10,7 @@ import (
 
 	"icoo_proxy/internal/catalog"
 	"icoo_proxy/internal/config"
+	"icoo_proxy/internal/consts"
 )
 
 func newLoopbackRequest(method, target string, body *bytes.Buffer) *http.Request {
@@ -47,7 +48,7 @@ func TestHandleAcceptsConfiguredAuthKeyList(t *testing.T) {
 		}
 		rec := httptest.NewRecorder()
 
-		service.Handle(rec, req, catalog.ProtocolOpenAIChat)
+		service.Handle(rec, req, consts.ProtocolOpenAIChat)
 
 		if rec.Code != http.StatusOK {
 			t.Fatalf("%s expected status 200, got %d body=%s", header, rec.Code, rec.Body.String())
@@ -58,7 +59,7 @@ func TestHandleAcceptsConfiguredAuthKeyList(t *testing.T) {
 	req.Header.Set("x-api-key", "bad-key")
 	rec := httptest.NewRecorder()
 
-	service.Handle(rec, req, catalog.ProtocolOpenAIChat)
+	service.Handle(rec, req, consts.ProtocolOpenAIChat)
 
 	if rec.Code != http.StatusUnauthorized {
 		t.Fatalf("expected unauthorized, got %d body=%s", rec.Code, rec.Body.String())
@@ -91,7 +92,7 @@ func TestHandleAllowsUnauthenticatedLoopbackOnly(t *testing.T) {
 	req.RemoteAddr = "127.0.0.1:34567"
 	rec := httptest.NewRecorder()
 
-	service.Handle(rec, req, catalog.ProtocolOpenAIResponse)
+	service.Handle(rec, req, consts.ProtocolOpenAIResponses)
 
 	if rec.Code != http.StatusOK {
 		t.Fatalf("expected loopback request to be allowed, got %d body=%s", rec.Code, rec.Body.String())
@@ -101,7 +102,7 @@ func TestHandleAllowsUnauthenticatedLoopbackOnly(t *testing.T) {
 	remoteReq.RemoteAddr = "203.0.113.10:4567"
 	remoteRec := httptest.NewRecorder()
 
-	service.Handle(remoteRec, remoteReq, catalog.ProtocolOpenAIResponse)
+	service.Handle(remoteRec, remoteReq, consts.ProtocolOpenAIResponses)
 
 	if remoteRec.Code != http.StatusUnauthorized {
 		t.Fatalf("expected non-loopback request to require auth, got %d body=%s", remoteRec.Code, remoteRec.Body.String())
@@ -155,7 +156,7 @@ func TestHandleAppliesConfiguredUpstreamUserAgent(t *testing.T) {
 	req := newLoopbackRequest(http.MethodPost, "/v1/responses", bytes.NewBufferString(`{"model":"gpt-4.1-mini","input":"hello"}`))
 	rec := httptest.NewRecorder()
 
-	service.Handle(rec, req, catalog.ProtocolOpenAIResponse)
+	service.Handle(rec, req, consts.ProtocolOpenAIResponses)
 
 	if rec.Code != http.StatusOK {
 		t.Fatalf("expected status 200, got %d body=%s", rec.Code, rec.Body.String())
@@ -206,14 +207,14 @@ func TestHandleUsesSplitOpenAIUpstreams(t *testing.T) {
 
 	chatReq := newLoopbackRequest(http.MethodPost, "/v1/chat/completions", bytes.NewBufferString(`{"model":"gpt-4o-mini","messages":[{"role":"user","content":"hello"}]}`))
 	chatRec := httptest.NewRecorder()
-	service.Handle(chatRec, chatReq, catalog.ProtocolOpenAIChat)
+	service.Handle(chatRec, chatReq, consts.ProtocolOpenAIChat)
 	if chatRec.Code != http.StatusOK {
 		t.Fatalf("expected chat status 200, got %d body=%s", chatRec.Code, chatRec.Body.String())
 	}
 
 	responsesReq := newLoopbackRequest(http.MethodPost, "/v1/responses", bytes.NewBufferString(`{"model":"gpt-4.1-mini","input":"hello"}`))
 	responsesRec := httptest.NewRecorder()
-	service.Handle(responsesRec, responsesReq, catalog.ProtocolOpenAIResponse)
+	service.Handle(responsesRec, responsesReq, consts.ProtocolOpenAIResponses)
 	if responsesRec.Code != http.StatusOK {
 		t.Fatalf("expected responses status 200, got %d body=%s", responsesRec.Code, responsesRec.Body.String())
 	}
@@ -266,7 +267,7 @@ func TestHandleAnthropicPassthroughRewritesAliasModel(t *testing.T) {
 	req := newLoopbackRequest(http.MethodPost, "/v1/messages", bytes.NewBufferString(`{"model":"claude-sonnet","messages":[{"role":"user","content":"hello"}],"max_tokens":64}`))
 	rec := httptest.NewRecorder()
 
-	service.Handle(rec, req, catalog.ProtocolAnthropic)
+	service.Handle(rec, req, consts.ProtocolAnthropic)
 
 	if rec.Code != http.StatusOK {
 		t.Fatalf("expected status 200, got %d body=%s", rec.Code, rec.Body.String())
@@ -317,7 +318,7 @@ func TestHandleTranslatesChatToResponses(t *testing.T) {
 	req := newLoopbackRequest(http.MethodPost, "/v1/chat/completions", bytes.NewBufferString(`{"model":"assistant-default","messages":[{"role":"system","content":"You are helpful"},{"role":"user","content":"hi"}],"tools":[{"type":"function","function":{"name":"get_weather","description":"Get weather","parameters":{"type":"object","properties":{"city":{"type":"string"}},"required":["city"]}}}],"max_tokens":32}`))
 	rec := httptest.NewRecorder()
 
-	service.Handle(rec, req, catalog.ProtocolOpenAIChat)
+	service.Handle(rec, req, consts.ProtocolOpenAIChat)
 
 	if rec.Code != http.StatusOK {
 		t.Fatalf("expected status 200, got %d body=%s", rec.Code, rec.Body.String())
@@ -386,7 +387,7 @@ func TestHandleTranslatesResponsesToChat(t *testing.T) {
 	req := newLoopbackRequest(http.MethodPost, "/v1/responses", bytes.NewBufferString(`{"model":"chat-default","instructions":"Keep it short","input":[{"role":"assistant","type":"function_call","call_id":"call_weather","name":"get_weather","arguments":"{\"city\":\"Shanghai\"}"},{"type":"function_call_output","call_id":"call_weather","output":"sunny"},{"role":"user","content":"hi"}],"tools":[{"type":"function","name":"get_weather","description":"Get weather","parameters":{"type":"object","properties":{"city":{"type":"string"}}}}],"max_output_tokens":64}`))
 	rec := httptest.NewRecorder()
 
-	service.Handle(rec, req, catalog.ProtocolOpenAIResponse)
+	service.Handle(rec, req, consts.ProtocolOpenAIResponses)
 
 	if rec.Code != http.StatusOK {
 		t.Fatalf("expected status 200, got %d body=%s", rec.Code, rec.Body.String())
@@ -446,7 +447,7 @@ func TestHandleTranslatesAnthropicToResponses(t *testing.T) {
 	req := newLoopbackRequest(http.MethodPost, "/v1/messages", bytes.NewBufferString(`{"model":"anthropic-default","system":"Be concise","tools":[{"name":"lookup_docs","description":"Lookup docs","input_schema":{"type":"object","properties":{"topic":{"type":"string"}}}}],"messages":[{"role":"assistant","content":[{"type":"tool_use","id":"tool_prev","name":"lookup_docs","input":{"topic":"proxy"}}]},{"role":"user","content":[{"type":"tool_result","tool_use_id":"tool_prev","content":"done"},{"type":"text","text":"hello"}]}],"max_tokens":64}`))
 	rec := httptest.NewRecorder()
 
-	service.Handle(rec, req, catalog.ProtocolAnthropic)
+	service.Handle(rec, req, consts.ProtocolAnthropic)
 
 	if rec.Code != http.StatusOK {
 		t.Fatalf("expected status 200, got %d body=%s", rec.Code, rec.Body.String())
@@ -521,7 +522,7 @@ func TestHandleStreamsAnthropicToResponsesAsAnthropicSSE(t *testing.T) {
 	req := newLoopbackRequest(http.MethodPost, "/v1/messages", bytes.NewBufferString(`{"model":"anthropic-default","messages":[{"role":"user","content":[{"type":"text","text":"hello"}]}],"max_tokens":64,"stream":true}`))
 	rec := httptest.NewRecorder()
 
-	service.Handle(rec, req, catalog.ProtocolAnthropic)
+	service.Handle(rec, req, consts.ProtocolAnthropic)
 
 	if rec.Code != http.StatusOK {
 		t.Fatalf("expected status 200, got %d body=%s", rec.Code, rec.Body.String())
@@ -589,7 +590,7 @@ func TestHandleStreamsAnthropicToResponsesToolUseAsAnthropicSSE(t *testing.T) {
 	req := newLoopbackRequest(http.MethodPost, "/v1/messages", bytes.NewBufferString(`{"model":"anthropic-default","messages":[{"role":"user","content":[{"type":"text","text":"call the tool"}]}],"max_tokens":64,"stream":true}`))
 	rec := httptest.NewRecorder()
 
-	service.Handle(rec, req, catalog.ProtocolAnthropic)
+	service.Handle(rec, req, consts.ProtocolAnthropic)
 
 	if rec.Code != http.StatusOK {
 		t.Fatalf("expected status 200, got %d body=%s", rec.Code, rec.Body.String())
@@ -649,7 +650,7 @@ func TestHandleForcesOnlyStreamResponsesForAnthropicNonStream(t *testing.T) {
 	req := newLoopbackRequest(http.MethodPost, "/v1/messages", bytes.NewBufferString(`{"model":"anthropic-default","messages":[{"role":"user","content":[{"type":"text","text":"hello"}]}],"max_tokens":64}`))
 	rec := httptest.NewRecorder()
 
-	service.Handle(rec, req, catalog.ProtocolAnthropic)
+	service.Handle(rec, req, consts.ProtocolAnthropic)
 
 	if rec.Code != http.StatusOK {
 		t.Fatalf("expected status 200, got %d body=%s", rec.Code, rec.Body.String())
@@ -705,7 +706,7 @@ func TestHandleForcesOnlyStreamResponsesForResponsesNonStream(t *testing.T) {
 	req := newLoopbackRequest(http.MethodPost, "/v1/responses", bytes.NewBufferString(`{"model":"gpt-4.1-mini","input":"hello"}`))
 	rec := httptest.NewRecorder()
 
-	service.Handle(rec, req, catalog.ProtocolOpenAIResponse)
+	service.Handle(rec, req, consts.ProtocolOpenAIResponses)
 
 	if rec.Code != http.StatusOK {
 		t.Fatalf("expected status 200, got %d body=%s", rec.Code, rec.Body.String())
@@ -754,7 +755,7 @@ func TestHandleResponsesPassthroughAddsDefaultReasoning(t *testing.T) {
 	req := newLoopbackRequest(http.MethodPost, "/v1/responses", bytes.NewBufferString(`{"model":"gpt-4.1-mini","input":"hello"}`))
 	rec := httptest.NewRecorder()
 
-	service.Handle(rec, req, catalog.ProtocolOpenAIResponse)
+	service.Handle(rec, req, consts.ProtocolOpenAIResponses)
 
 	if rec.Code != http.StatusOK {
 		t.Fatalf("expected status 200, got %d body=%s", rec.Code, rec.Body.String())
@@ -796,7 +797,7 @@ func TestHandleResponsesPassthroughPreservesExplicitReasoning(t *testing.T) {
 	req := newLoopbackRequest(http.MethodPost, "/v1/responses", bytes.NewBufferString(`{"model":"gpt-4.1-mini","input":"hello","reasoning":{"effort":"high"}}`))
 	rec := httptest.NewRecorder()
 
-	service.Handle(rec, req, catalog.ProtocolOpenAIResponse)
+	service.Handle(rec, req, consts.ProtocolOpenAIResponses)
 
 	if rec.Code != http.StatusOK {
 		t.Fatalf("expected status 200, got %d body=%s", rec.Code, rec.Body.String())
@@ -828,7 +829,7 @@ func TestHandleTranslatesResponsesOutputTextFallbackToAnthropic(t *testing.T) {
 	req := newLoopbackRequest(http.MethodPost, "/v1/messages", bytes.NewBufferString(`{"model":"anthropic-default","messages":[{"role":"user","content":"hello"}],"max_tokens":64}`))
 	rec := httptest.NewRecorder()
 
-	service.Handle(rec, req, catalog.ProtocolAnthropic)
+	service.Handle(rec, req, consts.ProtocolAnthropic)
 
 	if rec.Code != http.StatusOK {
 		t.Fatalf("expected status 200, got %d body=%s", rec.Code, rec.Body.String())
@@ -883,7 +884,7 @@ func TestHandleTranslatesResponsesToAnthropic(t *testing.T) {
 	req := newLoopbackRequest(http.MethodPost, "/v1/responses", bytes.NewBufferString(`{"model":"response-default","instructions":"Be direct","input":[{"type":"function_call_output","call_id":"tool_prev","output":"done"},{"role":"user","content":"hello"}],"tools":[{"type":"function","name":"lookup_docs","description":"Lookup docs","parameters":{"type":"object","properties":{"topic":{"type":"string"}}}}],"max_output_tokens":32}`))
 	rec := httptest.NewRecorder()
 
-	service.Handle(rec, req, catalog.ProtocolOpenAIResponse)
+	service.Handle(rec, req, consts.ProtocolOpenAIResponses)
 
 	if rec.Code != http.StatusOK {
 		t.Fatalf("expected status 200, got %d body=%s", rec.Code, rec.Body.String())
@@ -946,7 +947,7 @@ func TestHandleTranslatesAnthropicToChat(t *testing.T) {
 	req := newLoopbackRequest(http.MethodPost, "/v1/messages", bytes.NewBufferString(`{"model":"anthropic-chat","system":"Be practical","tools":[{"name":"lookup_docs","description":"Lookup docs","input_schema":{"type":"object","properties":{"topic":{"type":"string"}}}}],"messages":[{"role":"user","content":[{"type":"text","text":"hello"}]}],"max_tokens":32}`))
 	rec := httptest.NewRecorder()
 
-	service.Handle(rec, req, catalog.ProtocolAnthropic)
+	service.Handle(rec, req, consts.ProtocolAnthropic)
 
 	if rec.Code != http.StatusOK {
 		t.Fatalf("expected status 200, got %d body=%s", rec.Code, rec.Body.String())
@@ -1009,7 +1010,7 @@ func TestHandleTranslatesChatToAnthropic(t *testing.T) {
 	req := newLoopbackRequest(http.MethodPost, "/v1/chat/completions", bytes.NewBufferString(`{"model":"chat-anthropic","messages":[{"role":"system","content":"Be practical"},{"role":"assistant","content":null,"tool_calls":[{"id":"tool_prev","type":"function","function":{"name":"lookup_docs","arguments":"{\"topic\":\"proxy\"}"}}]},{"role":"tool","tool_call_id":"tool_prev","content":"done"},{"role":"user","content":"hello"}],"tools":[{"type":"function","function":{"name":"lookup_docs","description":"Lookup docs","parameters":{"type":"object","properties":{"topic":{"type":"string"}}}}}],"max_tokens":32}`))
 	rec := httptest.NewRecorder()
 
-	service.Handle(rec, req, catalog.ProtocolOpenAIChat)
+	service.Handle(rec, req, consts.ProtocolOpenAIChat)
 
 	if rec.Code != http.StatusOK {
 		t.Fatalf("expected status 200, got %d body=%s", rec.Code, rec.Body.String())

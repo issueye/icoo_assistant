@@ -18,6 +18,7 @@ import (
 	"icoo_proxy/internal/api"
 	"icoo_proxy/internal/catalog"
 	"icoo_proxy/internal/config"
+	"icoo_proxy/internal/consts"
 )
 
 type Service struct {
@@ -41,7 +42,7 @@ func (s *Service) SetChainLogger(logger *slog.Logger) {
 	s.logger = logger
 }
 
-func (s *Service) Handle(w http.ResponseWriter, r *http.Request, downstream catalog.Protocol) {
+func (s *Service) Handle(w http.ResponseWriter, r *http.Request, downstream consts.Protocol) {
 	requestID := newRequestID()
 	start := time.Now()
 	w.Header().Set("X-ICOO-Request-ID", requestID)
@@ -269,7 +270,7 @@ func (s *Service) Handle(w http.ResponseWriter, r *http.Request, downstream cata
 					"body", "<event-stream body not captured>",
 				)
 				copyStream(w, resp.Body)
-			} else if route.Upstream == catalog.ProtocolOpenAIResponse {
+			} else if route.Upstream == consts.ProtocolOpenAIResponses {
 				aggregatedBody, aggregateErr := aggregateResponsesStreamToJSON(resp.Body)
 				if aggregateErr != nil {
 					s.fail(w, downstream, api.RequestView{
@@ -371,7 +372,7 @@ func (s *Service) Handle(w http.ResponseWriter, r *http.Request, downstream cata
 			"body", "<event-stream body not captured>",
 		)
 		switch {
-		case downstream == catalog.ProtocolAnthropic && route.Upstream == catalog.ProtocolOpenAIResponse && downstreamWantsStream:
+		case downstream == consts.ProtocolAnthropic && route.Upstream == consts.ProtocolOpenAIResponses && downstreamWantsStream:
 			w.Header().Set("Content-Type", "text/event-stream")
 			w.Header().Set("Cache-Control", "no-cache")
 			w.Header().Del("Content-Length")
@@ -405,7 +406,7 @@ func (s *Service) Handle(w http.ResponseWriter, r *http.Request, downstream cata
 			}
 			s.logRequest(item)
 			return
-		case !downstreamWantsStream && route.Upstream == catalog.ProtocolOpenAIResponse:
+		case !downstreamWantsStream && route.Upstream == consts.ProtocolOpenAIResponses:
 			aggregatedBody, aggregateErr := aggregateResponsesStreamToJSON(resp.Body)
 			if aggregateErr != nil {
 				s.fail(w, downstream, api.RequestView{
@@ -580,9 +581,9 @@ func (s *Service) Handle(w http.ResponseWriter, r *http.Request, downstream cata
 	})
 }
 
-func (s *Service) shouldForceUpstreamStream(protocol catalog.Protocol) bool {
+func (s *Service) shouldForceUpstreamStream(protocol consts.Protocol) bool {
 	switch protocol {
-	case catalog.ProtocolOpenAIResponse:
+	case consts.ProtocolOpenAIResponses:
 		return s.cfg.OpenAIResponsesOnlyStreamValue()
 	default:
 		return false
@@ -619,19 +620,19 @@ func isLocalRequest(r *http.Request) bool {
 	return ip != nil && ip.IsLoopback()
 }
 
-func (s *Service) upstreamURL(protocol catalog.Protocol) (string, error) {
+func (s *Service) upstreamURL(protocol consts.Protocol) (string, error) {
 	switch protocol {
-	case catalog.ProtocolAnthropic:
+	case consts.ProtocolAnthropic:
 		if strings.TrimSpace(s.cfg.AnthropicAPIKey) == "" {
 			return "", fmt.Errorf("anthropic upstream is not configured")
 		}
 		return strings.TrimRight(s.cfg.AnthropicBaseURL, "/") + "/v1/messages", nil
-	case catalog.ProtocolOpenAIChat:
+	case consts.ProtocolOpenAIChat:
 		if strings.TrimSpace(s.cfg.OpenAIChatAPIKeyValue()) == "" {
 			return "", fmt.Errorf("openai chat upstream is not configured")
 		}
 		return strings.TrimRight(s.cfg.OpenAIChatBaseURLValue(), "/") + "/v1/chat/completions", nil
-	case catalog.ProtocolOpenAIResponse:
+	case consts.ProtocolOpenAIResponses:
 		if strings.TrimSpace(s.cfg.OpenAIResponsesAPIKeyValue()) == "" {
 			return "", fmt.Errorf("openai responses upstream is not configured")
 		}
@@ -641,13 +642,13 @@ func (s *Service) upstreamURL(protocol catalog.Protocol) (string, error) {
 	}
 }
 
-func (s *Service) applyRequestHeaders(target *http.Request, source *http.Request, protocol catalog.Protocol) {
+func (s *Service) applyRequestHeaders(target *http.Request, source *http.Request, protocol consts.Protocol) {
 	target.Header.Set("Content-Type", "application/json")
 	if accept := strings.TrimSpace(source.Header.Get("Accept")); accept != "" {
 		target.Header.Set("Accept", accept)
 	}
 	switch protocol {
-	case catalog.ProtocolAnthropic:
+	case consts.ProtocolAnthropic:
 		target.Header.Set("x-api-key", s.cfg.AnthropicAPIKey)
 		target.Header.Set("anthropic-version", s.cfg.AnthropicVersion)
 		if userAgent := strings.TrimSpace(s.cfg.AnthropicUserAgent); userAgent != "" {
@@ -656,7 +657,7 @@ func (s *Service) applyRequestHeaders(target *http.Request, source *http.Request
 		if beta := strings.TrimSpace(source.Header.Get("anthropic-beta")); beta != "" {
 			target.Header.Set("anthropic-beta", beta)
 		}
-	case catalog.ProtocolOpenAIChat:
+	case consts.ProtocolOpenAIChat:
 		target.Header.Set("Authorization", "Bearer "+s.cfg.OpenAIChatAPIKeyValue())
 		if userAgent := strings.TrimSpace(s.cfg.OpenAIChatUserAgentValue()); userAgent != "" {
 			target.Header.Set("User-Agent", userAgent)
@@ -664,7 +665,7 @@ func (s *Service) applyRequestHeaders(target *http.Request, source *http.Request
 		if value := strings.TrimSpace(source.Header.Get("OpenAI-Beta")); value != "" {
 			target.Header.Set("OpenAI-Beta", value)
 		}
-	case catalog.ProtocolOpenAIResponse:
+	case consts.ProtocolOpenAIResponses:
 		target.Header.Set("Authorization", "Bearer "+s.cfg.OpenAIResponsesAPIKeyValue())
 		if userAgent := strings.TrimSpace(s.cfg.OpenAIResponsesUserAgentValue()); userAgent != "" {
 			target.Header.Set("User-Agent", userAgent)
@@ -733,55 +734,55 @@ func forceStreamRequest(body []byte) ([]byte, error) {
 	return rewritten, nil
 }
 
-func (s *Service) prepareRequestBody(downstream catalog.Protocol, route catalog.Route, body []byte) ([]byte, error) {
+func (s *Service) prepareRequestBody(downstream consts.Protocol, route catalog.Route, body []byte) ([]byte, error) {
 	if route.Upstream == downstream {
-		if downstream == catalog.ProtocolOpenAIResponse {
+		if downstream == consts.ProtocolOpenAIResponses {
 			return rewriteResponsesRequest(body, route.Model)
 		}
 		return rewriteModel(body, route.Model)
 	}
 	switch {
-	case downstream == catalog.ProtocolOpenAIChat && route.Upstream == catalog.ProtocolOpenAIResponse:
+	case downstream == consts.ProtocolOpenAIChat && route.Upstream == consts.ProtocolOpenAIResponses:
 		return translateChatToResponsesRequest(body, route.Model)
-	case downstream == catalog.ProtocolOpenAIResponse && route.Upstream == catalog.ProtocolOpenAIChat:
+	case downstream == consts.ProtocolOpenAIResponses && route.Upstream == consts.ProtocolOpenAIChat:
 		return translateResponsesToChatRequest(body, route.Model)
-	case downstream == catalog.ProtocolAnthropic && route.Upstream == catalog.ProtocolOpenAIResponse:
+	case downstream == consts.ProtocolAnthropic && route.Upstream == consts.ProtocolOpenAIResponses:
 		return translateAnthropicToResponsesRequest(body, route.Model)
-	case downstream == catalog.ProtocolOpenAIResponse && route.Upstream == catalog.ProtocolAnthropic:
+	case downstream == consts.ProtocolOpenAIResponses && route.Upstream == consts.ProtocolAnthropic:
 		return translateResponsesToAnthropicRequest(body, route.Model)
-	case downstream == catalog.ProtocolAnthropic && route.Upstream == catalog.ProtocolOpenAIChat:
+	case downstream == consts.ProtocolAnthropic && route.Upstream == consts.ProtocolOpenAIChat:
 		return translateAnthropicToChatRequest(body, route.Model)
-	case downstream == catalog.ProtocolOpenAIChat && route.Upstream == catalog.ProtocolAnthropic:
+	case downstream == consts.ProtocolOpenAIChat && route.Upstream == consts.ProtocolAnthropic:
 		return translateChatToAnthropicRequest(body, route.Model)
 	default:
 		return nil, fmt.Errorf("cross protocol translation from %s to %s is not implemented yet", downstream, route.Upstream)
 	}
 }
 
-func translateResponseBody(downstream, upstream catalog.Protocol, model string, body []byte) ([]byte, error) {
+func translateResponseBody(downstream, upstream consts.Protocol, model string, body []byte) ([]byte, error) {
 	switch {
-	case downstream == catalog.ProtocolOpenAIChat && upstream == catalog.ProtocolOpenAIResponse:
+	case downstream == consts.ProtocolOpenAIChat && upstream == consts.ProtocolOpenAIResponses:
 		return translateResponsesToChatResponse(body, model)
-	case downstream == catalog.ProtocolOpenAIResponse && upstream == catalog.ProtocolOpenAIChat:
+	case downstream == consts.ProtocolOpenAIResponses && upstream == consts.ProtocolOpenAIChat:
 		return translateChatToResponsesResponse(body, model)
-	case downstream == catalog.ProtocolAnthropic && upstream == catalog.ProtocolOpenAIResponse:
+	case downstream == consts.ProtocolAnthropic && upstream == consts.ProtocolOpenAIResponses:
 		return translateResponsesToAnthropicResponse(body, model)
-	case downstream == catalog.ProtocolOpenAIResponse && upstream == catalog.ProtocolAnthropic:
+	case downstream == consts.ProtocolOpenAIResponses && upstream == consts.ProtocolAnthropic:
 		return translateAnthropicToResponsesResponse(body, model)
-	case downstream == catalog.ProtocolAnthropic && upstream == catalog.ProtocolOpenAIChat:
+	case downstream == consts.ProtocolAnthropic && upstream == consts.ProtocolOpenAIChat:
 		return translateChatToAnthropicResponse(body, model)
-	case downstream == catalog.ProtocolOpenAIChat && upstream == catalog.ProtocolAnthropic:
+	case downstream == consts.ProtocolOpenAIChat && upstream == consts.ProtocolAnthropic:
 		return translateAnthropicToChatResponse(body, model)
 	default:
 		return nil, fmt.Errorf("cross protocol response translation from %s to %s is not implemented yet", upstream, downstream)
 	}
 }
 
-func writeProtocolError(w http.ResponseWriter, protocol catalog.Protocol, statusCode int, message string) {
+func writeProtocolError(w http.ResponseWriter, protocol consts.Protocol, statusCode int, message string) {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(statusCode)
 	switch protocol {
-	case catalog.ProtocolAnthropic:
+	case consts.ProtocolAnthropic:
 		_ = json.NewEncoder(w).Encode(map[string]interface{}{
 			"type": "error",
 			"error": map[string]string{
@@ -799,7 +800,7 @@ func writeProtocolError(w http.ResponseWriter, protocol catalog.Protocol, status
 	}
 }
 
-func (s *Service) fail(w http.ResponseWriter, protocol catalog.Protocol, item api.RequestView) {
+func (s *Service) fail(w http.ResponseWriter, protocol consts.Protocol, item api.RequestView) {
 	s.logChain("downstream.response.error",
 		"request_id", item.RequestID,
 		"downstream", item.Downstream,

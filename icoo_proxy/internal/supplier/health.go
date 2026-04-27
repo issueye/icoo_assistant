@@ -2,6 +2,7 @@ package supplier
 
 import (
 	"fmt"
+	"icoo_proxy/internal/consts"
 	"net/http"
 	"sort"
 	"strings"
@@ -10,16 +11,16 @@ import (
 )
 
 type HealthRecord struct {
-	SupplierID   string `json:"supplier_id"`
-	Status       string `json:"status"`
-	Message      string `json:"message"`
-	CheckedAt    string `json:"checked_at"`
-	StatusCode   int    `json:"status_code"`
-	DurationMS   int64  `json:"duration_ms"`
-	Reachable    bool   `json:"reachable"`
-	Protocol     string `json:"protocol"`
-	BaseURL      string `json:"base_url"`
-	SupplierName string `json:"supplier_name"`
+	SupplierID   string          `json:"supplier_id"`
+	Status       string          `json:"status"`
+	Message      string          `json:"message"`
+	CheckedAt    string          `json:"checked_at"`
+	StatusCode   int             `json:"status_code"`
+	DurationMS   int64           `json:"duration_ms"`
+	Reachable    bool            `json:"reachable"`
+	Protocol     consts.Protocol `json:"protocol"`
+	BaseURL      string          `json:"base_url"`
+	SupplierName string          `json:"supplier_name"`
 }
 
 type HealthService struct {

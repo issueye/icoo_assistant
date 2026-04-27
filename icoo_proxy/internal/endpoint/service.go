@@ -7,24 +7,25 @@ import (
 
 	"gorm.io/gorm"
 
+	"icoo_proxy/internal/consts"
 	"icoo_proxy/internal/storage"
 )
 
 type Record struct {
-	ID          string `json:"id"`
-	Path        string `json:"path"`
-	Protocol    string `json:"protocol"`
-	Description string `json:"description"`
-	Enabled     bool   `json:"enabled"`
-	BuiltIn     bool   `json:"built_in"`
-	UpdatedAt   string `json:"updated_at"`
-	CreatedAt   string `json:"created_at"`
+	ID          string          `json:"id"`
+	Path        string          `json:"path"`
+	Protocol    consts.Protocol `json:"protocol"`
+	Description string          `json:"description"`
+	Enabled     bool            `json:"enabled"`
+	BuiltIn     bool            `json:"built_in"`
+	UpdatedAt   string          `json:"updated_at"`
+	CreatedAt   string          `json:"created_at"`
 }
 
 type endpointModel struct {
 	ID          string `gorm:"primaryKey"`
 	Path        string `gorm:"uniqueIndex"`
-	Protocol    string
+	Protocol    consts.Protocol
 	Description string
 	Enabled     bool
 	BuiltIn     bool
@@ -46,17 +47,17 @@ type UpsertInput struct {
 
 type DefaultDefinition struct {
 	Path        string
-	Protocol    string
+	Protocol    consts.Protocol
 	Description string
 }
 
 var defaultDefinitions = []DefaultDefinition{
-	{Path: "/v1/messages", Protocol: "anthropic", Description: "Anthropic Messages official-compatible endpoint."},
-	{Path: "/anthropic/v1/messages", Protocol: "anthropic", Description: "Anthropic namespaced Messages endpoint."},
-	{Path: "/v1/chat/completions", Protocol: "openai-chat", Description: "OpenAI Chat Completions official-compatible endpoint."},
-	{Path: "/openai/v1/chat/completions", Protocol: "openai-chat", Description: "OpenAI namespaced Chat Completions endpoint."},
-	{Path: "/v1/responses", Protocol: "openai-responses", Description: "OpenAI Responses official-compatible endpoint."},
-	{Path: "/openai/v1/responses", Protocol: "openai-responses", Description: "OpenAI namespaced Responses endpoint."},
+	{Path: "/v1/messages", Protocol: consts.ProtocolAnthropic, Description: "Anthropic Messages official-compatible endpoint."},
+	{Path: "/anthropic/v1/messages", Protocol: consts.ProtocolAnthropic, Description: "Anthropic namespaced Messages endpoint."},
+	{Path: "/v1/chat/completions", Protocol: consts.ProtocolOpenAIChat, Description: "OpenAI Chat Completions official-compatible endpoint."},
+	{Path: "/openai/v1/chat/completions", Protocol: consts.ProtocolOpenAIChat, Description: "OpenAI namespaced Chat Completions endpoint."},
+	{Path: "/v1/responses", Protocol: consts.ProtocolOpenAIResponses, Description: "OpenAI Responses official-compatible endpoint."},
+	{Path: "/openai/v1/responses", Protocol: consts.ProtocolOpenAIResponses, Description: "OpenAI namespaced Responses endpoint."},
 }
 
 func DefaultDefinitions() []DefaultDefinition {
@@ -76,9 +77,6 @@ func NewService(root string) (*Service, error) {
 		return nil, err
 	}
 	svc := &Service{db: db}
-	if err := svc.seedDefaults(); err != nil {
-		return nil, err
-	}
 	return svc, nil
 }
 
@@ -120,7 +118,7 @@ func (s *Service) Upsert(input UpsertInput) (Record, error) {
 		return Record{}, fmt.Errorf("endpoint path is required")
 	}
 	protocol := normalizeProtocol(input.Protocol)
-	if protocol == "" {
+	if protocol == consts.Protocol("") {
 		return Record{}, fmt.Errorf("endpoint protocol is required")
 	}
 
@@ -171,43 +169,6 @@ func (s *Service) Delete(id string) error {
 	return s.db.Delete(&endpointModel{}, "id = ?", id).Error
 }
 
-func (s *Service) seedDefaults() error {
-	for _, item := range defaultEndpoints() {
-		var count int64
-		if err := s.db.Model(&endpointModel{}).Where("path = ?", item.Path).Count(&count).Error; err != nil {
-			return err
-		}
-		if count == 0 {
-			if err := s.db.Create(&item).Error; err != nil {
-				return err
-			}
-		}
-	}
-	return nil
-}
-
-func defaultEndpoints() []endpointModel {
-	now := time.Now()
-	items := make([]endpointModel, 0, len(defaultDefinitions))
-	for _, item := range defaultDefinitions {
-		items = append(items, defaultEndpoint(item.Path, item.Protocol, item.Description, now))
-	}
-	return items
-}
-
-func defaultEndpoint(path, protocol, description string, now time.Time) endpointModel {
-	return endpointModel{
-		ID:          buildID(path),
-		Path:        path,
-		Protocol:    protocol,
-		Description: description,
-		Enabled:     true,
-		BuiltIn:     true,
-		UpdatedAt:   now,
-		CreatedAt:   now,
-	}
-}
-
 func toRecord(item endpointModel) Record {
 	return Record{
 		ID:          item.ID,
@@ -232,10 +193,10 @@ func normalizePath(raw string) string {
 	return value
 }
 
-func normalizeProtocol(raw string) string {
-	value := strings.TrimSpace(strings.ToLower(raw))
+func normalizeProtocol(raw string) consts.Protocol {
+	value := consts.Protocol(strings.TrimSpace(raw))
 	switch value {
-	case "anthropic", "openai-chat", "openai-responses":
+	case consts.ProtocolAnthropic, consts.ProtocolOpenAIChat, consts.ProtocolOpenAIResponses:
 		return value
 	default:
 		return ""
