@@ -1,17 +1,28 @@
 <template>
   <div class="app-shell">
+    <header class="app-global-header">
+      <div class="app-global-header__brand">
+        <div class="app-global-header__logo" aria-hidden="true">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
+        </div>
+        <div class="app-global-header__title">
+          <span>本地 AI 网关管理台</span>
+        </div>
+      </div>
+      <div class="app-global-header__right">
+        <div class="app-window-controls" aria-label="窗口控制">
+          <button class="app-window-control" type="button" aria-label="最小化" title="最小化" @click="minimizeWindow">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/></svg>
+          </button>
+          <button class="app-window-control app-window-control--close" type="button" aria-label="关闭" title="关闭" @click="closeWindow">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
     <div class="app-frame">
       <aside class="app-sidebar">
-        <div class="app-sidebar-brand">
-          <div class="app-sidebar-logo">
-            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
-          </div>
-          <div class="app-sidebar-brand-text">
-            <h1>icoo proxy</h1>
-            <p>本地 AI 网关</p>
-          </div>
-        </div>
-
         <nav class="app-sidebar-nav">
           <RouterLink
             v-for="item in navItems"
@@ -48,6 +59,12 @@
         </div>
       </main>
     </div>
+
+    <footer class="app-global-footer">
+      <span>icoo proxy</span>
+      <span>本地代理服务由桌面端自动托管</span>
+    </footer>
+
     <UMessage />
   </div>
 </template>
@@ -55,6 +72,7 @@
 <script setup>
 import { computed } from "vue";
 import { RouterLink, RouterView, useRoute } from "vue-router";
+import { Quit, WindowMinimise } from "../wailsjs/runtime/runtime";
 import UMessage from "./components/ued/UMessage.vue";
 
 const route = useRoute();
@@ -74,4 +92,12 @@ const currentTitle = computed(() => {
   const current = navItems.value.find((item) => item.to === route.path);
   return current?.label || "本地 AI 网关管理台";
 });
+
+function minimizeWindow() {
+  WindowMinimise();
+}
+
+function closeWindow() {
+  Quit();
+}
 </script>

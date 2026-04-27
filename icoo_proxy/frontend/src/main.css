@@ -774,16 +774,72 @@ body {
 }
 
 .app-shell {
-    @apply h-screen overflow-hidden text-[#262626];
+    @apply flex h-screen flex-col overflow-hidden text-[#262626];
     background: var(--ued-color-bg-page);
   }
 
+.app-global-header {
+    @apply z-20 flex shrink-0 items-center justify-between bg-white pl-1;
+    --wails-draggable: drag;
+    box-shadow: 0 1px 0 var(--ued-color-divider);
+  }
+
+.app-global-header__brand {
+    @apply flex min-w-0 items-center gap-2;
+  }
+
+.app-global-header__logo {
+    @apply inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-white;
+    background: var(--ued-color-primary);
+  }
+
+.app-global-header__title {
+    @apply flex min-w-0 flex-col leading-tight;
+  }
+
+.app-global-header__title strong {
+    @apply text-sm font-semibold text-[#262626];
+  }
+
+.app-global-header__title span,
+.app-global-header__meta,
+.app-global-footer {
+    @apply text-xs text-[#8c8c8c];
+  }
+
+.app-global-header__meta {
+    @apply ml-4 shrink-0;
+  }
+
+.app-global-header__right {
+    @apply ml-4 flex shrink-0 items-center gap-3;
+  }
+
+.app-window-controls {
+    @apply flex items-center gap-1;
+    --wails-draggable: no-drag;
+  }
+
+.app-window-control {
+    @apply inline-flex h-7 w-7 items-center justify-center rounded-md border border-transparent bg-transparent text-[#8c8c8c] transition hover:bg-[#f5f5f5] hover:text-[#262626];
+    --wails-draggable: no-drag;
+  }
+
+.app-window-control--close {
+    @apply hover:bg-[#fff1f0] hover:text-[#cf1322];
+  }
+
+.app-global-footer {
+    @apply flex h-6 shrink-0 items-center justify-between bg-white px-5;
+    box-shadow: 0 -1px 0 var(--ued-color-divider);
+  }
+
 .app-frame {
-    @apply mx-auto flex h-screen max-w-none overflow-hidden;
+    @apply mx-auto flex min-h-0 w-full flex-1 max-w-none overflow-hidden;
   }
 
 .app-sidebar {
-    @apply hidden h-screen w-[180px] shrink-0 overflow-hidden border-r-0 lg:flex lg:flex-col;
+    @apply hidden min-h-0 w-[180px] shrink-0 overflow-hidden border-r-0 lg:flex lg:flex-col;
     background: var(--ued-color-sidebar);
     box-shadow: 2px 0 6px rgba(0, 21, 41, 0.12);
   }
@@ -852,7 +908,7 @@ body {
   }
 
 .app-main {
-    @apply flex h-screen min-w-0 flex-1 flex-col overflow-hidden border-l-0;
+    @apply flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden border-l-0;
     background: var(--ued-color-bg-page);
   }
 
@@ -992,7 +1048,7 @@ body {
 
 .btn,
 .ued-button {
-    @apply inline-flex items-center justify-center gap-2 rounded-md border px-3 py-0 text-sm font-normal transition disabled:cursor-not-allowed disabled:opacity-60;
+    @apply inline-flex items-center justify-center gap-2 rounded-md border border-transparent px-3 py-0 text-sm font-normal transition disabled:cursor-not-allowed disabled:opacity-60;
     min-height: var(--ued-size-md);
   }
 
@@ -1002,61 +1058,61 @@ body {
 
 .btn-primary,
 .ued-button--primary {
-    border-color: var(--ued-color-primary);
+    border-color: transparent;
     background: var(--ued-color-primary);
     color: var(--ued-color-primary-foreground);
   }
 
   .btn-primary:hover,
   .ued-button--primary:hover {
-    border-color: var(--ued-color-primary-hover);
+    border-color: transparent;
     background: var(--ued-color-primary-hover);
   }
 
   .btn-primary:active,
   .ued-button--primary:active {
-    border-color: var(--ued-color-primary-active);
+    border-color: transparent;
     background: var(--ued-color-primary-active);
   }
 
 .btn-secondary,
 .ued-button--secondary {
-    @apply border-[#d9d9d9] bg-white text-[#262626];
+    @apply border-transparent bg-[#f5f5f5] text-[#262626];
   }
 
   .btn-secondary:hover,
   .ued-button--secondary:hover {
-    border-color: var(--ued-color-primary-hover);
+    border-color: transparent;
     color: var(--ued-color-primary);
   }
 
 .btn-success,
 .ued-button--success {
-    @apply border-[#52c41a] bg-[#52c41a] text-white hover:border-[#73d13d] hover:bg-[#73d13d];
+    @apply border-transparent bg-[#52c41a] text-white hover:border-transparent hover:bg-[#73d13d];
   }
 
 .btn-warning,
 .ued-button--warning {
-    @apply border-[#faad14] bg-[#faad14] text-white hover:border-[#ffc53d] hover:bg-[#ffc53d];
+    @apply border-transparent bg-[#faad14] text-white hover:border-transparent hover:bg-[#ffc53d];
   }
 
 .btn-danger,
 .btn-error,
 .ued-button--danger,
 .ued-button--error {
-    @apply border-[#ff4d4f] bg-[#ff4d4f] text-white hover:border-[#ff7875] hover:bg-[#ff7875];
+    @apply border-transparent bg-[#ff4d4f] text-white hover:border-transparent hover:bg-[#ff7875];
   }
 
 .btn-info,
 .ued-button--info {
-    border-color: color-mix(in srgb, var(--ued-color-primary) 30%, white);
+    border-color: transparent;
     background: var(--ued-color-primary-soft);
     color: var(--ued-color-primary-active);
   }
 
   .btn-info:hover,
   .ued-button--info:hover {
-    border-color: var(--ued-color-primary-hover);
+    border-color: transparent;
     background: color-mix(in srgb, var(--ued-color-primary-soft) 80%, var(--ued-color-primary));
   }
 

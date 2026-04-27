@@ -27,16 +27,9 @@
 
     <template v-else>
       <div class="section-grid grid-cols-2 lg:grid-cols-4">
-        <StatCard icon="globe" label="代理地址" :value="store.data?.proxy_url || '未运行'" tone="primary" />
         <StatCard icon="wifi" label="监听地址" :value="store.data?.listen_addr || '-'" />
         <StatCard icon="key" label="访问模式" :value="store.data?.auth_required ? `${store.data?.auth_key_count || 0} 个授权 Key` : '本地信任模式'" :tone="store.data?.auth_required ? 'success' : 'warning'" />
-        <StatCard icon="tag" label="版本" :value="store.data?.version || '-'" />
-      </div>
-
-      <div class="section-grid grid-cols-2 lg:grid-cols-4">
         <StatCard icon="server" label="供应商" :value="String(store.supplierCount)" tone="info" />
-        <StatCard icon="check" label="已启用" :value="String(store.enabledSupplierCount)" tone="success" />
-        <StatCard icon="activity" label="已健康检查" :value="String(store.checkedSupplierCount)" />
         <StatCard icon="layers" label="启用策略" :value="String(store.activePolicyCount)" tone="info" />
       </div>
 
