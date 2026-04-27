@@ -45,49 +45,40 @@ defineProps({
 
 <style scoped>
 .stat-card {
-  @apply relative flex items-center gap-3 rounded-lg border bg-white px-2 py-2 transition;
-  border-color: var(--ued-color-divider);
-  box-shadow: var(--ued-shadow-card);
+  @apply relative flex min-h-[76px] items-center gap-3 rounded border border-slate-200 bg-white px-3 py-3 transition;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05);
 }
 .stat-card:hover {
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
-  transform: translateY(-1px);
+  border-color: #bfdbfe;
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.08);
 }
 .stat-card__icon {
-  @apply inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-md;
-  background: var(--ued-color-secondary);
-  color: var(--ued-color-text-secondary);
+  @apply inline-flex h-10 w-10 shrink-0 items-center justify-center rounded border border-slate-200 bg-slate-50 text-slate-500;
 }
 .stat-card__body {
   @apply min-w-0 flex-1;
 }
 .stat-card__label {
-  @apply text-xs font-medium text-[#8c8c8c];
+  @apply text-xs font-medium text-slate-500;
 }
 .stat-card__value {
-  font-size: 0.7rem;
-  @apply mt-0.5 break-all font-semibold text-[#262626];
+  @apply mt-1 break-all text-base font-semibold leading-5 text-slate-900;
 }
 
 /* Tones */
 .stat-card--primary .stat-card__icon {
-  background: #e6f4ff;
-  color: #1677ff;
+  @apply border-blue-200 bg-blue-50 text-blue-600;
 }
 .stat-card--success .stat-card__icon {
-  background: #f6ffed;
-  color: #52c41a;
+  @apply border-emerald-200 bg-emerald-50 text-emerald-600;
 }
 .stat-card--warning .stat-card__icon {
-  background: #fffbe6;
-  color: #faad14;
+  @apply border-amber-200 bg-amber-50 text-amber-600;
 }
 .stat-card--danger .stat-card__icon {
-  background: #fff2f0;
-  color: #ff4d4f;
+  @apply border-red-200 bg-red-50 text-red-600;
 }
 .stat-card--info .stat-card__icon {
-  background: #e6f4ff;
-  color: #1677ff;
+  @apply border-cyan-200 bg-cyan-50 text-cyan-700;
 }
 </style>

@@ -23,7 +23,6 @@
       <StatCard icon="endpoint" label="端点总数" :value="String(store.items.length)" tone="info" />
       <StatCard icon="check" label="已启用" :value="String(store.enabledCount)" tone="success" />
       <StatCard icon="layers" label="自定义端点" :value="String(store.customCount)" />
-      <StatCard icon="settings" label="生效方式" value="保存后重载代理" />
     </div>
 
     <PanelBlock title="代理端点">
