@@ -2,7 +2,7 @@
   <section class="page-section">
     <Teleport to="#app-topbar-actions">
       <div class="app-topbar-actions__group">
-        <button class="btn btn-primary" @click="openCreate">新建模型别名</button>
+        <button class="btn btn-primary" @click="openCreate">新建</button>
       </div>
     </Teleport>
 

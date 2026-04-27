@@ -872,7 +872,7 @@ body {
 
 .app-topbar-actions .btn {
     @apply whitespace-nowrap;
-    min-height: 32px;
+    min-height: var(--ued-size-md);
   }
 
 .app-topbar-actions .badge,
@@ -881,7 +881,7 @@ body {
   }
 
 .app-topbar-actions .field-toggle {
-    min-height: 32px;
+    min-height: var(--ued-size-md);
     padding-top: 4px;
     padding-bottom: 4px;
   }
@@ -992,7 +992,7 @@ body {
 
 .btn,
 .ued-button {
-    @apply inline-flex items-center justify-center gap-2 rounded-md border px-3 text-sm font-normal transition disabled:cursor-not-allowed disabled:opacity-60;
+    @apply inline-flex items-center justify-center gap-2 rounded-md border px-3 py-0 text-sm font-normal transition disabled:cursor-not-allowed disabled:opacity-60;
     min-height: var(--ued-size-md);
   }
 
@@ -1495,7 +1495,8 @@ body {
   }
 
 .table-actions .btn {
-    @apply h-7 min-h-0 rounded border-transparent bg-transparent px-1.5 py-0 text-xs leading-none text-[#1677ff] hover:bg-[#e6f4ff] hover:text-[#0958d9];
+    @apply min-h-0 rounded border-transparent bg-transparent px-1.5 py-0 text-xs leading-none text-[#1677ff] hover:bg-[#e6f4ff] hover:text-[#0958d9];
+    height: var(--ued-size-sm);
   }
 
 .table-actions .btn-danger,
