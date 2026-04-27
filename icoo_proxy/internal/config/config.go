@@ -16,7 +16,6 @@ type Config struct {
 	ReadTimeout               time.Duration
 	WriteTimeout              time.Duration
 	ShutdownTimeout           time.Duration
-	ProxyAPIKey               string
 	ProxyAPIKeys              []string
 	AllowUnauthenticatedLocal bool
 	AnthropicBaseURL          string
@@ -41,14 +40,17 @@ func Load(workdir string) (Config, error) {
 	if err := loadDotEnv(filepath.Join(workdir, ".env")); err != nil {
 		return Config{}, err
 	}
+	proxyAPIKeys := mergeUniqueValues(
+		[]string{strings.TrimSpace(os.Getenv("PROXY_API_KEY"))},
+		csvFromEnv("PROXY_API_KEYS"),
+	)
 	cfg := Config{
 		Host:                      strings.TrimSpace(os.Getenv("PROXY_HOST")),
 		Port:                      intFromEnv("PROXY_PORT", 18181),
 		ReadTimeout:               durationFromEnv("PROXY_READ_TIMEOUT_SECONDS", 15*time.Second),
 		WriteTimeout:              durationFromEnv("PROXY_WRITE_TIMEOUT_SECONDS", 300*time.Second),
 		ShutdownTimeout:           durationFromEnv("PROXY_SHUTDOWN_TIMEOUT_SECONDS", 10*time.Second),
-		ProxyAPIKey:               strings.TrimSpace(os.Getenv("PROXY_API_KEY")),
-		ProxyAPIKeys:              csvFromEnv("PROXY_API_KEYS"),
+		ProxyAPIKeys:              proxyAPIKeys,
 		AllowUnauthenticatedLocal: boolFromEnv("PROXY_ALLOW_UNAUTHENTICATED_LOCAL", true),
 		AnthropicVersion:          "2023-06-01",
 		DefaultAnthropicRoute:     strings.TrimSpace(os.Getenv("PROXY_DEFAULT_ANTHROPIC_ROUTE")),
@@ -69,16 +71,7 @@ func Load(workdir string) (Config, error) {
 }
 
 func (c Config) AuthKeys() []string {
-	values := make([]string, 0, len(c.ProxyAPIKeys)+1)
-	for _, item := range append([]string{c.ProxyAPIKey}, c.ProxyAPIKeys...) {
-		for _, part := range strings.Split(item, ",") {
-			value := strings.TrimSpace(part)
-			if value != "" && !slices.Contains(values, value) {
-				values = append(values, value)
-			}
-		}
-	}
-	return values
+	return slices.Clone(c.ProxyAPIKeys)
 }
 
 func (c Config) Addr() string {
@@ -159,11 +152,19 @@ func csvFromEnv(key string) []string {
 	if raw == "" {
 		return nil
 	}
+	return mergeUniqueValues([]string{raw})
+}
+
+func mergeUniqueValues(groups ...[]string) []string {
 	values := make([]string, 0)
-	for _, part := range strings.Split(raw, ",") {
-		value := strings.TrimSpace(part)
-		if value != "" && !slices.Contains(values, value) {
-			values = append(values, value)
+	for _, group := range groups {
+		for _, item := range group {
+			for _, part := range strings.Split(item, ",") {
+				value := strings.TrimSpace(part)
+				if value != "" && !slices.Contains(values, value) {
+					values = append(values, value)
+				}
+			}
 		}
 	}
 	return values

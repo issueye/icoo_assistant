@@ -2,6 +2,38 @@ package endpoint
 
 import "testing"
 
+func TestDefaultDefinitionsMatchSeededBuiltIns(t *testing.T) {
+	svc, err := NewService(t.TempDir())
+	if err != nil {
+		t.Fatalf("new service: %v", err)
+	}
+	t.Cleanup(func() { _ = svc.Close() })
+
+	defs := DefaultDefinitions()
+	items := svc.List()
+	builtIns := make(map[string]Record)
+	for _, item := range items {
+		if item.BuiltIn {
+			builtIns[item.Path] = item
+		}
+	}
+	if len(builtIns) != len(defs) {
+		t.Fatalf("expected %d built-in endpoints, got %d", len(defs), len(builtIns))
+	}
+	for _, def := range defs {
+		item, ok := builtIns[def.Path]
+		if !ok {
+			t.Fatalf("missing built-in endpoint for path %q", def.Path)
+		}
+		if item.Protocol != def.Protocol {
+			t.Fatalf("expected protocol %q for %q, got %q", def.Protocol, def.Path, item.Protocol)
+		}
+		if item.Description != def.Description {
+			t.Fatalf("expected description %q for %q, got %q", def.Description, def.Path, item.Description)
+		}
+	}
+}
+
 func TestServiceSeedsAndUpsertsEndpoints(t *testing.T) {
 	svc, err := NewService(t.TempDir())
 	if err != nil {

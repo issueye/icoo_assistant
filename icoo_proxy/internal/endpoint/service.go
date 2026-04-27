@@ -44,6 +44,25 @@ type UpsertInput struct {
 	Enabled     bool   `json:"enabled"`
 }
 
+type DefaultDefinition struct {
+	Path        string
+	Protocol    string
+	Description string
+}
+
+var defaultDefinitions = []DefaultDefinition{
+	{Path: "/v1/messages", Protocol: "anthropic", Description: "Anthropic Messages official-compatible endpoint."},
+	{Path: "/anthropic/v1/messages", Protocol: "anthropic", Description: "Anthropic namespaced Messages endpoint."},
+	{Path: "/v1/chat/completions", Protocol: "openai-chat", Description: "OpenAI Chat Completions official-compatible endpoint."},
+	{Path: "/openai/v1/chat/completions", Protocol: "openai-chat", Description: "OpenAI namespaced Chat Completions endpoint."},
+	{Path: "/v1/responses", Protocol: "openai-responses", Description: "OpenAI Responses official-compatible endpoint."},
+	{Path: "/openai/v1/responses", Protocol: "openai-responses", Description: "OpenAI namespaced Responses endpoint."},
+}
+
+func DefaultDefinitions() []DefaultDefinition {
+	return append([]DefaultDefinition(nil), defaultDefinitions...)
+}
+
 type Service struct {
 	db *gorm.DB
 }
@@ -169,14 +188,11 @@ func (s *Service) seedDefaults() error {
 
 func defaultEndpoints() []endpointModel {
 	now := time.Now()
-	return []endpointModel{
-		defaultEndpoint("/v1/messages", "anthropic", "Anthropic Messages official-compatible endpoint.", now),
-		defaultEndpoint("/anthropic/v1/messages", "anthropic", "Anthropic namespaced Messages endpoint.", now),
-		defaultEndpoint("/v1/chat/completions", "openai-chat", "OpenAI Chat Completions official-compatible endpoint.", now),
-		defaultEndpoint("/openai/v1/chat/completions", "openai-chat", "OpenAI namespaced Chat Completions endpoint.", now),
-		defaultEndpoint("/v1/responses", "openai-responses", "OpenAI Responses official-compatible endpoint.", now),
-		defaultEndpoint("/openai/v1/responses", "openai-responses", "OpenAI namespaced Responses endpoint.", now),
+	items := make([]endpointModel, 0, len(defaultDefinitions))
+	for _, item := range defaultDefinitions {
+		items = append(items, defaultEndpoint(item.Path, item.Protocol, item.Description, now))
 	}
+	return items
 }
 
 func defaultEndpoint(path, protocol, description string, now time.Time) endpointModel {

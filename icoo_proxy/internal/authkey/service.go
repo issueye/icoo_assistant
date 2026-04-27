@@ -223,13 +223,15 @@ func generateSecret() string {
 	return "icoo_" + hex.EncodeToString(buf)
 }
 
-func MergeSecrets(primary string, extras []string) []string {
-	values := make([]string, 0, len(extras)+1)
-	for _, item := range append([]string{primary}, extras...) {
-		for _, part := range strings.Split(item, ",") {
-			value := strings.TrimSpace(part)
-			if value != "" && !slices.Contains(values, value) {
-				values = append(values, value)
+func MergeSecrets(groups ...[]string) []string {
+	values := make([]string, 0)
+	for _, group := range groups {
+		for _, item := range group {
+			for _, part := range strings.Split(item, ",") {
+				value := strings.TrimSpace(part)
+				if value != "" && !slices.Contains(values, value) {
+					values = append(values, value)
+				}
 			}
 		}
 	}

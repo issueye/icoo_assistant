@@ -386,7 +386,7 @@ func (a *App) startProxy() error {
 		return err
 	}
 	if a.authKeys != nil {
-		cfg.ProxyAPIKeys = authkey.MergeSecrets(cfg.ProxyAPIKey, append(cfg.ProxyAPIKeys, a.authKeys.EnabledSecrets()...))
+		cfg.ProxyAPIKeys = authkey.MergeSecrets(cfg.ProxyAPIKeys, a.authKeys.EnabledSecrets())
 	}
 	cat, err := catalog.New(cfg)
 	if err != nil {
@@ -444,7 +444,19 @@ func openChainLog(path string) (*slog.Logger, *os.File, error) {
 
 func (a *App) endpointRoutes() []api.EndpointRoute {
 	if a.endpoints == nil {
-		return defaultEndpointRoutes()
+		defaults := endpoint.DefaultDefinitions()
+		routes := make([]api.EndpointRoute, 0, len(defaults))
+		for _, item := range defaults {
+			protocol := catalog.Protocol(item.Protocol)
+			switch protocol {
+			case catalog.ProtocolAnthropic, catalog.ProtocolOpenAIChat, catalog.ProtocolOpenAIResponse:
+				routes = append(routes, api.EndpointRoute{
+					Path:     item.Path,
+					Protocol: protocol,
+				})
+			}
+		}
+		return routes
 	}
 	records := a.endpoints.Enabled()
 	routes := make([]api.EndpointRoute, 0, len(records))
@@ -463,9 +475,10 @@ func (a *App) endpointRoutes() []api.EndpointRoute {
 
 func (a *App) enabledEndpointPathsLocked() []string {
 	if a.endpoints == nil {
-		paths := make([]string, 0, len(defaultEndpointRoutes()))
-		for _, route := range defaultEndpointRoutes() {
-			paths = append(paths, route.Path)
+		defaults := endpoint.DefaultDefinitions()
+		paths := make([]string, 0, len(defaults))
+		for _, item := range defaults {
+			paths = append(paths, item.Path)
 		}
 		return paths
 	}
@@ -475,17 +488,6 @@ func (a *App) enabledEndpointPathsLocked() []string {
 		paths = append(paths, item.Path)
 	}
 	return paths
-}
-
-func defaultEndpointRoutes() []api.EndpointRoute {
-	return []api.EndpointRoute{
-		{Path: "/v1/messages", Protocol: catalog.ProtocolAnthropic},
-		{Path: "/anthropic/v1/messages", Protocol: catalog.ProtocolAnthropic},
-		{Path: "/v1/chat/completions", Protocol: catalog.ProtocolOpenAIChat},
-		{Path: "/openai/v1/chat/completions", Protocol: catalog.ProtocolOpenAIChat},
-		{Path: "/v1/responses", Protocol: catalog.ProtocolOpenAIResponse},
-		{Path: "/openai/v1/responses", Protocol: catalog.ProtocolOpenAIResponse},
-	}
 }
 
 func (a *App) stopProxy(ctx context.Context) error {

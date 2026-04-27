@@ -3,6 +3,7 @@ package config
 import (
 	"os"
 	"path/filepath"
+	"reflect"
 	"testing"
 )
 
@@ -10,6 +11,8 @@ func TestLoadUsesEnvFileAndDefaults(t *testing.T) {
 	t.Setenv("PROXY_HOST", "")
 	t.Setenv("PROXY_PORT", "")
 	t.Setenv("PROXY_ALLOW_UNAUTHENTICATED_LOCAL", "")
+	t.Setenv("PROXY_API_KEY", "")
+	t.Setenv("PROXY_API_KEYS", "")
 
 	dir := t.TempDir()
 	envPath := filepath.Join(dir, ".env")
@@ -36,19 +39,26 @@ func TestLoadUsesEnvFileAndDefaults(t *testing.T) {
 	}
 }
 
-func TestAuthKeysMergesLegacyAndListValues(t *testing.T) {
-	cfg := Config{
-		ProxyAPIKey:  "alpha",
-		ProxyAPIKeys: []string{"beta,gamma", "alpha", " gamma "},
+func TestLoadNormalizesLegacyAndListAuthKeys(t *testing.T) {
+	t.Setenv("PROXY_API_KEY", "")
+	t.Setenv("PROXY_API_KEYS", "")
+
+	dir := t.TempDir()
+	envPath := filepath.Join(dir, ".env")
+	data := []byte("PROXY_API_KEY=alpha\nPROXY_API_KEYS=beta,gamma,alpha\n")
+	if err := os.WriteFile(envPath, data, 0o644); err != nil {
+		t.Fatalf("write env: %v", err)
 	}
-	got := cfg.AuthKeys()
+
+	cfg, err := Load(dir)
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
 	want := []string{"alpha", "beta", "gamma"}
-	if len(got) != len(want) {
-		t.Fatalf("expected %#v, got %#v", want, got)
+	if !reflect.DeepEqual(cfg.ProxyAPIKeys, want) {
+		t.Fatalf("expected normalized proxy api keys %#v, got %#v", want, cfg.ProxyAPIKeys)
 	}
-	for i := range want {
-		if got[i] != want[i] {
-			t.Fatalf("expected %#v, got %#v", want, got)
-		}
+	if !reflect.DeepEqual(cfg.AuthKeys(), want) {
+		t.Fatalf("expected auth keys %#v, got %#v", want, cfg.AuthKeys())
 	}
 }

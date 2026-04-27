@@ -1,6 +1,9 @@
 package authkey
 
-import "testing"
+import (
+	"reflect"
+	"testing"
+)
 
 func TestServiceUpsertListsAndDeletesAuthKeys(t *testing.T) {
 	svc, err := NewService(t.TempDir())
@@ -44,14 +47,9 @@ func TestServiceUpsertListsAndDeletesAuthKeys(t *testing.T) {
 }
 
 func TestMergeSecretsDeduplicatesCommaSeparatedValues(t *testing.T) {
-	got := MergeSecrets("alpha", []string{"beta,gamma", "alpha", " gamma "})
+	got := MergeSecrets([]string{"alpha"}, []string{"beta,gamma", "alpha", " gamma "})
 	want := []string{"alpha", "beta", "gamma"}
-	if len(got) != len(want) {
+	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("expected %#v, got %#v", want, got)
-	}
-	for i := range want {
-		if got[i] != want[i] {
-			t.Fatalf("expected %#v, got %#v", want, got)
-		}
 	}
 }
