@@ -66,15 +66,16 @@ body {
 
 @layer components {
   .app-shell {
-    @apply h-screen overflow-hidden bg-[#f4f4f5] text-zinc-950;
+    @apply h-full overflow-hidden bg-[#f4f4f5] text-zinc-950;
   }
 
   .app-frame {
-    @apply mx-auto flex h-screen max-w-none overflow-hidden;
+    height: calc(100% - 1.5rem - 1.7rem);
+    @apply mx-auto flex max-w-none overflow-hidden;
   }
 
   .app-sidebar {
-    @apply hidden h-screen w-[240px] shrink-0 overflow-hidden border-r border-[#e4e4e7] bg-[#f4f4f5] lg:flex lg:flex-col;
+    @apply hidden h-full w-[240px] shrink-0 overflow-hidden border-r border-[#e4e4e7] bg-[#f4f4f5] lg:flex lg:flex-col;
   }
 
   .app-sidebar-brand {
@@ -102,7 +103,7 @@ body {
   }
 
   .app-main {
-    @apply flex h-screen min-w-0 flex-1 flex-col overflow-hidden border-l border-[#e4e4e7] bg-white;
+    @apply flex h-full min-w-0 flex-1 flex-col overflow-hidden border-l border-[#e4e4e7] bg-white;
   }
 
   .app-topbar {
@@ -782,10 +783,15 @@ body {
     @apply z-20 flex shrink-0 items-center justify-between bg-white pl-1;
     --wails-draggable: drag;
     box-shadow: 0 1px 0 var(--ued-color-divider);
+    height: 1.7rem;
   }
 
 .app-global-header__brand {
     @apply flex min-w-0 items-center gap-2;
+  }
+
+.app-sidebar-toggle {
+    @apply inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-transparent bg-transparent text-white/60 transition hover:bg-white/[0.08] hover:text-white;
   }
 
 .app-global-header__logo {
@@ -830,18 +836,75 @@ body {
   }
 
 .app-global-footer {
-    @apply flex h-6 shrink-0 items-center justify-between bg-white px-5;
+    @apply flex h-6 shrink-0 items-center justify-between gap-4 bg-white px-5;
     box-shadow: 0 -1px 0 var(--ued-color-divider);
   }
 
+.app-proxy-status {
+    @apply flex min-w-0 items-center gap-1.5;
+  }
+
+.app-proxy-status__dot {
+    @apply h-1.5 w-1.5 shrink-0 rounded-full bg-[#bfbfbf];
+  }
+
+.app-proxy-status__detail {
+    @apply max-w-[360px] truncate text-[#595959];
+  }
+
+.app-proxy-status--running .app-proxy-status__dot {
+    @apply bg-[#52c41a];
+  }
+
+.app-proxy-status--stopped .app-proxy-status__dot {
+    @apply bg-[#faad14];
+  }
+
+.app-proxy-status--error .app-proxy-status__dot {
+    @apply bg-[#ff4d4f];
+  }
+
+.app-proxy-status--error {
+    @apply text-[#cf1322];
+  }
+
 .app-frame {
-    @apply mx-auto flex min-h-0 w-full flex-1 max-w-none overflow-hidden;
+    height: calc(100% - 1.5rem - 1.7rem);
+    @apply mx-auto flex min-h-0 w-full max-w-none overflow-hidden;
   }
 
 .app-sidebar {
     @apply hidden min-h-0 w-[180px] shrink-0 overflow-hidden border-r-0 lg:flex lg:flex-col;
     background: var(--ued-color-sidebar);
     box-shadow: 2px 0 6px rgba(0, 21, 41, 0.12);
+  }
+
+.app-shell--sidebar-collapsed .app-sidebar {
+    @apply w-[52px];
+  }
+
+.app-shell--sidebar-collapsed .app-sidebar-actions {
+    @apply justify-center px-2;
+  }
+
+.app-shell--sidebar-collapsed .app-sidebar-nav {
+    @apply px-2;
+  }
+
+.app-shell--sidebar-collapsed .app-nav-item {
+    @apply justify-center px-0;
+  }
+
+.app-shell--sidebar-collapsed .app-nav-text {
+    @apply hidden;
+  }
+
+.app-shell--sidebar-collapsed .app-nav-icon {
+    @apply mx-auto;
+  }
+
+.app-shell--sidebar-collapsed .app-nav-item-active::before {
+    @apply hidden;
   }
 
 .app-sidebar-brand {
@@ -864,6 +927,10 @@ body {
   
   .app-sidebar-brand-text {
     @apply mt-1;
+  }
+
+.app-sidebar-actions {
+    @apply flex h-10 shrink-0 items-center justify-end px-2;
   }
 
 .app-sidebar-nav {

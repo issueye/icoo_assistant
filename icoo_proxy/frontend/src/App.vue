@@ -1,5 +1,5 @@
 <template>
-  <div class="app-shell">
+  <div class="app-shell" :class="{ 'app-shell--sidebar-collapsed': sidebarCollapsed }">
     <header class="app-global-header">
       <div class="app-global-header__brand">
         <div class="app-global-header__logo" aria-hidden="true">
@@ -23,6 +23,18 @@
 
     <div class="app-frame">
       <aside class="app-sidebar">
+        <div class="app-sidebar-actions">
+          <button
+            class="app-sidebar-toggle"
+            type="button"
+            :aria-label="sidebarCollapsed ? '展开菜单' : '收缩菜单'"
+            :title="sidebarCollapsed ? '展开菜单' : '收缩菜单'"
+            @click="toggleSidebar"
+          >
+            <svg v-if="sidebarCollapsed" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="18" y2="18"/></svg>
+            <svg v-else xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+          </button>
+        </div>
         <nav class="app-sidebar-nav">
           <RouterLink
             v-for="item in navItems"
@@ -62,7 +74,11 @@
 
     <footer class="app-global-footer">
       <span>icoo proxy</span>
-      <span>本地代理服务由桌面端自动托管</span>
+      <span class="app-proxy-status" :class="proxyStatusClass" :title="proxyStatusDetail">
+        <span class="app-proxy-status__dot" aria-hidden="true"></span>
+        <span>代理{{ proxyStatusText }}</span>
+        <span class="app-proxy-status__detail">{{ proxyStatusDetail }}</span>
+      </span>
     </footer>
 
     <UMessage />
@@ -70,12 +86,16 @@
 </template>
 
 <script setup>
-import { computed } from "vue";
+import { computed, onMounted, onUnmounted, ref } from "vue";
 import { RouterLink, RouterView, useRoute } from "vue-router";
 import { Quit, WindowMinimise } from "../wailsjs/runtime/runtime";
+import { State } from "./lib/wailsApp";
 import UMessage from "./components/ued/UMessage.vue";
 
 const route = useRoute();
+const sidebarCollapsed = ref(false);
+const proxyState = ref(null);
+let proxyStateTimer = null;
 
 const navItems = computed(() => [
   { to: "/", label: "网关概览", icon: "overview" },
@@ -91,6 +111,58 @@ const navItems = computed(() => [
 const currentTitle = computed(() => {
   const current = navItems.value.find((item) => item.to === route.path);
   return current?.label || "本地 AI 网关管理台";
+});
+
+const proxyStatusText = computed(() => {
+  if (!proxyState.value) {
+    return "检测中";
+  }
+  if (proxyState.value.last_error) {
+    return "异常";
+  }
+  return proxyState.value.running ? "运行中" : "已停止";
+});
+
+const proxyStatusDetail = computed(() => {
+  if (!proxyState.value) {
+    return "正在读取代理状态";
+  }
+  if (proxyState.value.last_error) {
+    return proxyState.value.last_error;
+  }
+  return proxyState.value.proxy_url || proxyState.value.listen_addr || "未监听";
+});
+
+const proxyStatusClass = computed(() => ({
+  "app-proxy-status--running": proxyState.value?.running && !proxyState.value?.last_error,
+  "app-proxy-status--stopped": proxyState.value && !proxyState.value.running && !proxyState.value.last_error,
+  "app-proxy-status--error": Boolean(proxyState.value?.last_error),
+}));
+
+function toggleSidebar() {
+  sidebarCollapsed.value = !sidebarCollapsed.value;
+}
+
+async function refreshProxyState() {
+  try {
+    proxyState.value = await State();
+  } catch (error) {
+    proxyState.value = {
+      running: false,
+      last_error: error instanceof Error ? error.message : String(error),
+    };
+  }
+}
+
+onMounted(() => {
+  refreshProxyState();
+  proxyStateTimer = window.setInterval(refreshProxyState, 5000);
+});
+
+onUnmounted(() => {
+  if (proxyStateTimer) {
+    window.clearInterval(proxyStateTimer);
+  }
 });
 
 function minimizeWindow() {
