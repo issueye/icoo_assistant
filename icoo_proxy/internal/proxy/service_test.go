@@ -141,9 +141,9 @@ func TestHandleAppliesConfiguredUpstreamUserAgent(t *testing.T) {
 
 	cfg := config.Config{
 		AllowUnauthenticatedLocal: true,
-		OpenAIBaseURL:             upstream.URL,
-		OpenAIApiKey:              "test-openai-key",
-		OpenAIUserAgent:           "SupplierUA/2.0",
+		OpenAIResponsesBaseURL:    upstream.URL,
+		OpenAIResponsesAPIKey:     "test-openai-key",
+		OpenAIResponsesUserAgent:  "SupplierUA/2.0",
 		DefaultResponsesRoute:     "openai-responses:gpt-4.1-mini",
 	}
 	cat, err := catalog.New(cfg)
@@ -162,6 +162,73 @@ func TestHandleAppliesConfiguredUpstreamUserAgent(t *testing.T) {
 	}
 	if gotUserAgent != "SupplierUA/2.0" {
 		t.Fatalf("expected configured upstream user agent, got %q", gotUserAgent)
+	}
+}
+
+func TestHandleUsesSplitOpenAIUpstreams(t *testing.T) {
+	var gotChatAuth string
+	var gotResponsesAuth string
+	var gotChatUserAgent string
+	var gotResponsesUserAgent string
+
+	chatUpstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotChatAuth = r.Header.Get("Authorization")
+		gotChatUserAgent = r.Header.Get("User-Agent")
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"id":"chatcmpl_split","choices":[{"index":0,"message":{"role":"assistant","content":"chat ok"},"finish_reason":"stop"}]}`))
+	}))
+	defer chatUpstream.Close()
+
+	responsesUpstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotResponsesAuth = r.Header.Get("Authorization")
+		gotResponsesUserAgent = r.Header.Get("User-Agent")
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"id":"resp_split","object":"response","status":"completed","output_text":"responses ok","output":[]}`))
+	}))
+	defer responsesUpstream.Close()
+
+	cfg := config.Config{
+		AllowUnauthenticatedLocal: true,
+		OpenAIChatBaseURL:         chatUpstream.URL,
+		OpenAIChatAPIKey:          "chat-secret",
+		OpenAIChatUserAgent:       "ChatUA/1.0",
+		OpenAIResponsesBaseURL:    responsesUpstream.URL,
+		OpenAIResponsesAPIKey:     "responses-secret",
+		OpenAIResponsesUserAgent:  "ResponsesUA/1.0",
+		DefaultChatRoute:          "openai-chat:gpt-4o-mini",
+		DefaultResponsesRoute:     "openai-responses:gpt-4.1-mini",
+	}
+	cat, err := catalog.New(cfg)
+	if err != nil {
+		t.Fatalf("new catalog: %v", err)
+	}
+	service := New(cfg, cat)
+
+	chatReq := newLoopbackRequest(http.MethodPost, "/v1/chat/completions", bytes.NewBufferString(`{"model":"gpt-4o-mini","messages":[{"role":"user","content":"hello"}]}`))
+	chatRec := httptest.NewRecorder()
+	service.Handle(chatRec, chatReq, catalog.ProtocolOpenAIChat)
+	if chatRec.Code != http.StatusOK {
+		t.Fatalf("expected chat status 200, got %d body=%s", chatRec.Code, chatRec.Body.String())
+	}
+
+	responsesReq := newLoopbackRequest(http.MethodPost, "/v1/responses", bytes.NewBufferString(`{"model":"gpt-4.1-mini","input":"hello"}`))
+	responsesRec := httptest.NewRecorder()
+	service.Handle(responsesRec, responsesReq, catalog.ProtocolOpenAIResponse)
+	if responsesRec.Code != http.StatusOK {
+		t.Fatalf("expected responses status 200, got %d body=%s", responsesRec.Code, responsesRec.Body.String())
+	}
+
+	if gotChatAuth != "Bearer chat-secret" {
+		t.Fatalf("expected chat upstream auth header, got %q", gotChatAuth)
+	}
+	if gotResponsesAuth != "Bearer responses-secret" {
+		t.Fatalf("expected responses upstream auth header, got %q", gotResponsesAuth)
+	}
+	if gotChatUserAgent != "ChatUA/1.0" {
+		t.Fatalf("expected chat upstream user agent, got %q", gotChatUserAgent)
+	}
+	if gotResponsesUserAgent != "ResponsesUA/1.0" {
+		t.Fatalf("expected responses upstream user agent, got %q", gotResponsesUserAgent)
 	}
 }
 
@@ -568,9 +635,9 @@ func TestHandleForcesOnlyStreamResponsesForAnthropicNonStream(t *testing.T) {
 
 	cfg := config.Config{
 		AllowUnauthenticatedLocal: true,
-		OpenAIBaseURL:             upstream.URL,
-		OpenAIApiKey:              "test-openai-key",
-		OpenAIOnlyStream:          true,
+		OpenAIResponsesBaseURL:    upstream.URL,
+		OpenAIResponsesAPIKey:     "test-openai-key",
+		OpenAIResponsesOnlyStream: true,
 		ModelRoutes:               "anthropic-default=openai-responses:gpt-4.1-mini",
 	}
 	cat, err := catalog.New(cfg)
@@ -624,9 +691,9 @@ func TestHandleForcesOnlyStreamResponsesForResponsesNonStream(t *testing.T) {
 
 	cfg := config.Config{
 		AllowUnauthenticatedLocal: true,
-		OpenAIBaseURL:             upstream.URL,
-		OpenAIApiKey:              "test-openai-key",
-		OpenAIOnlyStream:          true,
+		OpenAIResponsesBaseURL:    upstream.URL,
+		OpenAIResponsesAPIKey:     "test-openai-key",
+		OpenAIResponsesOnlyStream: true,
 		DefaultResponsesRoute:     "openai-responses:gpt-4.1-mini",
 	}
 	cat, err := catalog.New(cfg)

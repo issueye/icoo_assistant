@@ -23,6 +23,14 @@ type Config struct {
 	AnthropicVersion          string
 	AnthropicOnlyStream       bool
 	AnthropicUserAgent        string
+	OpenAIChatBaseURL         string
+	OpenAIChatAPIKey          string
+	OpenAIChatOnlyStream      bool
+	OpenAIChatUserAgent       string
+	OpenAIResponsesBaseURL    string
+	OpenAIResponsesAPIKey     string
+	OpenAIResponsesOnlyStream bool
+	OpenAIResponsesUserAgent  string
 	OpenAIBaseURL             string
 	OpenAIApiKey              string
 	OpenAIOnlyStream          bool
@@ -64,6 +72,70 @@ func Load(workdir string) (Config, error) {
 
 func (c Config) AuthKeys() []string {
 	return slices.Clone(c.ProxyAPIKeys)
+}
+
+func (c Config) OpenAIChatBaseURLValue() string {
+	if c.hasSpecificOpenAIChatConfig() {
+		return strings.TrimSpace(c.OpenAIChatBaseURL)
+	}
+	return strings.TrimSpace(c.OpenAIBaseURL)
+}
+
+func (c Config) OpenAIChatAPIKeyValue() string {
+	if c.hasSpecificOpenAIChatConfig() {
+		return strings.TrimSpace(c.OpenAIChatAPIKey)
+	}
+	return strings.TrimSpace(c.OpenAIApiKey)
+}
+
+func (c Config) OpenAIChatUserAgentValue() string {
+	if c.hasSpecificOpenAIChatConfig() {
+		return strings.TrimSpace(c.OpenAIChatUserAgent)
+	}
+	return strings.TrimSpace(c.OpenAIUserAgent)
+}
+
+func (c Config) OpenAIChatOnlyStreamValue() bool {
+	if c.hasSpecificOpenAIChatConfig() {
+		return c.OpenAIChatOnlyStream
+	}
+	return c.OpenAIOnlyStream
+}
+
+func (c Config) OpenAIResponsesBaseURLValue() string {
+	if c.hasSpecificOpenAIResponsesConfig() {
+		return strings.TrimSpace(c.OpenAIResponsesBaseURL)
+	}
+	return strings.TrimSpace(c.OpenAIBaseURL)
+}
+
+func (c Config) OpenAIResponsesAPIKeyValue() string {
+	if c.hasSpecificOpenAIResponsesConfig() {
+		return strings.TrimSpace(c.OpenAIResponsesAPIKey)
+	}
+	return strings.TrimSpace(c.OpenAIApiKey)
+}
+
+func (c Config) OpenAIResponsesUserAgentValue() string {
+	if c.hasSpecificOpenAIResponsesConfig() {
+		return strings.TrimSpace(c.OpenAIResponsesUserAgent)
+	}
+	return strings.TrimSpace(c.OpenAIUserAgent)
+}
+
+func (c Config) OpenAIResponsesOnlyStreamValue() bool {
+	if c.hasSpecificOpenAIResponsesConfig() {
+		return c.OpenAIResponsesOnlyStream
+	}
+	return c.OpenAIOnlyStream
+}
+
+func (c Config) hasSpecificOpenAIChatConfig() bool {
+	return strings.TrimSpace(c.OpenAIChatBaseURL) != "" || strings.TrimSpace(c.OpenAIChatAPIKey) != "" || strings.TrimSpace(c.OpenAIChatUserAgent) != "" || c.OpenAIChatOnlyStream
+}
+
+func (c Config) hasSpecificOpenAIResponsesConfig() bool {
+	return strings.TrimSpace(c.OpenAIResponsesBaseURL) != "" || strings.TrimSpace(c.OpenAIResponsesAPIKey) != "" || strings.TrimSpace(c.OpenAIResponsesUserAgent) != "" || c.OpenAIResponsesOnlyStream
 }
 
 func (c Config) Addr() string {

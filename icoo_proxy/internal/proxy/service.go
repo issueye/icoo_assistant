@@ -583,7 +583,7 @@ func (s *Service) Handle(w http.ResponseWriter, r *http.Request, downstream cata
 func (s *Service) shouldForceUpstreamStream(protocol catalog.Protocol) bool {
 	switch protocol {
 	case catalog.ProtocolOpenAIResponse:
-		return s.cfg.OpenAIOnlyStream
+		return s.cfg.OpenAIResponsesOnlyStreamValue()
 	default:
 		return false
 	}
@@ -627,15 +627,15 @@ func (s *Service) upstreamURL(protocol catalog.Protocol) (string, error) {
 		}
 		return strings.TrimRight(s.cfg.AnthropicBaseURL, "/") + "/v1/messages", nil
 	case catalog.ProtocolOpenAIChat:
-		if strings.TrimSpace(s.cfg.OpenAIApiKey) == "" {
-			return "", fmt.Errorf("openai upstream is not configured")
+		if strings.TrimSpace(s.cfg.OpenAIChatAPIKeyValue()) == "" {
+			return "", fmt.Errorf("openai chat upstream is not configured")
 		}
-		return strings.TrimRight(s.cfg.OpenAIBaseURL, "/") + "/v1/chat/completions", nil
+		return strings.TrimRight(s.cfg.OpenAIChatBaseURLValue(), "/") + "/v1/chat/completions", nil
 	case catalog.ProtocolOpenAIResponse:
-		if strings.TrimSpace(s.cfg.OpenAIApiKey) == "" {
-			return "", fmt.Errorf("openai upstream is not configured")
+		if strings.TrimSpace(s.cfg.OpenAIResponsesAPIKeyValue()) == "" {
+			return "", fmt.Errorf("openai responses upstream is not configured")
 		}
-		return strings.TrimRight(s.cfg.OpenAIBaseURL, "/") + "/v1/responses", nil
+		return strings.TrimRight(s.cfg.OpenAIResponsesBaseURLValue(), "/") + "/v1/responses", nil
 	default:
 		return "", fmt.Errorf("unsupported upstream protocol %q", protocol)
 	}
@@ -656,9 +656,17 @@ func (s *Service) applyRequestHeaders(target *http.Request, source *http.Request
 		if beta := strings.TrimSpace(source.Header.Get("anthropic-beta")); beta != "" {
 			target.Header.Set("anthropic-beta", beta)
 		}
-	case catalog.ProtocolOpenAIChat, catalog.ProtocolOpenAIResponse:
-		target.Header.Set("Authorization", "Bearer "+s.cfg.OpenAIApiKey)
-		if userAgent := strings.TrimSpace(s.cfg.OpenAIUserAgent); userAgent != "" {
+	case catalog.ProtocolOpenAIChat:
+		target.Header.Set("Authorization", "Bearer "+s.cfg.OpenAIChatAPIKeyValue())
+		if userAgent := strings.TrimSpace(s.cfg.OpenAIChatUserAgentValue()); userAgent != "" {
+			target.Header.Set("User-Agent", userAgent)
+		}
+		if value := strings.TrimSpace(source.Header.Get("OpenAI-Beta")); value != "" {
+			target.Header.Set("OpenAI-Beta", value)
+		}
+	case catalog.ProtocolOpenAIResponse:
+		target.Header.Set("Authorization", "Bearer "+s.cfg.OpenAIResponsesAPIKeyValue())
+		if userAgent := strings.TrimSpace(s.cfg.OpenAIResponsesUserAgentValue()); userAgent != "" {
 			target.Header.Set("User-Agent", userAgent)
 		}
 		if value := strings.TrimSpace(source.Header.Get("OpenAI-Beta")); value != "" {

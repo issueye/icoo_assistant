@@ -33,11 +33,16 @@ func ApplyRoutePolicies(cfg config.Config, suppliers *supplier.Service, policies
 			cfg.AnthropicAPIKey = snapshot.APIKey
 			cfg.AnthropicOnlyStream = snapshot.OnlyStream
 			cfg.AnthropicUserAgent = snapshot.UserAgent
-		case "openai-chat", "openai-responses":
-			cfg.OpenAIBaseURL = snapshot.BaseURL
-			cfg.OpenAIApiKey = snapshot.APIKey
-			cfg.OpenAIOnlyStream = snapshot.OnlyStream
-			cfg.OpenAIUserAgent = snapshot.UserAgent
+		case "openai-chat":
+			cfg.OpenAIChatBaseURL = snapshot.BaseURL
+			cfg.OpenAIChatAPIKey = snapshot.APIKey
+			cfg.OpenAIChatOnlyStream = snapshot.OnlyStream
+			cfg.OpenAIChatUserAgent = snapshot.UserAgent
+		case "openai-responses":
+			cfg.OpenAIResponsesBaseURL = snapshot.BaseURL
+			cfg.OpenAIResponsesAPIKey = snapshot.APIKey
+			cfg.OpenAIResponsesOnlyStream = snapshot.OnlyStream
+			cfg.OpenAIResponsesUserAgent = snapshot.UserAgent
 		}
 	}
 	return cfg, nil

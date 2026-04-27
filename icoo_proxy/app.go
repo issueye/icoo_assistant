@@ -302,13 +302,13 @@ func (a *App) State() api.State {
 			},
 			{
 				Protocol:   string(catalog.ProtocolOpenAIChat),
-				BaseURL:    a.cfg.OpenAIBaseURL,
-				Configured: strings.TrimSpace(a.cfg.OpenAIApiKey) != "",
+				BaseURL:    a.cfg.OpenAIChatBaseURLValue(),
+				Configured: strings.TrimSpace(a.cfg.OpenAIChatAPIKeyValue()) != "",
 			},
 			{
 				Protocol:   string(catalog.ProtocolOpenAIResponse),
-				BaseURL:    a.cfg.OpenAIBaseURL,
-				Configured: strings.TrimSpace(a.cfg.OpenAIApiKey) != "",
+				BaseURL:    a.cfg.OpenAIResponsesBaseURLValue(),
+				Configured: strings.TrimSpace(a.cfg.OpenAIResponsesAPIKeyValue()) != "",
 			},
 		},
 		Notes: []string{
@@ -321,14 +321,15 @@ func (a *App) State() api.State {
 			"The desktop app starts the local proxy automatically during startup.",
 		},
 		Checks: map[string]interface{}{
-			"proxy_running":        a.running,
-			"anthropic_ready":      strings.TrimSpace(a.cfg.AnthropicAPIKey) != "",
-			"openai_ready":         strings.TrimSpace(a.cfg.OpenAIApiKey) != "",
-			"route_catalog_ready":  a.catalog != nil,
-			"supplier_store_ready": a.suppliers != nil,
-			"route_policy_ready":   a.policies != nil,
-			"endpoint_store_ready": a.endpoints != nil,
-			"auth_key_store_ready": a.authKeys != nil,
+			"proxy_running":          a.running,
+			"anthropic_ready":        strings.TrimSpace(a.cfg.AnthropicAPIKey) != "",
+			"openai_chat_ready":      strings.TrimSpace(a.cfg.OpenAIChatAPIKeyValue()) != "",
+			"openai_responses_ready": strings.TrimSpace(a.cfg.OpenAIResponsesAPIKeyValue()) != "",
+			"route_catalog_ready":    a.catalog != nil,
+			"supplier_store_ready":   a.suppliers != nil,
+			"route_policy_ready":     a.policies != nil,
+			"endpoint_store_ready":   a.endpoints != nil,
+			"auth_key_store_ready":   a.authKeys != nil,
 		},
 	}
 	if a.catalog != nil {
