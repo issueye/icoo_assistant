@@ -22,12 +22,17 @@ import (
 )
 
 type Service struct {
-	cfg     config.Config
-	catalog *catalog.Catalog
-	client  *http.Client
-	logger  *slog.Logger
-	mu      sync.RWMutex
-	recent  []api.RequestView
+	cfg      config.Config
+	catalog  *catalog.Catalog
+	client   *http.Client
+	logger   *slog.Logger
+	recorder RequestRecorder
+	mu       sync.RWMutex
+	recent   []api.RequestView
+}
+
+type RequestRecorder interface {
+	RecordRequest(api.RequestView) error
 }
 
 func New(cfg config.Config, catalog *catalog.Catalog) *Service {
@@ -40,6 +45,12 @@ func New(cfg config.Config, catalog *catalog.Catalog) *Service {
 
 func (s *Service) SetChainLogger(logger *slog.Logger) {
 	s.logger = logger
+}
+
+func (s *Service) SetRequestRecorder(recorder RequestRecorder) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.recorder = recorder
 }
 
 func (s *Service) Handle(w http.ResponseWriter, r *http.Request, downstream consts.Protocol) {
@@ -969,9 +980,16 @@ func (s *Service) logRequest(item api.RequestView) {
 
 func (s *Service) recordRequest(item api.RequestView) {
 	s.mu.Lock()
-	defer s.mu.Unlock()
 	s.recent = append([]api.RequestView{item}, s.recent...)
 	if len(s.recent) > 12 {
 		s.recent = s.recent[:12]
+	}
+	recorder := s.recorder
+	s.mu.Unlock()
+
+	if recorder != nil {
+		if err := recorder.RecordRequest(item); err != nil {
+			log.Printf("icoo_proxy traffic record error: %v", err)
+		}
 	}
 }

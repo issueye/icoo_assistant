@@ -24,6 +24,7 @@ import (
 	"icoo_proxy/internal/routepolicy"
 	"icoo_proxy/internal/server"
 	"icoo_proxy/internal/supplier"
+	"icoo_proxy/internal/traffic"
 	"icoo_proxy/internal/uiprefs"
 )
 
@@ -40,6 +41,7 @@ type App struct {
 	policies   *routepolicy.Service
 	aliases    *modelalias.Service
 	endpoints  *endpoint.Service
+	traffic    *traffic.Service
 	uiPrefs    *uiprefs.Service
 	httpServer *http.Server
 	chainLog   *os.File
@@ -91,6 +93,12 @@ func (a *App) startup(ctx context.Context) {
 		return
 	}
 	a.authKeys = authKeys
+	trafficStore, err := traffic.NewService(root)
+	if err != nil {
+		a.setLastError(err.Error())
+		return
+	}
+	a.traffic = trafficStore
 	uiPrefs, err := uiprefs.NewService(root)
 	if err != nil {
 		a.setLastError(err.Error())
@@ -112,6 +120,9 @@ func (a *App) shutdown(ctx context.Context) {
 	}
 	if a.uiPrefs != nil {
 		_ = a.uiPrefs.Close()
+	}
+	if a.traffic != nil {
+		_ = a.traffic.Close()
 	}
 	if a.aliases != nil {
 		_ = a.aliases.Close()
@@ -422,7 +433,9 @@ func (a *App) State() api.State {
 			})
 		}
 	}
-	if a.service != nil {
+	if a.traffic != nil {
+		state.RecentRequests = a.traffic.ListRecent(100)
+	} else if a.service != nil {
 		state.RecentRequests = a.service.RecentRequests()
 	}
 	if a.endpoints != nil {
@@ -476,6 +489,9 @@ func (a *App) startProxy() error {
 		return err
 	}
 	service := proxy.New(cfg, cat)
+	if a.traffic != nil {
+		service.SetRequestRecorder(a.traffic)
+	}
 	chainLogger, chainLog, err := openChainLog(cfg.ChainLogPath)
 	if err != nil {
 		return err
