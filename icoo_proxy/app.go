@@ -24,6 +24,7 @@ import (
 	"icoo_proxy/internal/routepolicy"
 	"icoo_proxy/internal/server"
 	"icoo_proxy/internal/supplier"
+	"icoo_proxy/internal/uiprefs"
 )
 
 type App struct {
@@ -39,6 +40,7 @@ type App struct {
 	policies   *routepolicy.Service
 	aliases    *modelalias.Service
 	endpoints  *endpoint.Service
+	uiPrefs    *uiprefs.Service
 	httpServer *http.Server
 	chainLog   *os.File
 	listenAddr string
@@ -89,6 +91,12 @@ func (a *App) startup(ctx context.Context) {
 		return
 	}
 	a.authKeys = authKeys
+	uiPrefs, err := uiprefs.NewService(root)
+	if err != nil {
+		a.setLastError(err.Error())
+		return
+	}
+	a.uiPrefs = uiPrefs
 	if err := a.startProxy(); err != nil {
 		a.setLastError(err.Error())
 	}
@@ -101,6 +109,9 @@ func (a *App) shutdown(ctx context.Context) {
 	}
 	if a.authKeys != nil {
 		_ = a.authKeys.Close()
+	}
+	if a.uiPrefs != nil {
+		_ = a.uiPrefs.Close()
 	}
 	if a.aliases != nil {
 		_ = a.aliases.Close()
@@ -135,6 +146,23 @@ func (a *App) SaveProjectSettings(input projectsettings.Values) (projectsettings
 		return projectsettings.Values{}, err
 	}
 	return projectsettings.Load(a.root)
+}
+
+func (a *App) GetUiPrefs() (uiprefs.Preferences, error) {
+	if a.uiPrefs == nil {
+		return uiprefs.Preferences{}, context.Canceled
+	}
+	return a.uiPrefs.Get()
+}
+
+func (a *App) SaveUiPrefs(input uiprefs.Preferences) (uiprefs.Preferences, error) {
+	if a.uiPrefs == nil {
+		return uiprefs.Preferences{}, context.Canceled
+	}
+	if err := a.uiPrefs.Save(input); err != nil {
+		return uiprefs.Preferences{}, err
+	}
+	return a.uiPrefs.Get()
 }
 
 func (a *App) ReloadProxy() (map[string]interface{}, error) {

@@ -30,6 +30,51 @@
       {{ store.success }}
     </div>
 
+    <PanelBlock title="外观设置">
+      <div class="divide-y divide-[#f0f0f0]">
+        <div class="py-3">
+          <p class="text-sm font-medium text-[#262626]">主题颜色</p>
+          <p class="mt-0.5 text-[11px] text-[#8c8c8c]">选择界面主色调，即时生效。</p>
+          <div class="mt-3 flex flex-wrap gap-2">
+            <button
+              v-for="opt in uiPrefs.themeOptions"
+              :key="opt.value"
+              class="theme-swatch"
+              :class="{ 'theme-swatch--active': uiPrefs.theme === opt.value }"
+              :title="opt.label"
+              @click="uiPrefs.setTheme(opt.value)"
+            >
+              <span class="theme-swatch__dot" :style="{ background: opt.color }" />
+              <span class="theme-swatch__label">{{ opt.label }}</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="py-3">
+          <p class="text-sm font-medium text-[#262626]">按钮尺寸</p>
+          <p class="mt-0.5 text-[11px] text-[#8c8c8c]">调整全局按钮和输入控件的大小。</p>
+          <div class="mt-3 flex flex-wrap gap-2">
+            <button
+              v-for="opt in uiPrefs.buttonSizeOptions"
+              :key="opt.value"
+              class="btn"
+              :class="uiPrefs.buttonSize === opt.value ? 'btn-primary' : 'btn-secondary'"
+              @click="uiPrefs.setButtonSize(opt.value)"
+            >
+              {{ opt.label }}
+            </button>
+          </div>
+          <div class="mt-3">
+            <UButton size="sm">示例按钮 SM</UButton>
+            <span class="mx-1" />
+            <UButton size="md">示例按钮 MD</UButton>
+            <span class="mx-1" />
+            <UButton size="lg">示例按钮 LG</UButton>
+          </div>
+        </div>
+      </div>
+    </PanelBlock>
+
     <div v-if="store.loading" class="empty-state">
       正在加载项目设置...
     </div>
@@ -87,9 +132,12 @@ import { onMounted } from "vue";
 import FieldLabel from "../components/FieldLabel.vue";
 import PanelBlock from "../components/PanelBlock.vue";
 import StatCard from "../components/StatCard.vue";
+import UButton from "../components/ued/UButton.vue";
 import { useSettingsStore } from "../stores/settings";
+import { useUiPrefsStore } from "../stores/uiPrefs";
 
 const store = useSettingsStore();
+const uiPrefs = useUiPrefsStore();
 
 async function submit() {
   await store.save();

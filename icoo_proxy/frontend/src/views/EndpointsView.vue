@@ -33,7 +33,7 @@
       <div v-else-if="!store.items.length" class="empty-state">
         当前尚未配置端点。
       </div>
-      <UTable v-else :columns="tableColumns" :rows="store.items" action-width="168px" fixed>
+      <UTable v-else :columns="tableColumns" :rows="store.items" action-width="90px" fixed>
         <template #cell-path="{ row }">
           <UTag code size="xs">{{ row.path }}</UTag>
         </template>
@@ -142,7 +142,7 @@ const confirmState = reactive({
 const tableColumns = [
   { key: "path", title: "路径", width: "22%" },
   { key: "protocol", title: "协议", width: "16%" },
-  { key: "description", title: "说明", width: "34%" },
+  { key: "description", title: "说明", width: "65%" },
   { key: "builtIn", title: "类型", width: "10%" },
   { key: "enabled", title: "状态", width: "10%" },
 ];

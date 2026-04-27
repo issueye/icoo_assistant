@@ -32,7 +32,7 @@
       <div v-else-if="!store.items.length" class="empty-state">
         当前尚未添加授权 Key。本地信任模式仍按配置生效。
       </div>
-      <UTable v-else :columns="tableColumns" :rows="store.items" action-width="220px" fixed>
+      <UTable v-else :columns="tableColumns" :rows="store.items" action-width="160px" fixed>
         <template #cell-name="{ row }">
           <p class="font-medium text-[#262626]">{{ row.name }}</p>
           <p class="mt-0.5 table-meta">更新时间：{{ formatDateTime(row.updated_at) }}</p>

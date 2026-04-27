@@ -34,6 +34,10 @@ export function GetProjectSettings() {
   return window['go']['main']['App']['GetProjectSettings']();
 }
 
+export function GetUiPrefs() {
+  return window['go']['main']['App']['GetUiPrefs']();
+}
+
 export function ListAuthKeys() {
   return window['go']['main']['App']['ListAuthKeys']();
 }
@@ -84,6 +88,10 @@ export function SaveRoutePolicy(arg1) {
 
 export function SaveSupplier(arg1) {
   return window['go']['main']['App']['SaveSupplier'](arg1);
+}
+
+export function SaveUiPrefs(arg1) {
+  return window['go']['main']['App']['SaveUiPrefs'](arg1);
 }
 
 export function State() {

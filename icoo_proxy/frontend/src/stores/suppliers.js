@@ -5,6 +5,7 @@ import {
   ListRoutePolicies,
   ListSupplierHealth,
   ListSuppliers,
+  SaveRoutePolicy,
   SaveSupplier,
 } from "../lib/wailsApp";
 

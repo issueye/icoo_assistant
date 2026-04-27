@@ -626,19 +626,23 @@ body {
   }
 
   .ued-button--xs {
-    @apply h-6 rounded px-2 text-xs;
+    @apply min-h-0 rounded px-2 text-xs;
+    height: var(--ued-size-xs);
   }
 
   .ued-button--sm {
-    @apply h-7 rounded-md px-2.5 text-xs;
+    @apply min-h-0 rounded-md px-2.5 text-xs;
+    height: var(--ued-size-sm);
   }
 
   .ued-button--md {
-    @apply h-[34px] px-3 text-sm;
+    @apply min-h-0 px-3 text-sm;
+    height: var(--ued-size-md);
   }
 
   .ued-button--lg {
-    @apply h-10 px-4 text-sm;
+    @apply min-h-0 px-4 text-sm;
+    height: var(--ued-size-lg);
   }
 
   .ued-button--block {
@@ -789,7 +793,8 @@ body {
   }
   
   .app-sidebar-logo {
-    @apply mb-0 inline-flex h-8 w-8 items-center justify-center rounded-md bg-white/10 text-white/80;
+    @apply mb-0 inline-flex h-8 w-8 items-center justify-center rounded-md text-white/80;
+    background: var(--ued-color-primary);
   }
   
   .app-sidebar-brand h1 {
@@ -822,7 +827,8 @@ body {
   }
 
 .app-nav-item-active {
-    @apply border-transparent bg-[#1677ff] text-white shadow-none;
+    @apply border-transparent text-white shadow-none;
+    background: var(--ued-color-primary);
   }
   
   .app-nav-item-active .app-nav-icon {
@@ -967,11 +973,16 @@ body {
 .field-input:focus,
 .ued-input:focus {
     border-color: var(--ued-color-primary);
-    box-shadow: 0 0 0 2px rgba(22, 119, 255, 0.12);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--ued-color-primary) 12%, transparent);
   }
 
 .field-checkbox {
-    @apply h-4 w-4 rounded border-[#d9d9d9] text-[#1677ff] focus:ring-[#1677ff];
+    @apply h-4 w-4 rounded border-[#d9d9d9];
+    color: var(--ued-color-primary);
+  }
+
+  .field-checkbox:focus {
+    ring-color: var(--ued-color-primary);
   }
 
 .field-toggle {
@@ -991,18 +1002,32 @@ body {
 
 .btn-primary,
 .ued-button--primary {
-    @apply border-[#1677ff] bg-[#1677ff] text-white hover:border-[#4096ff] hover:bg-[#4096ff];
-    box-shadow: 0 2px 0 rgba(5, 145, 255, 0.1);
+    border-color: var(--ued-color-primary);
+    background: var(--ued-color-primary);
+    color: var(--ued-color-primary-foreground);
   }
 
-.btn-primary:active,
-.ued-button--primary:active {
-    @apply border-[#0958d9] bg-[#0958d9];
+  .btn-primary:hover,
+  .ued-button--primary:hover {
+    border-color: var(--ued-color-primary-hover);
+    background: var(--ued-color-primary-hover);
+  }
+
+  .btn-primary:active,
+  .ued-button--primary:active {
+    border-color: var(--ued-color-primary-active);
+    background: var(--ued-color-primary-active);
   }
 
 .btn-secondary,
 .ued-button--secondary {
-    @apply border-[#d9d9d9] bg-white text-[#262626] hover:border-[#4096ff] hover:text-[#1677ff];
+    @apply border-[#d9d9d9] bg-white text-[#262626];
+  }
+
+  .btn-secondary:hover,
+  .ued-button--secondary:hover {
+    border-color: var(--ued-color-primary-hover);
+    color: var(--ued-color-primary);
   }
 
 .btn-success,
@@ -1024,27 +1049,44 @@ body {
 
 .btn-info,
 .ued-button--info {
-    @apply border-[#91caff] bg-[#e6f4ff] text-[#0958d9] hover:border-[#4096ff] hover:bg-[#bae0ff];
+    border-color: color-mix(in srgb, var(--ued-color-primary) 30%, white);
+    background: var(--ued-color-primary-soft);
+    color: var(--ued-color-primary-active);
   }
 
-.ued-button--ghost {
-    @apply border-transparent bg-transparent text-[#262626] hover:bg-[#f5f5f5] hover:text-[#1677ff];
+  .btn-info:hover,
+  .ued-button--info:hover {
+    border-color: var(--ued-color-primary-hover);
+    background: color-mix(in srgb, var(--ued-color-primary-soft) 80%, var(--ued-color-primary));
+  }
+
+  .ued-button--ghost {
+    @apply border-transparent bg-transparent text-[#262626];
+  }
+
+  .ued-button--ghost:hover {
+    background: var(--ued-color-primary-soft);
+    color: var(--ued-color-primary);
   }
 
 .ued-button--xs {
-    @apply h-6 min-h-0 rounded px-2 text-xs;
+    @apply min-h-0 rounded px-2 text-xs;
+    height: var(--ued-size-xs);
   }
 
 .ued-button--sm {
-    @apply h-7 min-h-0 rounded px-2.5 text-xs;
+    @apply min-h-0 rounded px-2.5 text-xs;
+    height: var(--ued-size-sm);
   }
 
 .ued-button--md {
-    @apply h-8 min-h-0 px-3 text-sm;
+    @apply min-h-0 px-3 text-sm;
+    height: var(--ued-size-md);
   }
 
 .ued-button--lg {
-    @apply h-10 min-h-0 px-4 text-sm;
+    @apply min-h-0 px-4 text-sm;
+    height: var(--ued-size-lg);
   }
 
 .badge {
@@ -1509,7 +1551,7 @@ body {
   }
 
 .ued-select__control:focus {
-    box-shadow: 0 0 0 2px rgba(22, 119, 255, 0.12);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--ued-color-primary) 12%, transparent);
   }
 
 .ued-select.is-error .ued-select__control {
@@ -1607,4 +1649,35 @@ body {
 
 .ued-modal__footer {
     @apply shrink-0 border-t border-[#f0f0f0] bg-[#fafafa] px-5 py-3;
+  }
+
+  .theme-swatch {
+    @apply inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-xs transition;
+    border-color: var(--ued-color-border);
+    background: white;
+    cursor: pointer;
+  }
+
+  .theme-swatch:hover {
+    border-color: var(--ued-color-primary-hover);
+    background: var(--ued-color-primary-soft);
+  }
+
+  .theme-swatch--active {
+    border-color: var(--ued-color-primary);
+    background: var(--ued-color-primary-soft);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--ued-color-primary) 12%, transparent);
+  }
+
+  .theme-swatch__dot {
+    @apply inline-block h-3.5 w-3.5 rounded-full border border-white/50 shadow-sm;
+  }
+
+  .theme-swatch__label {
+    @apply text-[#595959];
+  }
+
+  .theme-swatch--active .theme-swatch__label {
+    @apply font-medium;
+    color: var(--ued-color-primary);
   }

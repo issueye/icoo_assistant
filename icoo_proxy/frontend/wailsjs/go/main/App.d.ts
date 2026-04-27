@@ -5,6 +5,7 @@ import {authkey} from '../models';
 import {endpoint} from '../models';
 import {modelalias} from '../models';
 import {projectsettings} from '../models';
+import {uiprefs} from '../models';
 import {routepolicy} from '../models';
 import {api} from '../models';
 
@@ -23,6 +24,8 @@ export function GetAuthKeySecret(arg1:string):Promise<string>;
 export function GetOverview():Promise<Record<string, any>>;
 
 export function GetProjectSettings():Promise<projectsettings.Values>;
+
+export function GetUiPrefs():Promise<uiprefs.Preferences>;
 
 export function ListAuthKeys():Promise<Array<authkey.Record>>;
 
@@ -49,5 +52,7 @@ export function SaveProjectSettings(arg1:projectsettings.Values):Promise<project
 export function SaveRoutePolicy(arg1:routepolicy.UpsertInput):Promise<Array<routepolicy.Record>>;
 
 export function SaveSupplier(arg1:supplier.UpsertInput):Promise<Array<supplier.Record>>;
+
+export function SaveUiPrefs(arg1:uiprefs.Preferences):Promise<uiprefs.Preferences>;
 
 export function State():Promise<api.State>;

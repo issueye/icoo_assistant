@@ -83,7 +83,7 @@
           v-else
           :columns="supplierTableColumns"
           :rows="store.items"
-          action-width="320px"
+          action-width="220px"
           fixed
           min-width="1480px"
           table-class="supplier-table"

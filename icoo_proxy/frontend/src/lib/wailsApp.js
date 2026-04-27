@@ -47,6 +47,10 @@ export function GetProjectSettings() {
   return invoke("GetProjectSettings");
 }
 
+export function GetUiPrefs() {
+  return invoke("GetUiPrefs");
+}
+
 export function ListAuthKeys() {
   return invoke("ListAuthKeys");
 }
@@ -97,6 +101,10 @@ export function SaveRoutePolicy(arg1) {
 
 export function SaveSupplier(arg1) {
   return invoke("SaveSupplier", arg1);
+}
+
+export function SaveUiPrefs(arg1) {
+  return invoke("SaveUiPrefs", arg1);
 }
 
 export function State() {
