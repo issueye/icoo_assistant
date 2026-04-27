@@ -27,6 +27,10 @@ export function DeleteEndpoint(arg1) {
   return invoke("DeleteEndpoint", arg1);
 }
 
+export function DeleteModelAlias(arg1) {
+  return invoke("DeleteModelAlias", arg1);
+}
+
 export function DeleteSupplier(arg1) {
   return invoke("DeleteSupplier", arg1);
 }
@@ -49,6 +53,10 @@ export function ListAuthKeys() {
 
 export function ListEndpoints() {
   return invoke("ListEndpoints");
+}
+
+export function ListModelAliases() {
+  return invoke("ListModelAliases");
 }
 
 export function ListRoutePolicies() {
@@ -75,16 +83,20 @@ export function SaveEndpoint(arg1) {
   return invoke("SaveEndpoint", arg1);
 }
 
+export function SaveModelAlias(arg1) {
+  return invoke("SaveModelAlias", arg1);
+}
+
+export function SaveProjectSettings(arg1) {
+  return invoke("SaveProjectSettings", arg1);
+}
+
 export function SaveRoutePolicy(arg1) {
   return invoke("SaveRoutePolicy", arg1);
 }
 
 export function SaveSupplier(arg1) {
   return invoke("SaveSupplier", arg1);
-}
-
-export function SaveProjectSettings(arg1) {
-  return invoke("SaveProjectSettings", arg1);
 }
 
 export function State() {

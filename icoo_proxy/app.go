@@ -18,6 +18,7 @@ import (
 	"icoo_proxy/internal/config"
 	"icoo_proxy/internal/consts"
 	"icoo_proxy/internal/endpoint"
+	"icoo_proxy/internal/modelalias"
 	"icoo_proxy/internal/projectsettings"
 	"icoo_proxy/internal/proxy"
 	"icoo_proxy/internal/routepolicy"
@@ -36,6 +37,7 @@ type App struct {
 	suppliers  *supplier.Service
 	health     *supplier.HealthService
 	policies   *routepolicy.Service
+	aliases    *modelalias.Service
 	endpoints  *endpoint.Service
 	httpServer *http.Server
 	chainLog   *os.File
@@ -69,6 +71,12 @@ func (a *App) startup(ctx context.Context) {
 		return
 	}
 	a.policies = policies
+	aliases, err := modelalias.NewService(root)
+	if err != nil {
+		a.setLastError(err.Error())
+		return
+	}
+	a.aliases = aliases
 	endpoints, err := endpoint.NewService(root)
 	if err != nil {
 		a.setLastError(err.Error())
@@ -93,6 +101,9 @@ func (a *App) shutdown(ctx context.Context) {
 	}
 	if a.authKeys != nil {
 		_ = a.authKeys.Close()
+	}
+	if a.aliases != nil {
+		_ = a.aliases.Close()
 	}
 	if a.policies != nil {
 		_ = a.policies.Close()
@@ -198,6 +209,39 @@ func (a *App) ListRoutePolicies() []routepolicy.Record {
 		return nil
 	}
 	return a.policies.List()
+}
+
+func (a *App) ListModelAliases() []modelalias.Record {
+	if a.aliases == nil {
+		return nil
+	}
+	return a.aliases.List()
+}
+
+func (a *App) SaveModelAlias(input modelalias.UpsertInput) ([]modelalias.Record, error) {
+	if a.aliases == nil {
+		return nil, context.Canceled
+	}
+	if _, err := a.aliases.Upsert(input); err != nil {
+		return nil, err
+	}
+	if _, err := a.ReloadProxy(); err != nil {
+		return nil, err
+	}
+	return a.aliases.List(), nil
+}
+
+func (a *App) DeleteModelAlias(id string) ([]modelalias.Record, error) {
+	if a.aliases == nil {
+		return nil, context.Canceled
+	}
+	if err := a.aliases.Delete(id); err != nil {
+		return nil, err
+	}
+	if _, err := a.ReloadProxy(); err != nil {
+		return nil, err
+	}
+	return a.aliases.List(), nil
 }
 
 func (a *App) SaveRoutePolicy(input routepolicy.UpsertInput) ([]routepolicy.Record, error) {
@@ -322,15 +366,16 @@ func (a *App) State() api.State {
 			"The desktop app starts the local proxy automatically during startup.",
 		},
 		Checks: map[string]interface{}{
-			"proxy_running":          a.running,
-			"anthropic_ready":        strings.TrimSpace(a.cfg.AnthropicAPIKey) != "",
-			"openai_chat_ready":      strings.TrimSpace(a.cfg.OpenAIChatAPIKeyValue()) != "",
-			"openai_responses_ready": strings.TrimSpace(a.cfg.OpenAIResponsesAPIKeyValue()) != "",
-			"route_catalog_ready":    a.catalog != nil,
-			"supplier_store_ready":   a.suppliers != nil,
-			"route_policy_ready":     a.policies != nil,
-			"endpoint_store_ready":   a.endpoints != nil,
-			"auth_key_store_ready":   a.authKeys != nil,
+			"proxy_running":           a.running,
+			"anthropic_ready":         strings.TrimSpace(a.cfg.AnthropicAPIKey) != "",
+			"openai_chat_ready":       strings.TrimSpace(a.cfg.OpenAIChatAPIKeyValue()) != "",
+			"openai_responses_ready":  strings.TrimSpace(a.cfg.OpenAIResponsesAPIKeyValue()) != "",
+			"route_catalog_ready":     a.catalog != nil,
+			"supplier_store_ready":    a.suppliers != nil,
+			"route_policy_ready":      a.policies != nil,
+			"model_alias_store_ready": a.aliases != nil,
+			"endpoint_store_ready":    a.endpoints != nil,
+			"auth_key_store_ready":    a.authKeys != nil,
 		},
 	}
 	if a.catalog != nil {
@@ -374,7 +419,6 @@ func (a *App) State() api.State {
 				SupplierID:         policy.SupplierID,
 				SupplierName:       policy.SupplierName,
 				UpstreamProtocol:   policy.UpstreamProtocol,
-				TargetModel:        policy.TargetModel,
 				Enabled:            policy.Enabled,
 				UpdatedAt:          policy.UpdatedAt,
 				CreatedAt:          policy.CreatedAt,
@@ -395,6 +439,9 @@ func (a *App) startProxy() error {
 	}
 	if a.authKeys != nil {
 		cfg.ProxyAPIKeys = authkey.MergeSecrets(cfg.ProxyAPIKeys, a.authKeys.EnabledSecrets())
+	}
+	if a.aliases != nil {
+		cfg.ModelRoutes = modelalias.MergeEntries(cfg.ModelRoutes, a.aliases.EnabledEntries())
 	}
 	cat, err := catalog.New(cfg)
 	if err != nil {

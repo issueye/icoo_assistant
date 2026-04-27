@@ -76,6 +76,9 @@ func NewService(root string) (*Service, error) {
 		return nil, err
 	}
 	svc := &Service{db: db}
+	if err := svc.seedDefaults(); err != nil {
+		return nil, err
+	}
 	return svc, nil
 }
 
@@ -172,6 +175,43 @@ func (s *Service) Upsert(input UpsertInput) (Record, error) {
 		return Record{}, err
 	}
 	return toRecord(current), nil
+}
+
+func (s *Service) seedDefaults() error {
+	defaults := []supplierModel{
+		{
+			ID:          "supplier-anthropic-default",
+			Name:        "Anthropic Default",
+			Protocol:    consts.ProtocolAnthropic,
+			BaseURL:     "https://api.anthropic.com",
+			Enabled:     false,
+			Description: "Built-in Anthropic supplier template.",
+		},
+		{
+			ID:          "supplier-openai-responses-default",
+			Name:        "OpenAI Responses Default",
+			Protocol:    consts.ProtocolOpenAIResponses,
+			BaseURL:     "https://api.openai.com",
+			Enabled:     false,
+			Description: "Built-in OpenAI Responses supplier template.",
+		},
+	}
+	for _, item := range defaults {
+		var count int64
+		if err := s.db.Model(&supplierModel{}).Where("id = ?", item.ID).Count(&count).Error; err != nil {
+			return err
+		}
+		if count > 0 {
+			continue
+		}
+		now := time.Now()
+		item.CreatedAt = now
+		item.UpdatedAt = now
+		if err := s.db.Create(&item).Error; err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (s *Service) Delete(id string) error {

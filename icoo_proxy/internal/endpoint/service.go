@@ -77,6 +77,9 @@ func NewService(root string) (*Service, error) {
 		return nil, err
 	}
 	svc := &Service{db: db}
+	if err := svc.seedDefaults(); err != nil {
+		return nil, err
+	}
 	return svc, nil
 }
 
@@ -152,6 +155,33 @@ func (s *Service) Upsert(input UpsertInput) (Record, error) {
 		return Record{}, err
 	}
 	return toRecord(current), nil
+}
+
+func (s *Service) seedDefaults() error {
+	for _, item := range DefaultDefinitions() {
+		var count int64
+		if err := s.db.Model(&endpointModel{}).Where("path = ?", item.Path).Count(&count).Error; err != nil {
+			return err
+		}
+		if count > 0 {
+			continue
+		}
+		now := time.Now()
+		current := endpointModel{
+			ID:          buildID(item.Path),
+			Path:        item.Path,
+			Protocol:    item.Protocol,
+			Description: item.Description,
+			Enabled:     true,
+			BuiltIn:     true,
+			CreatedAt:   now,
+			UpdatedAt:   now,
+		}
+		if err := s.db.Create(&current).Error; err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (s *Service) Delete(id string) error {

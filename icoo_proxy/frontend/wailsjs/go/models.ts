@@ -58,7 +58,6 @@ export namespace api {
 	    supplier_id: string;
 	    supplier_name: string;
 	    upstream_protocol: string;
-	    target_model: string;
 	    enabled: boolean;
 	    updated_at: string;
 	    created_at: string;
@@ -74,7 +73,6 @@ export namespace api {
 	        this.supplier_id = source["supplier_id"];
 	        this.supplier_name = source["supplier_name"];
 	        this.upstream_protocol = source["upstream_protocol"];
-	        this.target_model = source["target_model"];
 	        this.enabled = source["enabled"];
 	        this.updated_at = source["updated_at"];
 	        this.created_at = source["created_at"];
@@ -279,6 +277,55 @@ export namespace endpoint {
 
 }
 
+export namespace modelalias {
+	
+	export class Record {
+	    id: string;
+	    name: string;
+	    upstream_protocol: string;
+	    model: string;
+	    enabled: boolean;
+	    updated_at: string;
+	    created_at: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new Record(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.name = source["name"];
+	        this.upstream_protocol = source["upstream_protocol"];
+	        this.model = source["model"];
+	        this.enabled = source["enabled"];
+	        this.updated_at = source["updated_at"];
+	        this.created_at = source["created_at"];
+	    }
+	}
+	export class UpsertInput {
+	    id: string;
+	    name: string;
+	    upstream_protocol: string;
+	    model: string;
+	    enabled: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new UpsertInput(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.name = source["name"];
+	        this.upstream_protocol = source["upstream_protocol"];
+	        this.model = source["model"];
+	        this.enabled = source["enabled"];
+	    }
+	}
+
+}
+
 export namespace projectsettings {
 	
 	export class Values {
@@ -318,7 +365,6 @@ export namespace routepolicy {
 	    supplier_id: string;
 	    supplier_name: string;
 	    upstream_protocol: string;
-	    target_model: string;
 	    enabled: boolean;
 	    updated_at: string;
 	    created_at: string;
@@ -334,7 +380,6 @@ export namespace routepolicy {
 	        this.supplier_id = source["supplier_id"];
 	        this.supplier_name = source["supplier_name"];
 	        this.upstream_protocol = source["upstream_protocol"];
-	        this.target_model = source["target_model"];
 	        this.enabled = source["enabled"];
 	        this.updated_at = source["updated_at"];
 	        this.created_at = source["created_at"];
@@ -344,7 +389,6 @@ export namespace routepolicy {
 	    id: string;
 	    downstream_protocol: string;
 	    supplier_id: string;
-	    target_model: string;
 	    enabled: boolean;
 	
 	    static createFrom(source: any = {}) {
@@ -356,7 +400,6 @@ export namespace routepolicy {
 	        this.id = source["id"];
 	        this.downstream_protocol = source["downstream_protocol"];
 	        this.supplier_id = source["supplier_id"];
-	        this.target_model = source["target_model"];
 	        this.enabled = source["enabled"];
 	    }
 	}
@@ -406,7 +449,7 @@ export namespace supplier {
 	    enabled: boolean;
 	    description: string;
 	    models: string[];
-	    tags: string[];
+	    default_model: string;
 	    updated_at: string;
 	    created_at: string;
 	
@@ -426,7 +469,7 @@ export namespace supplier {
 	        this.enabled = source["enabled"];
 	        this.description = source["description"];
 	        this.models = source["models"];
-	        this.tags = source["tags"];
+	        this.default_model = source["default_model"];
 	        this.updated_at = source["updated_at"];
 	        this.created_at = source["created_at"];
 	    }
@@ -442,7 +485,7 @@ export namespace supplier {
 	    enabled: boolean;
 	    description: string;
 	    models: string;
-	    tags: string;
+	    default_model: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new UpsertInput(source);
@@ -460,7 +503,7 @@ export namespace supplier {
 	        this.enabled = source["enabled"];
 	        this.description = source["description"];
 	        this.models = source["models"];
-	        this.tags = source["tags"];
+	        this.default_model = source["default_model"];
 	    }
 	}
 

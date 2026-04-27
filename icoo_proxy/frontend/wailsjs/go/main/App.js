@@ -14,6 +14,10 @@ export function DeleteEndpoint(arg1) {
   return window['go']['main']['App']['DeleteEndpoint'](arg1);
 }
 
+export function DeleteModelAlias(arg1) {
+  return window['go']['main']['App']['DeleteModelAlias'](arg1);
+}
+
 export function DeleteSupplier(arg1) {
   return window['go']['main']['App']['DeleteSupplier'](arg1);
 }
@@ -38,6 +42,10 @@ export function ListEndpoints() {
   return window['go']['main']['App']['ListEndpoints']();
 }
 
+export function ListModelAliases() {
+  return window['go']['main']['App']['ListModelAliases']();
+}
+
 export function ListRoutePolicies() {
   return window['go']['main']['App']['ListRoutePolicies']();
 }
@@ -60,6 +68,10 @@ export function SaveAuthKey(arg1) {
 
 export function SaveEndpoint(arg1) {
   return window['go']['main']['App']['SaveEndpoint'](arg1);
+}
+
+export function SaveModelAlias(arg1) {
+  return window['go']['main']['App']['SaveModelAlias'](arg1);
 }
 
 export function SaveProjectSettings(arg1) {

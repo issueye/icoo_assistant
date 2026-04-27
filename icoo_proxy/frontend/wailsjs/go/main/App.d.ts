@@ -3,6 +3,7 @@
 import {supplier} from '../models';
 import {authkey} from '../models';
 import {endpoint} from '../models';
+import {modelalias} from '../models';
 import {projectsettings} from '../models';
 import {routepolicy} from '../models';
 import {api} from '../models';
@@ -12,6 +13,8 @@ export function CheckSupplier(arg1:string):Promise<Array<supplier.HealthRecord>>
 export function DeleteAuthKey(arg1:string):Promise<Array<authkey.Record>>;
 
 export function DeleteEndpoint(arg1:string):Promise<Array<endpoint.Record>>;
+
+export function DeleteModelAlias(arg1:string):Promise<Array<modelalias.Record>>;
 
 export function DeleteSupplier(arg1:string):Promise<Array<supplier.Record>>;
 
@@ -25,6 +28,8 @@ export function ListAuthKeys():Promise<Array<authkey.Record>>;
 
 export function ListEndpoints():Promise<Array<endpoint.Record>>;
 
+export function ListModelAliases():Promise<Array<modelalias.Record>>;
+
 export function ListRoutePolicies():Promise<Array<routepolicy.Record>>;
 
 export function ListSupplierHealth():Promise<Array<supplier.HealthRecord>>;
@@ -36,6 +41,8 @@ export function ReloadProxy():Promise<Record<string, any>>;
 export function SaveAuthKey(arg1:authkey.UpsertInput):Promise<Array<authkey.Record>>;
 
 export function SaveEndpoint(arg1:endpoint.UpsertInput):Promise<Array<endpoint.Record>>;
+
+export function SaveModelAlias(arg1:modelalias.UpsertInput):Promise<Array<modelalias.Record>>;
 
 export function SaveProjectSettings(arg1:projectsettings.Values):Promise<projectsettings.Values>;
 

@@ -56,7 +56,6 @@ type RoutePolicyView struct {
 	SupplierID         string          `json:"supplier_id"`
 	SupplierName       string          `json:"supplier_name"`
 	UpstreamProtocol   consts.Protocol `json:"upstream_protocol"`
-	TargetModel        string          `json:"target_model"`
 	Enabled            bool            `json:"enabled"`
 	UpdatedAt          string          `json:"updated_at"`
 	CreatedAt          string          `json:"created_at"`

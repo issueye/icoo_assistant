@@ -112,7 +112,7 @@
               <p class="mt-1 text-xs text-slate-500">下游协议</p>
             </div>
             <p class="text-sm text-slate-700">{{ policy.supplier_name || "未分配供应商" }}</p>
-            <p class="text-sm text-slate-500">{{ policy.upstream_protocol || "-" }} | {{ policy.target_model || "-" }}</p>
+            <p class="text-sm text-slate-500">{{ policy.upstream_protocol || "-" }} | 默认模型来自供应商</p>
             <UTag :variant="policy.enabled ? 'success' : 'error'">
               {{ policy.enabled ? "启用中" : "已停用" }}
             </UTag>
@@ -133,13 +133,6 @@ import StatCard from "../components/StatCard.vue";
 import UTag from "../components/ued/UTag.vue";
 
 const store = useOverviewStore();
-
-function formatDateTime(value) {
-  if (!value) {
-    return "未检查";
-  }
-  return new Date(value).toLocaleString();
-}
 
 onMounted(() => {
   store.load();
