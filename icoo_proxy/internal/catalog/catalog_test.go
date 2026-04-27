@@ -1,6 +1,7 @@
 package catalog
 
 import (
+	"strings"
 	"testing"
 
 	"icoo_proxy/internal/config"
@@ -36,14 +37,17 @@ func TestResolveUsesAliasAndDefaults(t *testing.T) {
 
 	route, err = cat.Resolve(consts.ProtocolOpenAIChat, "gpt-4.1")
 	if err != nil {
-		t.Fatalf("resolve passthrough: %v", err)
+		t.Fatalf("resolve explicit model via default supplier: %v", err)
 	}
 	if route.Upstream != consts.ProtocolOpenAIChat || route.Model != "gpt-4.1" {
-		t.Fatalf("unexpected passthrough route: %+v", route)
+		t.Fatalf("unexpected explicit model route: %+v", route)
+	}
+	if route.Name != "gpt-4.1" {
+		t.Fatalf("expected route name to preserve requested model, got %q", route.Name)
 	}
 }
 
-func TestResolveUsesDefaultWhenRequestedModelMatchesDefaultTarget(t *testing.T) {
+func TestResolveUsesDefaultUpstreamWhenRequestedModelDiffersFromDefaultTarget(t *testing.T) {
 	cfg := config.Config{
 		DefaultAnthropicRoute: "openai-responses:gpt-5.4",
 	}
@@ -52,11 +56,29 @@ func TestResolveUsesDefaultWhenRequestedModelMatchesDefaultTarget(t *testing.T) 
 		t.Fatalf("new catalog: %v", err)
 	}
 
-	route, err := cat.Resolve(consts.ProtocolAnthropic, "gpt-5.4")
+	route, err := cat.Resolve(consts.ProtocolAnthropic, "claude-3-7-sonnet")
 	if err != nil {
-		t.Fatalf("resolve default target model: %v", err)
+		t.Fatalf("resolve default upstream route: %v", err)
 	}
-	if route.Upstream != consts.ProtocolOpenAIResponses || route.Model != "gpt-5.4" {
-		t.Fatalf("unexpected default target route: %+v", route)
+	if route.Upstream != consts.ProtocolOpenAIResponses {
+		t.Fatalf("expected anthropic requests to use default upstream, got %+v", route)
+	}
+	if route.Model != "claude-3-7-sonnet" {
+		t.Fatalf("expected requested model to be preserved, got %+v", route)
+	}
+}
+
+func TestResolveReturnsErrorWhenExplicitModelHasNoDefaultRoute(t *testing.T) {
+	cat, err := New(config.Config{})
+	if err != nil {
+		t.Fatalf("new catalog: %v", err)
+	}
+
+	_, err = cat.Resolve(consts.ProtocolOpenAIChat, "gpt-4.1")
+	if err == nil {
+		t.Fatalf("expected missing default route error")
+	}
+	if !strings.Contains(err.Error(), "no default route") {
+		t.Fatalf("unexpected error: %v", err)
 	}
 }

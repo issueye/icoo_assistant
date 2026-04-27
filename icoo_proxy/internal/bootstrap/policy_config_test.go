@@ -147,16 +147,13 @@ func TestApplyRoutePoliciesRejectsSupplierWithoutDefaultModel(t *testing.T) {
 		t.Fatalf("new policies: %v", err)
 	}
 	t.Cleanup(func() { _ = policies.Close() })
-	if _, err := policies.Upsert(routepolicy.UpsertInput{
+	_, err = policies.Upsert(routepolicy.UpsertInput{
 		DownstreamProtocol: "openai-chat",
 		SupplierID:         record.ID,
 		Enabled:            true,
-	}); err != nil {
-		t.Fatalf("upsert policy: %v", err)
-	}
-	_, err = ApplyRoutePolicies(config.Config{}, suppliers, policies)
+	})
 	if err == nil {
-		t.Fatalf("expected missing default model error")
+		t.Fatalf("expected upsert to reject supplier without default model")
 	}
 	if !strings.Contains(err.Error(), "default model is required") {
 		t.Fatalf("unexpected error: %v", err)

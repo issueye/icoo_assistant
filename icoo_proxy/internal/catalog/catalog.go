@@ -72,8 +72,8 @@ func (c *Catalog) Resolve(downstream consts.Protocol, requestedModel string) (Ro
 	model := strings.TrimSpace(requestedModel)
 	slog.Info("resolve model", "model", model, "downstream", downstream)
 
+	route, ok := c.defaults[downstream]
 	if model == "" {
-		route, ok := c.defaults[downstream]
 		if !ok {
 			return Route{}, fmt.Errorf("missing model and no default route for %s", downstream)
 		}
@@ -82,14 +82,13 @@ func (c *Catalog) Resolve(downstream consts.Protocol, requestedModel string) (Ro
 	if route, ok := c.aliases[model]; ok {
 		return route, nil
 	}
-	if route, ok := c.defaults[downstream]; ok && route.Model == model {
-		return route, nil
+	if !ok {
+		return Route{}, fmt.Errorf("requested model %q has no default route for %s", model, downstream)
 	}
-	return Route{
-		Name:     model,
-		Upstream: downstream,
-		Model:    model,
-	}, nil
+	copyRoute := route
+	copyRoute.Name = model
+	copyRoute.Model = model
+	return copyRoute, nil
 }
 
 func (c *Catalog) Defaults() []Route {

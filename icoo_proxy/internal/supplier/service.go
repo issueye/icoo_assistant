@@ -253,7 +253,7 @@ func normalizeProtocol(raw string) consts.Protocol {
 	case consts.ProtocolAnthropic, consts.ProtocolOpenAIChat, consts.ProtocolOpenAIResponses:
 		return value
 	default:
-		return value
+		return consts.Protocol("")
 	}
 }
 

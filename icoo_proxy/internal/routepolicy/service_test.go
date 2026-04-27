@@ -15,9 +15,10 @@ func TestUpsertAndList(t *testing.T) {
 	svc, err := NewService(t.TempDir(), fakeResolver{
 		items: map[string]SupplierSnapshot{
 			"openai-default": {
-				ID:       "openai-default",
-				Name:     "OpenAI Default",
-				Protocol: "openai-responses",
+				ID:           "openai-default",
+				Name:         "OpenAI Default",
+				Protocol:     "openai-responses",
+				DefaultModel: "gpt-4.1-mini",
 			},
 		},
 	})
@@ -50,9 +51,10 @@ func TestFindEnabledBySupplierID(t *testing.T) {
 	svc, err := NewService(t.TempDir(), fakeResolver{
 		items: map[string]SupplierSnapshot{
 			"openai-default": {
-				ID:       "openai-default",
-				Name:     "OpenAI Default",
-				Protocol: "openai-responses",
+				ID:           "openai-default",
+				Name:         "OpenAI Default",
+				Protocol:     "openai-responses",
+				DefaultModel: "gpt-4.1-mini",
 			},
 		},
 	})

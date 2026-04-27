@@ -283,6 +283,103 @@ func TestHandleAnthropicPassthroughRewritesAliasModel(t *testing.T) {
 	}
 }
 
+func TestHandleAnthropicExplicitModelUsesMappedResponsesSupplier(t *testing.T) {
+	var gotPath string
+	var gotAuth string
+	var gotModel string
+
+	responsesUpstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotPath = r.URL.Path
+		gotAuth = r.Header.Get("Authorization")
+		var payload map[string]interface{}
+		if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+			t.Fatalf("decode upstream body: %v", err)
+		}
+		gotModel, _ = payload["model"].(string)
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"id":"resp_explicit","object":"response","status":"completed","output_text":"ok","output":[]}`))
+	}))
+	defer responsesUpstream.Close()
+
+	cfg := config.Config{
+		AllowUnauthenticatedLocal: true,
+		OpenAIResponsesBaseURL:    responsesUpstream.URL,
+		OpenAIResponsesAPIKey:     "responses-secret",
+		DefaultAnthropicRoute:     "openai-responses:gpt-5.4",
+	}
+	cat, err := catalog.New(cfg)
+	if err != nil {
+		t.Fatalf("new catalog: %v", err)
+	}
+	service := New(cfg, cat)
+
+	req := newLoopbackRequest(http.MethodPost, "/v1/messages", bytes.NewBufferString(`{"model":"claude-3-7-sonnet","messages":[{"role":"user","content":"hello"}],"max_tokens":64}`))
+	rec := httptest.NewRecorder()
+
+	service.Handle(rec, req, consts.ProtocolAnthropic)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d body=%s", rec.Code, rec.Body.String())
+	}
+	if gotPath != "/v1/responses" {
+		t.Fatalf("expected anthropic request to route to responses upstream path, got %q", gotPath)
+	}
+	if gotAuth != "Bearer responses-secret" {
+		t.Fatalf("expected responses auth header, got %q", gotAuth)
+	}
+	if gotModel != "claude-3-7-sonnet" {
+		t.Fatalf("expected explicit request model to be preserved, got %q", gotModel)
+	}
+}
+
+func TestHandleAnthropicExplicitUnknownModelReturnsUpstreamError(t *testing.T) {
+	var gotPath string
+	var gotModel string
+
+	responsesUpstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotPath = r.URL.Path
+		var payload map[string]interface{}
+		if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+			t.Fatalf("decode upstream body: %v", err)
+		}
+		gotModel, _ = payload["model"].(string)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		_, _ = w.Write([]byte(`{"error":{"type":"invalid_request_error","message":"The model 'claude-missing' does not exist"}}`))
+	}))
+	defer responsesUpstream.Close()
+
+	cfg := config.Config{
+		AllowUnauthenticatedLocal: true,
+		OpenAIResponsesBaseURL:    responsesUpstream.URL,
+		OpenAIResponsesAPIKey:     "responses-secret",
+		DefaultAnthropicRoute:     "openai-responses:gpt-5.4",
+	}
+	cat, err := catalog.New(cfg)
+	if err != nil {
+		t.Fatalf("new catalog: %v", err)
+	}
+	service := New(cfg, cat)
+
+	req := newLoopbackRequest(http.MethodPost, "/v1/messages", bytes.NewBufferString(`{"model":"claude-missing","messages":[{"role":"user","content":"hello"}],"max_tokens":64}`))
+	rec := httptest.NewRecorder()
+
+	service.Handle(rec, req, consts.ProtocolAnthropic)
+
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("expected upstream bad request to pass through, got %d body=%s", rec.Code, rec.Body.String())
+	}
+	if gotPath != "/v1/responses" {
+		t.Fatalf("expected unknown model request to still hit responses upstream path, got %q", gotPath)
+	}
+	if gotModel != "claude-missing" {
+		t.Fatalf("expected upstream request model to be preserved, got %q", gotModel)
+	}
+	if !strings.Contains(rec.Body.String(), "claude-missing") {
+		t.Fatalf("expected upstream model error to be returned, got %s", rec.Body.String())
+	}
+}
+
 func TestHandleTranslatesChatToResponses(t *testing.T) {
 	var gotModel string
 	var gotInstructions string

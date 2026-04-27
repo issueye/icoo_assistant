@@ -135,6 +135,9 @@ func (s *Service) Upsert(input UpsertInput) (Record, error) {
 	if !ok {
 		return Record{}, fmt.Errorf("supplier not found")
 	}
+	if input.Enabled && strings.TrimSpace(supplier.DefaultModel) == "" {
+		return Record{}, fmt.Errorf("supplier %q default model is required when enabling a route policy", supplier.Name)
+	}
 
 	id := strings.TrimSpace(input.ID)
 	var existing policyModel
