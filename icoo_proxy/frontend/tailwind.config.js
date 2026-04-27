@@ -3,6 +3,12 @@ export default {
   content: ["./index.html", "./src/**/*.{vue,js}"],
   theme: {
     extend: {
+      screens: {
+        sm: "480px",
+        md: "640px",
+        lg: "800px",
+        xl: "1024px",
+      },
       colors: {
         ant: {
           primary: "#1677ff",

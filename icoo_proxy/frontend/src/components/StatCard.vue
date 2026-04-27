@@ -45,7 +45,7 @@ defineProps({
 
 <style scoped>
 .stat-card {
-  @apply relative flex items-center gap-3 rounded-lg border bg-white px-4 py-3.5 transition;
+  @apply relative flex items-center gap-3 rounded-lg border bg-white px-2 py-2 transition;
   border-color: var(--ued-color-divider);
   box-shadow: var(--ued-shadow-card);
 }
@@ -65,8 +65,8 @@ defineProps({
   @apply text-xs font-medium text-[#8c8c8c];
 }
 .stat-card__value {
-  font-size: 0.4rem;
-  @apply mt-0.5 break-all text-base text-[#262626];
+  font-size: 0.7rem;
+  @apply mt-0.5 break-all font-semibold text-[#262626];
 }
 
 /* Tones */

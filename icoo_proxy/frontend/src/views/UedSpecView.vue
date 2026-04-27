@@ -8,7 +8,7 @@
     </div>
 
     <PanelBlock title="设计 Token">
-      <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+      <div class="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
         <div class="sub-card">
           <p class="text-sm font-medium text-slate-900">主色</p>
           <div class="mt-3 flex items-center gap-2">
@@ -36,7 +36,7 @@
       </div>
     </PanelBlock>
 
-    <div class="section-grid xl:grid-cols-2">
+    <div class="section-grid lg:grid-cols-2">
       <PanelBlock title="按钮">
         <div class="space-y-3">
           <div class="flex flex-wrap gap-2">
@@ -66,7 +66,7 @@
       </PanelBlock>
     </div>
 
-    <div class="section-grid xl:grid-cols-2">
+    <div class="section-grid lg:grid-cols-2">
       <PanelBlock title="Alert 警告提示">
         <div class="space-y-3">
           <UAlert type="success" message="保存成功，配置已写入本地代理。" />
@@ -87,7 +87,7 @@
       </PanelBlock>
     </div>
 
-    <div class="section-grid xl:grid-cols-2">
+    <div class="section-grid lg:grid-cols-2">
       <PanelBlock title="Loading 加载">
         <div class="space-y-4">
           <div class="flex flex-wrap items-center gap-5">
@@ -128,7 +128,7 @@
       </PanelBlock>
     </div>
 
-    <div class="section-grid xl:grid-cols-2">
+    <div class="section-grid lg:grid-cols-2">
       <PanelBlock title="输入与下拉">
         <div class="space-y-3">
           <UInput v-model="form.name" label="名称" placeholder="请输入供应商名称" hint="表单项采用上 label、下控件布局。" />

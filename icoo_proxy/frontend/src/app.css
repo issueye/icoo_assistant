@@ -128,7 +128,7 @@
 }
 
 .stat-card {
-  padding: 18px 18px 16px;
+  @apply p-2;
 }
 
 .stat-label,

@@ -177,7 +177,7 @@ body {
   }
 
   .stat-card {
-    @apply rounded-xl border border-[#e4e4e7] bg-[#fafafa] px-3 py-3;
+    @apply rounded-xl border border-[#e4e4e7] bg-[#fafafa] px-2 py-2;
   }
 
   .stat-label {
@@ -881,7 +881,7 @@ body {
   }
 
 .app-content {
-    @apply min-h-0 flex-1 overflow-y-auto px-5 py-4;
+    @apply min-h-0 flex-1 overflow-y-auto px-3 py-2;
     background: var(--ued-color-bg-page);
     scrollbar-color: #d9d9d9 transparent;
     scrollbar-width: thin;
@@ -929,7 +929,7 @@ body {
   }
 
 .stat-card {
-    @apply rounded-lg border bg-white px-3.5 py-3;
+    @apply rounded-lg border bg-white px-2 py-2;
     border-color: var(--ued-color-divider);
     box-shadow: var(--ued-shadow-card);
   }
@@ -943,7 +943,7 @@ body {
   }
 
 .section-grid {
-    @apply grid gap-4;
+    @apply grid gap-2;
   }
 
 .list-card,
