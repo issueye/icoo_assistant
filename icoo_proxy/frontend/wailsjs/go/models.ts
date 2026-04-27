@@ -282,6 +282,8 @@ export namespace modelalias {
 	export class Record {
 	    id: string;
 	    name: string;
+	    supplier_id: string;
+	    supplier_name: string;
 	    upstream_protocol: string;
 	    model: string;
 	    enabled: boolean;
@@ -296,6 +298,8 @@ export namespace modelalias {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.id = source["id"];
 	        this.name = source["name"];
+	        this.supplier_id = source["supplier_id"];
+	        this.supplier_name = source["supplier_name"];
 	        this.upstream_protocol = source["upstream_protocol"];
 	        this.model = source["model"];
 	        this.enabled = source["enabled"];
@@ -306,7 +310,7 @@ export namespace modelalias {
 	export class UpsertInput {
 	    id: string;
 	    name: string;
-	    upstream_protocol: string;
+	    supplier_id: string;
 	    model: string;
 	    enabled: boolean;
 	
@@ -318,7 +322,7 @@ export namespace modelalias {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.id = source["id"];
 	        this.name = source["name"];
-	        this.upstream_protocol = source["upstream_protocol"];
+	        this.supplier_id = source["supplier_id"];
 	        this.model = source["model"];
 	        this.enabled = source["enabled"];
 	    }

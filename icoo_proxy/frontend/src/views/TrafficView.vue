@@ -11,9 +11,9 @@
           <span v-if="store.refreshing" class="btn__spinner" />
           {{ store.refreshing ? "刷新中..." : "刷新流量" }}
         </button>
-        <label class="field-toggle rounded-lg">
+        <label class="field-toggle rounded-md">
           <input :checked="store.autoRefresh" type="checkbox" class="field-checkbox" @change="store.toggleAutoRefresh" />
-          每 6 秒自动刷新
+          自动刷新
         </label>
       </div>
     </Teleport>
@@ -22,16 +22,16 @@
       {{ store.error }}
     </div>
 
-    <div class="section-grid xl:grid-cols-4">
-      <StatCard label="最近请求数" :value="String(store.requests.length)" />
-      <StatCard label="成功请求数" :value="String(store.successCount)" />
-      <StatCard label="错误请求数" :value="String(store.errorCount)" />
-      <StatCard label="平均耗时" :value="`${store.averageLatency} ms`" />
+    <div class="section-grid grid-cols-2 lg:grid-cols-4">
+      <StatCard icon="activity" label="最近请求数" :value="String(store.requests.length)" tone="info" />
+      <StatCard icon="check" label="成功请求" :value="String(store.successCount)" tone="success" />
+      <StatCard icon="alert" label="错误请求" :value="String(store.errorCount)" tone="danger" />
+      <StatCard icon="timer" label="平均耗时" :value="`${store.averageLatency} ms`" />
     </div>
 
-    <div class="section-grid xl:grid-cols-[320px_minmax(0,1fr)]">
+    <div class="section-grid lg:grid-cols-[280px_minmax(0,1fr)]">
       <PanelBlock title="筛选条件">
-        <div class="space-y-4">
+        <div class="space-y-3">
           <USelect
             label="协议"
             :model-value="store.filter"
@@ -39,14 +39,14 @@
             @update:model-value="store.setFilter"
           />
 
-          <div class="divide-y divide-[#eeeeF2] border-y border-[#eeeeF2]">
+          <div class="divide-y divide-[#f0f0f0]">
             <div class="flex items-center justify-between gap-3 py-2">
-              <p class="text-sm text-slate-500">最近刷新时间</p>
-              <p class="text-right text-sm font-medium text-slate-900">{{ formatDateTime(store.lastUpdatedAt) }}</p>
+              <p class="table-meta">最近刷新</p>
+              <p class="text-right text-sm font-medium text-[#262626]">{{ formatDateTime(store.lastUpdatedAt) }}</p>
             </div>
             <div class="flex items-center justify-between gap-3 py-2">
-              <p class="text-sm text-slate-500">当前筛选结果</p>
-              <p class="text-right text-sm font-medium text-slate-900">{{ store.filteredRequests.length }} 条</p>
+              <p class="table-meta">筛选结果</p>
+              <p class="text-right text-sm font-medium text-[#262626]">{{ store.filteredRequests.length }} 条</p>
             </div>
           </div>
         </div>
@@ -68,28 +68,28 @@
           table-class="traffic-table"
         >
           <template #cell-requestId="{ row }">
-            <p class="font-medium text-slate-900 table-cell-wrap">{{ row.request_id }}</p>
+            <p class="font-medium text-[#262626] table-cell-wrap">{{ row.request_id }}</p>
           </template>
           <template #cell-route="{ row }">
-            <p class="text-sm text-slate-700 table-cell-wrap">{{ row.downstream }}</p>
-            <p class="mt-1 table-meta table-cell-wrap">{{ row.upstream || "-" }}</p>
+            <p class="text-sm text-[#595959] table-cell-wrap">{{ row.downstream }}</p>
+            <p class="mt-0.5 table-meta table-cell-wrap">{{ row.upstream || "-" }}</p>
           </template>
           <template #cell-model="{ row }">
-            <UTag code>{{ row.model || "-" }}</UTag>
+            <UTag code size="xs">{{ row.model || "-" }}</UTag>
           </template>
           <template #cell-status="{ row }">
-            <UTag :variant="row.status_code >= 400 ? 'error' : 'success'">
+            <UTag :variant="row.status_code >= 400 ? 'error' : 'success'" size="xs">
               {{ row.status_code || "-" }}
             </UTag>
           </template>
           <template #cell-duration="{ row }">
-            <UTag>{{ row.duration_ms }} ms</UTag>
+            <UTag size="xs">{{ row.duration_ms }} ms</UTag>
           </template>
           <template #cell-createdAt="{ row }">
             <span class="table-meta">{{ formatDateTime(row.created_at) }}</span>
           </template>
           <template #cell-error="{ row }">
-            <p v-if="row.error" class="text-sm text-rose-700 table-cell-wrap">{{ row.error }}</p>
+            <p v-if="row.error" class="text-sm text-[#cf1322] table-cell-wrap">{{ row.error }}</p>
             <span v-else class="table-meta">无</span>
           </template>
         </UTable>

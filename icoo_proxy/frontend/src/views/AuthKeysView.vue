@@ -10,7 +10,7 @@
           @click="store.reloadProxy"
         >
           <span v-if="store.reloading" class="btn__spinner" />
-          {{ store.reloading ? "重载中..." : "重载代理生效" }}
+          {{ store.reloading ? "重载中..." : "重载代理" }}
         </button>
       </div>
     </Teleport>
@@ -19,10 +19,10 @@
       {{ store.error }}
     </div>
 
-    <div class="section-grid xl:grid-cols-3">
-      <StatCard label="Key 总数" :value="String(store.items.length)" />
-      <StatCard label="已启用" :value="String(store.enabledCount)" />
-      <StatCard label="使用方式" value="Bearer / x-api-key" />
+    <div class="section-grid grid-cols-3">
+      <StatCard icon="key" label="Key 总数" :value="String(store.items.length)" tone="info" />
+      <StatCard icon="check" label="已启用" :value="String(store.enabledCount)" tone="success" />
+      <StatCard icon="endpoint" label="使用方式" value="Bearer / x-api-key" />
     </div>
 
     <PanelBlock title="代理访问授权">
@@ -34,17 +34,17 @@
       </div>
       <UTable v-else :columns="tableColumns" :rows="store.items" action-width="220px" fixed>
         <template #cell-name="{ row }">
-          <p class="font-medium text-slate-950">{{ row.name }}</p>
-          <p class="mt-1 table-meta">更新时间：{{ formatDateTime(row.updated_at) }}</p>
+          <p class="font-medium text-[#262626]">{{ row.name }}</p>
+          <p class="mt-0.5 table-meta">更新时间：{{ formatDateTime(row.updated_at) }}</p>
         </template>
         <template #cell-secret="{ row }">
-          <UTag code>{{ row.secret_masked }}</UTag>
+          <UTag code size="xs">{{ row.secret_masked }}</UTag>
         </template>
         <template #cell-description="{ row }">
-          <p class="max-w-xl text-sm text-slate-600">{{ row.description || "-" }}</p>
+          <p class="max-w-xl text-sm text-[#595959]">{{ row.description || "-" }}</p>
         </template>
         <template #cell-enabled="{ row }">
-          <UTag :variant="row.enabled ? 'success' : 'error'">
+          <UTag :variant="row.enabled ? 'success' : 'error'" size="xs">
             {{ row.enabled ? "启用" : "停用" }}
           </UTag>
         </template>
@@ -173,7 +173,7 @@ async function submit() {
 function openDeleteConfirm(item) {
   confirmState.open = true;
   confirmState.id = item.id;
-  confirmState.message = `确定要删除授权 Key“${item.name}”吗？`;
+  confirmState.message = `确定要删除授权 Key"${item.name}"吗？`;
 }
 
 async function confirmDelete() {
@@ -189,7 +189,7 @@ async function confirmDelete() {
 async function copyKey(item) {
   const secret = await store.copySecret(item.id);
   if (secret) {
-    // Optionally show a toast or alert; for now rely on clipboard feedback
+    // clipboard handled by store
   }
 }
 

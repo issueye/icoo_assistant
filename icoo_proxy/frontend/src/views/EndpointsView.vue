@@ -10,7 +10,7 @@
           @click="store.reloadProxy"
         >
           <span v-if="store.reloading" class="btn__spinner" />
-          {{ store.reloading ? "重载中..." : "重载代理生效" }}
+          {{ store.reloading ? "重载中..." : "重载代理" }}
         </button>
       </div>
     </Teleport>
@@ -19,11 +19,11 @@
       {{ store.error }}
     </div>
 
-    <div class="section-grid xl:grid-cols-4">
-      <StatCard label="端点总数" :value="String(store.items.length)" />
-      <StatCard label="已启用端点" :value="String(store.enabledCount)" />
-      <StatCard label="自定义端点" :value="String(store.customCount)" />
-      <StatCard label="生效方式" value="保存后重载代理" />
+    <div class="section-grid grid-cols-2 lg:grid-cols-4">
+      <StatCard icon="endpoint" label="端点总数" :value="String(store.items.length)" tone="info" />
+      <StatCard icon="check" label="已启用" :value="String(store.enabledCount)" tone="success" />
+      <StatCard icon="layers" label="自定义端点" :value="String(store.customCount)" />
+      <StatCard icon="settings" label="生效方式" value="保存后重载代理" />
     </div>
 
     <PanelBlock title="代理端点">
@@ -35,22 +35,22 @@
       </div>
       <UTable v-else :columns="tableColumns" :rows="store.items" action-width="168px" fixed>
         <template #cell-path="{ row }">
-          <UTag code>{{ row.path }}</UTag>
+          <UTag code size="xs">{{ row.path }}</UTag>
         </template>
         <template #cell-protocol="{ row }">
-          <UTag variant="info">{{ row.protocol }}</UTag>
+          <UTag variant="info" size="xs">{{ row.protocol }}</UTag>
         </template>
         <template #cell-description="{ row }">
-          <p class="max-w-xl text-sm text-slate-600">{{ row.description || "-" }}</p>
-          <p class="mt-1 table-meta">更新时间：{{ formatDateTime(row.updated_at) }}</p>
+          <p class="max-w-xl text-sm text-[#595959]">{{ row.description || "-" }}</p>
+          <p class="mt-0.5 table-meta">更新时间：{{ formatDateTime(row.updated_at) }}</p>
         </template>
         <template #cell-builtIn="{ row }">
-          <UTag :variant="row.built_in ? 'neutral' : 'warning'">
+          <UTag :variant="row.built_in ? 'neutral' : 'warning'" size="xs">
             {{ row.built_in ? "内置" : "自定义" }}
           </UTag>
         </template>
         <template #cell-enabled="{ row }">
-          <UTag :variant="row.enabled ? 'success' : 'error'">
+          <UTag :variant="row.enabled ? 'success' : 'error'" size="xs">
             {{ row.enabled ? "启用" : "停用" }}
           </UTag>
         </template>
@@ -172,7 +172,7 @@ async function submit() {
 function openDeleteConfirm(item) {
   confirmState.open = true;
   confirmState.id = item.id;
-  confirmState.message = `确定要删除端点“${item.path}”吗？`;
+  confirmState.message = `确定要删除端点"${item.path}"吗？`;
 }
 
 async function confirmDelete() {

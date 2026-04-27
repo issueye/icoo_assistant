@@ -26,7 +26,7 @@
     <div v-if="store.error" class="notice-error">
       {{ store.error }}
     </div>
-    <div v-if="store.success" class="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
+    <div v-if="store.success" class="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
       {{ store.success }}
     </div>
 
@@ -35,9 +35,9 @@
     </div>
 
     <template v-else>
-      <div class="section-grid xl:grid-cols-2">
-        <StatCard label="代理监听" :value="`${store.form.proxy_host}:${store.form.proxy_port}`" />
-        <StatCard label="链路日志" :value="store.form.proxy_chain_log_bodies ? '记录请求与响应体' : '仅记录元数据'" />
+      <div class="section-grid grid-cols-2">
+        <StatCard icon="wifi" label="代理监听" :value="`${store.form.proxy_host}:${store.form.proxy_port}`" tone="primary" />
+        <StatCard icon="activity" label="链路日志" :value="store.form.proxy_chain_log_bodies ? '记录请求与响应体' : '仅记录元数据'" />
       </div>
 
       <form class="section-grid" @submit.prevent="submit">
@@ -87,7 +87,6 @@ import { onMounted } from "vue";
 import FieldLabel from "../components/FieldLabel.vue";
 import PanelBlock from "../components/PanelBlock.vue";
 import StatCard from "../components/StatCard.vue";
-import UAlert from "../components/ued/UAlert.vue";
 import { useSettingsStore } from "../stores/settings";
 
 const store = useSettingsStore();

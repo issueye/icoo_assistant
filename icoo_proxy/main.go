@@ -18,17 +18,17 @@ func main() {
 
 	err := wails.Run(&options.App{
 		Title:         "icoo Proxy",
-		Width:         1366,
-		Height:        900,
-		MinWidth:      1180,
-		MinHeight:     760,
+		Width:         900,
+		Height:        720,
+		MinWidth:      800,
+		MinHeight:     600,
 		DisableResize: false,
 		Frameless:     false,
 		Fullscreen:    false,
 		AssetServer: &assetserver.Options{
 			Assets: assets,
 		},
-		BackgroundColour: &options.RGBA{R: 12, G: 18, B: 24, A: 1},
+		BackgroundColour: &options.RGBA{R: 245, G: 245, B: 245, A: 255},
 		OnStartup:        app.startup,
 		OnShutdown:       app.shutdown,
 		Bind: []interface{}{

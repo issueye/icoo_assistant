@@ -11,9 +11,21 @@ import (
 	"icoo_proxy/internal/storage"
 )
 
+type SupplierResolver interface {
+	Resolve(id string) (SupplierSnapshot, bool)
+}
+
+type SupplierSnapshot struct {
+	ID       string
+	Name     string
+	Protocol consts.Protocol
+}
+
 type Record struct {
 	ID               string          `json:"id"`
 	Name             string          `json:"name"`
+	SupplierID       string          `json:"supplier_id"`
+	SupplierName     string          `json:"supplier_name"`
 	UpstreamProtocol consts.Protocol `json:"upstream_protocol"`
 	Model            string          `json:"model"`
 	Enabled          bool            `json:"enabled"`
@@ -22,13 +34,13 @@ type Record struct {
 }
 
 type aliasModel struct {
-	ID               string `gorm:"primaryKey"`
-	Name             string `gorm:"uniqueIndex"`
-	UpstreamProtocol consts.Protocol
-	Model            string
-	Enabled          bool
-	CreatedAt        time.Time
-	UpdatedAt        time.Time
+	ID         string `gorm:"primaryKey"`
+	Name       string `gorm:"uniqueIndex"`
+	SupplierID string
+	Model      string
+	Enabled    bool
+	CreatedAt  time.Time
+	UpdatedAt  time.Time
 }
 
 func (aliasModel) TableName() string {
@@ -36,18 +48,19 @@ func (aliasModel) TableName() string {
 }
 
 type UpsertInput struct {
-	ID               string          `json:"id"`
-	Name             string          `json:"name"`
-	UpstreamProtocol consts.Protocol `json:"upstream_protocol"`
-	Model            string          `json:"model"`
-	Enabled          bool            `json:"enabled"`
+	ID         string `json:"id"`
+	Name       string `json:"name"`
+	SupplierID string `json:"supplier_id"`
+	Model      string `json:"model"`
+	Enabled    bool   `json:"enabled"`
 }
 
 type Service struct {
-	db *gorm.DB
+	db     *gorm.DB
+	lookup SupplierResolver
 }
 
-func NewService(root string) (*Service, error) {
+func NewService(root string, resolver SupplierResolver) (*Service, error) {
 	db, err := storage.Open(root)
 	if err != nil {
 		return nil, err
@@ -55,7 +68,7 @@ func NewService(root string) (*Service, error) {
 	if err := db.AutoMigrate(&aliasModel{}); err != nil {
 		return nil, err
 	}
-	return &Service{db: db}, nil
+	return &Service{db: db, lookup: resolver}, nil
 }
 
 func (s *Service) Close() error {
@@ -73,7 +86,7 @@ func (s *Service) List() []Record {
 	}
 	items := make([]Record, 0, len(rows))
 	for _, item := range rows {
-		items = append(items, toRecord(item))
+		items = append(items, s.toRecord(item))
 	}
 	return items
 }
@@ -85,7 +98,15 @@ func (s *Service) EnabledEntries() []string {
 	}
 	items := make([]string, 0, len(rows))
 	for _, item := range rows {
-		items = append(items, fmt.Sprintf("%s=%s:%s", item.Name, item.UpstreamProtocol.ToString(), strings.TrimSpace(item.Model)))
+		supplier, ok := s.lookup.Resolve(item.SupplierID)
+		if !ok {
+			continue
+		}
+		items = append(items, fmt.Sprintf("%s=%s:%s",
+			item.Name,
+			supplier.Protocol.ToString(),
+			strings.TrimSpace(item.Model),
+		))
 	}
 	return items
 }
@@ -95,9 +116,13 @@ func (s *Service) Upsert(input UpsertInput) (Record, error) {
 	if name == "" {
 		return Record{}, fmt.Errorf("model alias name is required")
 	}
-	protocol := normalizeProtocol(input.UpstreamProtocol)
-	if protocol == consts.Protocol("") {
-		return Record{}, fmt.Errorf("model alias upstream protocol is required")
+	supplierID := strings.TrimSpace(input.SupplierID)
+	if supplierID == "" {
+		return Record{}, fmt.Errorf("model alias supplier is required")
+	}
+	supplier, ok := s.lookup.Resolve(supplierID)
+	if !ok {
+		return Record{}, fmt.Errorf("supplier not found")
 	}
 	model := strings.TrimSpace(input.Model)
 	if model == "" {
@@ -115,13 +140,13 @@ func (s *Service) Upsert(input UpsertInput) (Record, error) {
 
 	now := time.Now()
 	current := aliasModel{
-		ID:               buildID(name),
-		Name:             name,
-		UpstreamProtocol: protocol,
-		Model:            model,
-		Enabled:          input.Enabled,
-		CreatedAt:        now,
-		UpdatedAt:        now,
+		ID:         buildID(name),
+		Name:       name,
+		SupplierID: supplier.ID,
+		Model:      model,
+		Enabled:    input.Enabled,
+		CreatedAt:  now,
+		UpdatedAt:  now,
 	}
 	if found {
 		current.ID = existing.ID
@@ -132,7 +157,7 @@ func (s *Service) Upsert(input UpsertInput) (Record, error) {
 	if err := s.db.Save(&current).Error; err != nil {
 		return Record{}, err
 	}
-	return toRecord(current), nil
+	return s.toRecord(current), nil
 }
 
 func (s *Service) Delete(id string) error {
@@ -150,25 +175,21 @@ func (s *Service) Delete(id string) error {
 	return nil
 }
 
-func toRecord(item aliasModel) Record {
-	return Record{
-		ID:               item.ID,
-		Name:             item.Name,
-		UpstreamProtocol: item.UpstreamProtocol,
-		Model:            item.Model,
-		Enabled:          item.Enabled,
-		UpdatedAt:        item.UpdatedAt.Format(time.RFC3339),
-		CreatedAt:        item.CreatedAt.Format(time.RFC3339),
+func (s *Service) toRecord(item aliasModel) Record {
+	record := Record{
+		ID:         item.ID,
+		Name:       item.Name,
+		SupplierID: item.SupplierID,
+		Model:      item.Model,
+		Enabled:    item.Enabled,
+		UpdatedAt:  item.UpdatedAt.Format(time.RFC3339),
+		CreatedAt:  item.CreatedAt.Format(time.RFC3339),
 	}
-}
-
-func normalizeProtocol(raw consts.Protocol) consts.Protocol {
-	switch raw {
-	case consts.ProtocolAnthropic, consts.ProtocolOpenAIChat, consts.ProtocolOpenAIResponses:
-		return raw
-	default:
-		return consts.Protocol("")
+	if supplier, ok := s.lookup.Resolve(item.SupplierID); ok {
+		record.SupplierName = supplier.Name
+		record.UpstreamProtocol = supplier.Protocol
 	}
+	return record
 }
 
 func buildID(name string) string {

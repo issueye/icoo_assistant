@@ -71,7 +71,7 @@ func (a *App) startup(ctx context.Context) {
 		return
 	}
 	a.policies = policies
-	aliases, err := modelalias.NewService(root)
+	aliases, err := modelalias.NewService(root, &supplierResolverAdapter{svc: suppliers})
 	if err != nil {
 		a.setLastError(err.Error())
 		return
@@ -604,4 +604,20 @@ func stateToMap(state api.State) map[string]interface{} {
 		"notes":                       state.Notes,
 		"checks":                      state.Checks,
 	}
+}
+
+type supplierResolverAdapter struct {
+	svc *supplier.Service
+}
+
+func (a *supplierResolverAdapter) Resolve(id string) (modelalias.SupplierSnapshot, bool) {
+	snap, ok := a.svc.Resolve(id)
+	if !ok {
+		return modelalias.SupplierSnapshot{}, false
+	}
+	return modelalias.SupplierSnapshot{
+		ID:       snap.ID,
+		Name:     snap.Name,
+		Protocol: snap.Protocol,
+	}, true
 }

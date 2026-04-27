@@ -1,14 +1,10 @@
 import { defineStore } from "pinia";
 import {
   CheckSupplier,
-  DeleteModelAlias,
   DeleteSupplier,
-  ListModelAliases,
   ListRoutePolicies,
   ListSupplierHealth,
   ListSuppliers,
-  SaveModelAlias,
-  SaveRoutePolicy,
   SaveSupplier,
 } from "../lib/wailsApp";
 
@@ -59,14 +55,6 @@ const emptyPolicyForm = () => ({
   enabled: true,
 });
 
-const emptyAliasForm = () => ({
-  id: "",
-  name: "",
-  upstream_protocol: "openai-responses",
-  model: "",
-  enabled: true,
-});
-
 const emptyModelForm = () => ({
   ...emptyForm(),
 });
@@ -77,16 +65,13 @@ export const useSuppliersStore = defineStore("suppliers", {
     saving: false,
     deleting: "",
     checking: "",
-    aliasDeleting: "",
     error: "",
     items: [],
     policies: [],
-    aliases: [],
     health: [],
     form: emptyForm(),
     modelForm: emptyModelForm(),
     policyForm: emptyPolicyForm(),
-    aliasForm: emptyAliasForm(),
   }),
   getters: {
     enabledCount(state) {
@@ -101,16 +86,10 @@ export const useSuppliersStore = defineStore("suppliers", {
     enabledPolicyCount(state) {
       return state.policies.filter((item) => item.enabled).length;
     },
-    enabledAliasCount(state) {
-      return state.aliases.filter((item) => item.enabled).length;
-    },
     routeDefinitions() {
       return routeDefinitions;
     },
     policyOptions() {
-      return protocolOptions;
-    },
-    aliasProtocolOptions() {
       return protocolOptions;
     },
     policiesByProtocol() {
@@ -158,15 +137,13 @@ export const useSuppliersStore = defineStore("suppliers", {
       this.loading = true;
       this.error = "";
       try {
-        const [items, policies, aliases, health] = await Promise.all([
+        const [items, policies, health] = await Promise.all([
           ListSuppliers(),
           ListRoutePolicies(),
-          ListModelAliases(),
           ListSupplierHealth(),
         ]);
         this.items = items;
         this.policies = policies;
-        this.aliases = aliases;
         this.health = health;
       } catch (error) {
         this.error = error?.message || String(error);
@@ -220,18 +197,6 @@ export const useSuppliersStore = defineStore("suppliers", {
     },
     resetPolicyForm() {
       this.policyForm = emptyPolicyForm();
-    },
-    selectAlias(item) {
-      this.aliasForm = {
-        id: item.id,
-        name: item.name,
-        upstream_protocol: item.upstream_protocol,
-        model: item.model,
-        enabled: Boolean(item.enabled),
-      };
-    },
-    resetAliasForm() {
-      this.aliasForm = emptyAliasForm();
     },
     healthFor(id) {
       return this.health.find((item) => item.supplier_id === id);
@@ -296,22 +261,6 @@ export const useSuppliersStore = defineStore("suppliers", {
         this.saving = false;
       }
     },
-    async saveAlias() {
-      this.saving = true;
-      this.error = "";
-      try {
-        this.aliases = await SaveModelAlias({
-          ...this.aliasForm,
-          name: String(this.aliasForm.name || "").trim(),
-          model: String(this.aliasForm.model || "").trim(),
-        });
-        this.resetAliasForm();
-      } catch (error) {
-        this.error = error?.message || String(error);
-      } finally {
-        this.saving = false;
-      }
-    },
     async remove(id) {
       this.deleting = id;
       this.error = "";
@@ -330,20 +279,6 @@ export const useSuppliersStore = defineStore("suppliers", {
         this.error = error?.message || String(error);
       } finally {
         this.deleting = "";
-      }
-    },
-    async removeAlias(id) {
-      this.aliasDeleting = id;
-      this.error = "";
-      try {
-        this.aliases = await DeleteModelAlias(id);
-        if (this.aliasForm.id === id) {
-          this.resetAliasForm();
-        }
-      } catch (error) {
-        this.error = error?.message || String(error);
-      } finally {
-        this.aliasDeleting = "";
       }
     },
     async check(id) {

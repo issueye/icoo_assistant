@@ -8,6 +8,8 @@ import SettingsView from "../views/SettingsView.vue";
 import TrafficView from "../views/TrafficView.vue";
 import UedSpecView from "../views/UedSpecView.vue";
 
+import ModelAliasesView from "../views/ModelAliasesView.vue";
+
 export default createRouter({
   history: createWebHashHistory(),
   routes: [
@@ -20,6 +22,11 @@ export default createRouter({
       path: "/suppliers",
       name: "suppliers",
       component: SuppliersView,
+    },
+    {
+      path: "/model-aliases",
+      name: "model-aliases",
+      component: ModelAliasesView,
     },
     {
       path: "/endpoints",

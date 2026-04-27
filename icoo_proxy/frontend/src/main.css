@@ -188,8 +188,8 @@ body {
     @apply mt-1 break-all text-lg font-semibold text-zinc-900;
   }
 
-  .section-grid {
-    @apply grid gap-4;
+.section-grid {
+    @apply grid gap-3;
   }
 
   .list-card {
@@ -779,46 +779,70 @@ body {
   }
 
 .app-sidebar {
-    @apply hidden h-screen w-[224px] shrink-0 overflow-hidden border-r-0 lg:flex lg:flex-col;
+    @apply hidden h-screen w-[180px] shrink-0 overflow-hidden border-r-0 lg:flex lg:flex-col;
     background: var(--ued-color-sidebar);
-    box-shadow: 2px 0 8px rgba(0, 21, 41, 0.16);
+    box-shadow: 2px 0 6px rgba(0, 21, 41, 0.12);
   }
 
 .app-sidebar-brand {
-    @apply border-b border-white/10 px-5 py-4;
+    @apply border-b border-white/10 px-4 py-3;
   }
-
-.app-sidebar-brand h1 {
-    @apply text-white;
+  
+  .app-sidebar-logo {
+    @apply mb-0 inline-flex h-8 w-8 items-center justify-center rounded-md bg-white/10 text-white/80;
   }
-
-.app-sidebar-brand p,
-.app-sidebar-footer p {
-    @apply text-white/55;
+  
+  .app-sidebar-brand h1 {
+    @apply text-sm font-semibold text-white leading-tight;
+  }
+  
+  .app-sidebar-brand p,
+  .app-sidebar-footer p {
+    @apply text-[11px] text-white/45 leading-tight;
+  }
+  
+  .app-sidebar-brand-text {
+    @apply mt-1;
   }
 
 .app-sidebar-nav {
-    @apply flex-1 space-y-1 overflow-y-auto px-2 py-3;
+    @apply flex-1 space-y-0.5 overflow-y-auto px-2 py-2;
   }
-
-.app-nav-item {
-    @apply relative block rounded-md border border-transparent px-3 py-2 text-sm transition;
+  
+  .app-nav-item {
+    @apply relative flex items-center gap-2 rounded-md border border-transparent px-2.5 py-2 text-sm transition;
+  }
+  
+  .app-nav-icon {
+    @apply inline-flex h-5 w-5 shrink-0 items-center justify-center;
+  }
+  
+  .app-nav-text {
+    @apply text-[13px] leading-none;
   }
 
 .app-nav-item-active {
     @apply border-transparent bg-[#1677ff] text-white shadow-none;
   }
-
-.app-nav-item-active::before {
-    @apply absolute bottom-2 left-0 top-2 w-1 rounded-r bg-white content-[''];
+  
+  .app-nav-item-active .app-nav-icon {
+    @apply text-white;
+  }
+  
+  .app-nav-item-active::before {
+    @apply absolute bottom-1.5 left-0 top-1.5 w-[3px] rounded-r bg-white/80 content-[''];
   }
 
 .app-nav-item-idle {
-    @apply text-white/70 hover:bg-white/10 hover:text-white;
+    @apply text-white/60 hover:bg-white/[0.08] hover:text-white;
+  }
+  
+  .app-nav-item-idle .app-nav-icon {
+    @apply text-white/50;
   }
 
 .app-sidebar-footer {
-    @apply border-t border-white/10 px-5 py-4;
+    @apply border-t border-white/10 px-4 py-3;
   }
 
 .app-main {
@@ -827,9 +851,8 @@ body {
   }
 
 .app-topbar {
-    @apply z-10 flex h-14 shrink-0 items-center justify-between border-b bg-white px-6;
+    @apply z-10 flex h-[44px] shrink-0 items-center justify-between border-b bg-white px-5;
     border-color: var(--ued-color-divider);
-    box-shadow: 0 1px 4px rgba(0, 21, 41, 0.04);
   }
 
 .app-topbar-actions,
@@ -858,14 +881,14 @@ body {
   }
 
 .app-content {
-    @apply min-h-0 flex-1 overflow-y-auto px-6 py-5;
+    @apply min-h-0 flex-1 overflow-y-auto px-5 py-4;
     background: var(--ued-color-bg-page);
     scrollbar-color: #d9d9d9 transparent;
     scrollbar-width: thin;
   }
-
-.page-section {
-    @apply space-y-4;
+  
+  .page-section {
+    @apply space-y-3;
   }
 
 .page-header {
@@ -891,14 +914,14 @@ body {
     border-color: var(--ued-color-divider);
     box-shadow: var(--ued-shadow-card);
   }
-
-.panel-header {
-    @apply border-b px-5 py-3;
+  
+  .panel-header {
+    @apply border-b px-4 py-2.5;
     border-color: var(--ued-color-divider);
   }
-
-.panel-body {
-    @apply p-5;
+  
+  .panel-body {
+    @apply p-4;
   }
 
 .panel-title {
@@ -906,17 +929,17 @@ body {
   }
 
 .stat-card {
-    @apply rounded-lg border bg-white px-4 py-3;
+    @apply rounded-lg border bg-white px-3.5 py-3;
     border-color: var(--ued-color-divider);
     box-shadow: var(--ued-shadow-card);
   }
-
-.stat-label {
-    @apply text-xs font-medium text-[#8c8c8c];
+  
+  .stat-label {
+    @apply text-[11px] font-medium text-[#8c8c8c];
   }
-
-.stat-value {
-    @apply mt-1 break-all text-xl font-semibold text-[#262626];
+  
+  .stat-value {
+    @apply mt-0.5 break-all text-base font-semibold text-[#262626];
   }
 
 .section-grid {

@@ -2,7 +2,6 @@
   <section class="page-section">
     <Teleport to="#app-topbar-actions">
       <div class="app-topbar-actions__group">
-        <button class="btn btn-secondary" @click="openAliasCreate">新建模型别名</button>
         <button class="btn btn-primary" @click="openSupplierCreate">新建供应商</button>
       </div>
     </Teleport>
@@ -11,108 +10,51 @@
       {{ store.error }}
     </div>
 
-    <div class="section-grid xl:grid-cols-5">
-      <StatCard label="供应商总数" :value="String(store.items.length)" />
-      <StatCard label="已启用供应商" :value="String(store.enabledCount)" />
-      <StatCard label="已健康检查" :value="String(store.checkedCount)" />
-      <StatCard label="已配置协议" :value="String(store.configuredPolicyCount)" />
-      <StatCard label="启用中别名" :value="String(store.enabledAliasCount)" />
-    </div>
-
-    <div class="section-grid">
-      <PanelBlock title="模型别名">
-        <div class="mb-3 flex items-center justify-between gap-3">
-          <div>
-            <p class="text-sm font-medium text-slate-900">别名映射</p>
-            <p class="mt-1 text-xs text-slate-500">为常用模型名称配置固定上游协议与目标模型。</p>
-          </div>
-          <UTag variant="info">总数：{{ store.aliases.length }}</UTag>
-        </div>
-
-        <div v-if="!store.aliases.length" class="empty-state">
-          当前尚未配置模型别名。
-        </div>
-        <div v-else class="divide-y divide-[#eeeeF2] rounded-lg border border-[#e8e8ee]">
-          <article
-            v-for="item in store.aliases"
-            :key="item.id"
-            class="grid gap-3 px-3 py-3 lg:grid-cols-[1.4fr_2fr_auto] lg:items-center"
-          >
-            <div>
-              <div class="flex items-center gap-2">
-                <p class="text-base font-medium text-slate-900">{{ item.name }}</p>
-                <UTag :variant="item.enabled ? 'success' : 'error'">
-                  {{ item.enabled ? "启用" : "停用" }}
-                </UTag>
-              </div>
-              <p class="mt-1 table-meta">更新时间：{{ formatCheckedAt(item.updated_at) }}</p>
-            </div>
-            <div class="grid gap-2 md:grid-cols-2">
-              <div>
-                <p class="table-meta">上游协议</p>
-                <p class="mt-1 text-sm font-medium text-slate-900">{{ item.upstream_protocol }}</p>
-              </div>
-              <div>
-                <p class="table-meta">目标模型</p>
-                <p class="mt-1 break-all text-sm text-slate-700">{{ item.model }}</p>
-              </div>
-            </div>
-            <div class="table-actions">
-              <button class="btn btn-secondary" @click="openAliasEdit(item)">编辑</button>
-              <button
-                class="btn btn-error"
-                :class="{ 'is-loading': store.aliasDeleting === item.id }"
-                :disabled="store.aliasDeleting === item.id"
-                @click="store.removeAlias(item.id)"
-              >
-                <span v-if="store.aliasDeleting === item.id" class="btn__spinner" />
-                {{ store.aliasDeleting === item.id ? "删除中..." : "删除" }}
-              </button>
-            </div>
-          </article>
-        </div>
-      </PanelBlock>
+    <div class="section-grid grid-cols-2 lg:grid-cols-4">
+      <StatCard icon="server" label="供应商总数" :value="String(store.items.length)" tone="info" />
+      <StatCard icon="check" label="已启用" :value="String(store.enabledCount)" tone="success" />
+      <StatCard icon="heart-pulse" label="已健康检查" :value="String(store.checkedCount)" />
+      <StatCard icon="layers" label="已配置协议" :value="String(store.configuredPolicyCount)" tone="info" />
     </div>
 
     <div class="section-grid">
       <PanelBlock title="上下游管理">
         <div class="mb-3 flex items-center justify-between gap-3">
           <div>
-            <p class="text-sm font-medium text-slate-900">协议映射</p>
-            <p class="mt-1 text-xs text-slate-500">为三个下游协议分别指定供应商。默认模型直接继承供应商配置，不再单独设置目标模型。</p>
+            <p class="text-sm font-medium text-[#262626]">协议映射</p>
           </div>
-          <UTag variant="info">启用中：{{ store.enabledPolicyCount }}</UTag>
+          <UTag variant="info" size="xs">启用中：{{ store.enabledPolicyCount }}</UTag>
         </div>
 
-        <div class="divide-y divide-[#eeeeF2] rounded-lg border border-[#e8e8ee]">
+        <div class="divide-y divide-[#f0f0f0] rounded-lg border border-[#f0f0f0]">
           <article
             v-for="item in store.routeManagementRows"
             :key="item.key"
-            class="grid gap-3 px-3 py-3 lg:grid-cols-[1.2fr_2fr_auto] lg:items-center"
+            class="grid gap-3 px-3 py-2.5 lg:grid-cols-[1.2fr_2fr_auto] lg:items-center"
           >
             <div>
               <div class="flex items-center gap-2">
-                <p class="text-base font-medium text-slate-900">{{ item.label }}</p>
-                <UTag code>{{ item.key }}</UTag>
+                <p class="text-sm font-medium text-[#262626]">{{ item.label }}</p>
+                <UTag code size="xs">{{ item.key }}</UTag>
               </div>
-              <p class="mt-1 text-xs leading-5 text-slate-500">{{ item.description }}</p>
+              <p class="mt-0.5 text-[11px] leading-5 text-[#8c8c8c]">{{ item.description }}</p>
             </div>
 
             <div class="grid gap-2 md:grid-cols-3">
               <div>
                 <p class="table-meta">供应商</p>
-                <p class="mt-1 truncate text-sm font-medium text-slate-900">{{ item.supplierName }}</p>
+                <p class="mt-0.5 truncate text-sm font-medium text-[#262626]">{{ item.supplierName }}</p>
               </div>
               <div>
                 <p class="table-meta">上游协议</p>
-                <p class="mt-1 truncate text-sm text-slate-700">{{ item.upstreamProtocol }}</p>
+                <p class="mt-0.5 truncate text-sm text-[#595959]">{{ item.upstreamProtocol }}</p>
               </div>
               <div>
                 <p class="table-meta">状态</p>
-                <div class="mt-1">
-                  <UTag :variant="item.statusVariant">{{ item.statusText }}</UTag>
+                <div class="mt-0.5">
+                  <UTag :variant="item.statusVariant" size="xs">{{ item.statusText }}</UTag>
                 </div>
-                <p class="mt-1 text-xs text-slate-500">{{ item.helperText }}</p>
+                <p class="mt-0.5 text-[11px] text-[#8c8c8c]">{{ item.helperText }}</p>
               </div>
             </div>
 
@@ -148,55 +90,56 @@
         >
           <template #cell-supplier="{ row }">
             <div class="flex items-center gap-2">
-              <p class="font-medium text-slate-900">{{ row.name }}</p>
-              <UTag :variant="row.enabled ? 'success' : 'error'">
+              <p class="font-medium text-[#262626]">{{ row.name }}</p>
+              <UTag :variant="row.enabled ? 'success' : 'error'" size="xs">
                 {{ row.enabled ? "启用" : "停用" }}
               </UTag>
             </div>
-            <p class="mt-1 text-sm leading-5 text-slate-600 table-cell-wrap">
+            <p class="mt-0.5 text-sm leading-5 text-[#595959] table-cell-wrap">
               {{ row.description || "暂无描述。" }}
             </p>
-            <p class="mt-1 table-meta">更新时间：{{ formatCheckedAt(row.updated_at) }}</p>
+            <p class="mt-0.5 table-meta">更新时间：{{ formatCheckedAt(row.updated_at) }}</p>
           </template>
           <template #cell-protocol="{ row }">
-            <p class="font-medium text-slate-900">{{ row.protocol }}</p>
-            <p class="mt-1 break-all table-meta table-cell-wrap">{{ row.base_url }}</p>
+            <p class="font-medium text-[#262626]">{{ row.protocol }}</p>
+            <p class="mt-0.5 break-all table-meta table-cell-wrap">{{ row.base_url }}</p>
             <div class="mt-1 flex flex-wrap gap-1.5">
-              <UTag code>{{ row.api_key_masked || "未保存 API Key" }}</UTag>
-              <UTag v-if="row.only_stream" variant="warning">only_stream</UTag>
+              <UTag code size="xs">{{ row.api_key_masked || "未保存 API Key" }}</UTag>
+              <UTag v-if="row.only_stream" variant="warning" size="xs">only_stream</UTag>
             </div>
-            <p v-if="row.user_agent" class="mt-1 table-meta table-cell-wrap">UA: {{ row.user_agent }}</p>
+            <p v-if="row.user_agent" class="mt-0.5 table-meta table-cell-wrap">UA: {{ row.user_agent }}</p>
           </template>
           <template #cell-models="{ row }">
-            <div class="flex flex-wrap gap-2">
+            <div class="flex flex-wrap gap-1.5">
               <UTag
                 v-for="model in row.models || []"
                 :key="model"
                 :variant="row.default_model === model ? 'success' : 'info'"
+                size="xs"
               >
                 {{ row.default_model === model ? `${model} · 默认` : model }}
               </UTag>
               <span v-if="!(row.models || []).length" class="table-meta">无模型</span>
             </div>
-            <p v-if="row.default_model && !(row.models || []).includes(row.default_model)" class="mt-1 text-xs text-amber-600">
+            <p v-if="row.default_model && !(row.models || []).includes(row.default_model)" class="mt-0.5 text-[11px] text-amber-600">
               默认模型：{{ row.default_model }}
             </p>
           </template>
           <template #cell-health="{ row }">
             <template v-if="store.healthFor(row.id)">
-              <div class="flex flex-wrap items-center gap-2">
-                <UTag :variant="healthTone(store.healthFor(row.id))">
+              <div class="flex flex-wrap items-center gap-1.5">
+                <UTag :variant="healthTone(store.healthFor(row.id))" size="xs">
                   {{ store.healthFor(row.id).status }}
                 </UTag>
-                <UTag variant="info">{{ store.healthFor(row.id).duration_ms }} ms</UTag>
+                <UTag variant="info" size="xs">{{ store.healthFor(row.id).duration_ms }} ms</UTag>
               </div>
-              <p class="mt-1 table-meta">
+              <p class="mt-0.5 table-meta">
                 HTTP {{ store.healthFor(row.id).status_code || "无状态码" }}
               </p>
-              <p class="mt-1 text-sm leading-5 text-slate-600 table-cell-wrap">
+              <p class="mt-0.5 text-sm leading-5 text-[#595959] table-cell-wrap">
                 {{ store.healthFor(row.id).message }}
               </p>
-              <p class="mt-1 table-meta">{{ formatCheckedAt(store.healthFor(row.id).checked_at) }}</p>
+              <p class="mt-0.5 table-meta">{{ formatCheckedAt(store.healthFor(row.id).checked_at) }}</p>
             </template>
             <span v-else class="table-meta">尚未检查</span>
           </template>
@@ -265,8 +208,8 @@
             placeholder="请先在模型管理中配置候选模型"
             :options="supplierFormDefaultOptions"
           />
-          <div class="rounded-lg border border-dashed border-[#d9dbe7] bg-slate-50 px-3 py-2 text-xs leading-5 text-slate-500">
-            模型列表已拆分到独立弹窗管理。新建供应商后，可在列表中点击“管理模型”补充候选模型与默认模型。
+          <div class="rounded-md border border-dashed border-[#d9d9d9] bg-[#fafafa] px-3 py-2 text-[11px] leading-5 text-[#8c8c8c]">
+            模型列表已拆分到独立弹窗管理。新建供应商后，可在列表中点击"管理模型"补充候选模型与默认模型。
           </div>
         </div>
 
@@ -306,8 +249,8 @@
       <form id="model-form" class="space-y-3" @submit.prevent="submitModelEditor">
         <div class="flex items-center justify-between gap-3">
           <div>
-            <p class="text-sm font-medium text-slate-900">候选模型列表</p>
-            <p class="mt-1 text-xs text-slate-500">默认模型必须来自当前候选模型列表。</p>
+            <p class="text-sm font-medium text-[#262626]">候选模型列表</p>
+            <p class="mt-0.5 text-[11px] text-[#8c8c8c]">默认模型必须来自当前候选模型列表。</p>
           </div>
           <button type="button" class="btn btn-secondary px-2 py-1 text-xs" @click="addModelRow(store.modelForm.models)">
             添加模型
@@ -368,7 +311,7 @@
           <USelect v-model="store.policyForm.supplier_id" label="供应商" placeholder="请选择供应商" :options="supplierOptions" />
         </div>
 
-        <div class="rounded-lg border border-dashed border-[#d9dbe7] bg-slate-50 px-3 py-2 text-xs leading-5 text-slate-500">
+        <div class="rounded-md border border-dashed border-[#d9d9d9] bg-[#fafafa] px-3 py-2 text-[11px] leading-5 text-[#8c8c8c]">
           默认模型不再在路由策略中单独设置，运行时会直接继承供应商的默认模型。
         </div>
 
@@ -388,45 +331,6 @@
           >
             <span v-if="store.saving" class="btn__spinner" />
             {{ store.saving ? "保存中..." : "保存路由策略" }}
-          </button>
-        </div>
-      </template>
-    </UModal>
-
-    <UModal
-      v-model:open="aliasModalOpen"
-      :title="store.aliasForm.id ? '编辑模型别名' : '新建模型别名'"
-      width="560px"
-      @close="store.resetAliasForm"
-    >
-      <form id="alias-form" class="space-y-3" @submit.prevent="submitAlias">
-        <FieldLabel label="别名名称">
-          <input v-model="store.aliasForm.name" class="field-input" placeholder="例如：fast-model" />
-        </FieldLabel>
-
-        <div class="grid gap-3 md:grid-cols-2">
-          <USelect v-model="store.aliasForm.upstream_protocol" label="上游协议" :options="store.aliasProtocolOptions" />
-          <FieldLabel label="目标模型">
-            <input v-model="store.aliasForm.model" class="field-input" placeholder="例如：gpt-4.1-mini" />
-          </FieldLabel>
-        </div>
-
-        <label class="field-toggle">
-          <input v-model="store.aliasForm.enabled" type="checkbox" class="field-checkbox" />
-          启用该模型别名
-        </label>
-      </form>
-      <template #footer>
-        <div class="flex justify-end gap-2">
-          <button type="button" class="btn btn-secondary" @click="closeAliasModal">取消</button>
-          <button
-            form="alias-form"
-            class="btn btn-primary"
-            :class="{ 'is-loading': store.saving }"
-            :disabled="store.saving"
-          >
-            <span v-if="store.saving" class="btn__spinner" />
-            {{ store.saving ? "保存中..." : "保存模型别名" }}
           </button>
         </div>
       </template>
@@ -463,7 +367,6 @@ const store = useSuppliersStore();
 const supplierModalOpen = ref(false);
 const modelModalOpen = ref(false);
 const policyModalOpen = ref(false);
-const aliasModalOpen = ref(false);
 const confirmState = reactive({
   open: false,
   id: "",
@@ -529,7 +432,7 @@ function formatCheckedAt(value) {
 function openDeleteConfirm(item) {
   confirmState.open = true;
   confirmState.id = item.id;
-  confirmState.message = `确定要删除供应商“${item.name}”吗？`;
+  confirmState.message = `确定要删除供应商"${item.name}"吗？`;
 }
 
 function openSupplierCreate() {
@@ -606,28 +509,6 @@ async function submitPolicy() {
   await store.savePolicy();
   if (!store.error) {
     policyModalOpen.value = false;
-  }
-}
-
-function openAliasCreate() {
-  store.resetAliasForm();
-  aliasModalOpen.value = true;
-}
-
-function openAliasEdit(item) {
-  store.selectAlias(item);
-  aliasModalOpen.value = true;
-}
-
-function closeAliasModal() {
-  aliasModalOpen.value = false;
-  store.resetAliasForm();
-}
-
-async function submitAlias() {
-  await store.saveAlias();
-  if (!store.error) {
-    aliasModalOpen.value = false;
   }
 }
 
