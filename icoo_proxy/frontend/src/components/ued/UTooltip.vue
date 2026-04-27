@@ -128,21 +128,22 @@ function updatePosition() {
 
 .ued-tooltip__inner {
   max-width: 320px;
-  padding: 6px 10px;
+  padding: 7px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 6px;
-  background: #18181b;
-  color: #fafafa;
+  background: #172033;
+  color: #f8fafc;
   font-size: 12px;
   line-height: 1.5;
   word-break: break-word;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 14px 32px rgba(20, 31, 50, 0.22), 0 4px 10px rgba(20, 31, 50, 0.12);
 }
 
 .ued-tooltip__arrow {
   position: absolute;
   width: 6px;
   height: 6px;
-  background: #18181b;
+  background: #172033;
   transform: rotate(45deg);
 }
 

@@ -45,40 +45,57 @@ defineProps({
 
 <style scoped>
 .stat-card {
-  @apply relative flex min-h-[76px] items-center gap-3 rounded border border-slate-200 bg-white px-3 py-3 transition;
-  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05);
+  @apply relative flex min-h-[84px] items-center gap-3 rounded border bg-white px-3 py-3 transition;
+  border-color: var(--ued-color-border);
+  border-radius: var(--ued-radius-md);
+  box-shadow: var(--ued-shadow-card);
 }
 .stat-card:hover {
-  border-color: #bfdbfe;
-  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.08);
+  border-color: #b8c7f6;
+  box-shadow: var(--ued-shadow-card-hover);
+  transform: translateY(-1px);
 }
 .stat-card__icon {
-  @apply inline-flex h-10 w-10 shrink-0 items-center justify-center rounded border border-slate-200 bg-slate-50 text-slate-500;
+  @apply inline-flex h-10 w-10 shrink-0 items-center justify-center rounded border bg-slate-50 text-slate-500;
+  border-color: var(--ued-color-border);
+  border-radius: var(--ued-radius-md);
 }
 .stat-card__body {
   @apply min-w-0 flex-1;
 }
 .stat-card__label {
-  @apply text-xs font-medium text-slate-500;
+  @apply text-xs font-medium;
+  color: var(--ued-color-text-muted);
 }
 .stat-card__value {
-  @apply mt-1 break-all text-base font-semibold leading-5 text-slate-900;
+  @apply mt-1 break-all text-base font-semibold leading-5;
+  color: var(--ued-color-text);
 }
 
 /* Tones */
 .stat-card--primary .stat-card__icon {
-  @apply border-blue-200 bg-blue-50 text-blue-600;
+  border-color: #c8d4ff;
+  background: var(--ued-color-primary-soft);
+  color: var(--ued-color-primary);
 }
 .stat-card--success .stat-card__icon {
-  @apply border-emerald-200 bg-emerald-50 text-emerald-600;
+  border-color: #bde8d3;
+  background: var(--ued-color-success-soft);
+  color: var(--ued-color-success);
 }
 .stat-card--warning .stat-card__icon {
-  @apply border-amber-200 bg-amber-50 text-amber-600;
+  border-color: #f3d498;
+  background: var(--ued-color-warning-soft);
+  color: var(--ued-color-warning);
 }
 .stat-card--danger .stat-card__icon {
-  @apply border-red-200 bg-red-50 text-red-600;
+  border-color: #ffc5bf;
+  background: var(--ued-color-error-soft);
+  color: var(--ued-color-destructive);
 }
 .stat-card--info .stat-card__icon {
-  @apply border-cyan-200 bg-cyan-50 text-cyan-700;
+  border-color: #a6e5ef;
+  background: var(--ued-color-info-soft);
+  color: var(--ued-color-info);
 }
 </style>

@@ -34,3 +34,4 @@ learn-claude-code/*
 
 *.exe
 *.log
+*.err

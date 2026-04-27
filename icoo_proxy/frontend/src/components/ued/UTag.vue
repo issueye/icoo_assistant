@@ -2,9 +2,12 @@
   <component
     :is="as"
     class="ued-tag"
-    :class="[`ued-tag--${normalizedVariant}`, `ued-tag--${normalizedSize}`, { 'ued-tag--code': code }]"
+    :class="[`ued-tag--${normalizedVariant}`, `ued-tag--${normalizedSize}`, { 'ued-tag--code': code, 'ued-tag--dot': dot }]"
   >
-    <slot />
+    <span v-if="dot" class="ued-tag__dot" aria-hidden="true"></span>
+    <span class="ued-tag__content">
+      <slot />
+    </span>
   </component>
 </template>
 
@@ -21,6 +24,10 @@ const props = defineProps({
     default: "sm",
   },
   code: {
+    type: Boolean,
+    default: false,
+  },
+  dot: {
     type: Boolean,
     default: false,
   },

@@ -14,7 +14,13 @@
     @click="$emit('click', $event)"
   >
     <span v-if="loading" class="ued-button__spinner" />
+    <span v-else-if="$slots.icon" class="ued-button__icon" aria-hidden="true">
+      <slot name="icon" />
+    </span>
     <span><slot /></span>
+    <span v-if="$slots.suffix" class="ued-button__icon" aria-hidden="true">
+      <slot name="suffix" />
+    </span>
   </button>
 </template>
 

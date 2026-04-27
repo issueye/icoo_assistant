@@ -83,7 +83,7 @@
           v-else
           :columns="supplierTableColumns"
           :rows="store.items"
-          action-width="220px"
+          action-width="148px"
           fixed
           min-width="1480px"
           table-class="supplier-table"
@@ -145,26 +145,24 @@
           </template>
           <template #actions="{ row }">
             <div class="table-actions">
-              <button
-                class="btn btn-info"
-                :class="{ 'is-loading': store.checking === row.id }"
+              <UIconButton
+                icon="inspect"
+                label="检查供应商"
+                variant="info"
+                :loading="store.checking === row.id"
                 :disabled="store.checking === row.id"
                 @click="store.check(row.id)"
-              >
-                <span v-if="store.checking === row.id" class="btn__spinner" />
-                {{ store.checking === row.id ? "检查中..." : "检查" }}
-              </button>
-              <button class="btn btn-secondary" @click="openSupplierEdit(row)">编辑</button>
-              <button class="btn btn-secondary" @click="openModelEditor(row)">管理模型</button>
-              <button
-                class="btn btn-error"
-                :class="{ 'is-loading': store.deleting === row.id }"
+              />
+              <UIconButton icon="edit" label="编辑供应商" @click="openSupplierEdit(row)" />
+              <UIconButton icon="models" label="管理模型" @click="openModelEditor(row)" />
+              <UIconButton
+                icon="delete"
+                label="删除供应商"
+                variant="error"
+                :loading="store.deleting === row.id"
                 :disabled="store.deleting === row.id"
                 @click="openDeleteConfirm(row)"
-              >
-                <span v-if="store.deleting === row.id" class="btn__spinner" />
-                {{ store.deleting === row.id ? "删除中..." : "删除" }}
-              </button>
+              />
             </div>
           </template>
         </UTable>
@@ -358,6 +356,7 @@ import FieldLabel from "../components/FieldLabel.vue";
 import PanelBlock from "../components/PanelBlock.vue";
 import StatCard from "../components/StatCard.vue";
 import UConfirmDialog from "../components/ued/UConfirmDialog.vue";
+import UIconButton from "../components/ued/UIconButton.vue";
 import UModal from "../components/ued/UModal.vue";
 import USelect from "../components/ued/USelect.vue";
 import UTable from "../components/ued/UTable.vue";

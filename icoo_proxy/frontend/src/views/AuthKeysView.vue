@@ -32,7 +32,7 @@
       <div v-else-if="!store.items.length" class="empty-state">
         当前尚未添加授权 Key。本地信任模式仍按配置生效。
       </div>
-      <UTable v-else :columns="tableColumns" :rows="store.items" action-width="160px" fixed>
+      <UTable v-else :columns="tableColumns" :rows="store.items" action-width="118px" fixed>
         <template #cell-name="{ row }">
           <p class="font-medium text-[#262626]">{{ row.name }}</p>
           <p class="mt-0.5 table-meta">更新时间：{{ formatDateTime(row.updated_at) }}</p>
@@ -50,25 +50,23 @@
         </template>
         <template #actions="{ row }">
           <div class="table-actions">
-            <button
-              class="btn btn-info"
-              :class="{ 'is-loading': store.copying === row.id }"
+            <UIconButton
+              icon="copy"
+              label="复制授权 Key"
+              variant="info"
+              :loading="store.copying === row.id"
               :disabled="store.copying === row.id"
               @click="copyKey(row)"
-            >
-              <span v-if="store.copying === row.id" class="btn__spinner" />
-              {{ store.copying === row.id ? "复制中..." : "复制" }}
-            </button>
-            <button class="btn btn-secondary" @click="openEdit(row)">编辑</button>
-            <button
-              class="btn btn-error"
-              :class="{ 'is-loading': store.deleting === row.id }"
+            />
+            <UIconButton icon="edit" label="编辑授权 Key" @click="openEdit(row)" />
+            <UIconButton
+              icon="delete"
+              label="删除授权 Key"
+              variant="error"
+              :loading="store.deleting === row.id"
               :disabled="store.deleting === row.id"
               @click="openDeleteConfirm(row)"
-            >
-              <span v-if="store.deleting === row.id" class="btn__spinner" />
-              {{ store.deleting === row.id ? "删除中..." : "删除" }}
-            </button>
+            />
           </div>
         </template>
       </UTable>
@@ -129,6 +127,7 @@ import FieldLabel from "../components/FieldLabel.vue";
 import PanelBlock from "../components/PanelBlock.vue";
 import StatCard from "../components/StatCard.vue";
 import UConfirmDialog from "../components/ued/UConfirmDialog.vue";
+import UIconButton from "../components/ued/UIconButton.vue";
 import UModal from "../components/ued/UModal.vue";
 import UTable from "../components/ued/UTable.vue";
 import UTag from "../components/ued/UTag.vue";

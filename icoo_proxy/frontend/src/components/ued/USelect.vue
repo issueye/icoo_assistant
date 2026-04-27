@@ -1,5 +1,5 @@
 <template>
-  <UFormField :label="label" :hint="hint" :error="error">
+  <UFormField :label="label" :hint="hint" :error="error" :required="required">
     <div ref="rootRef" class="ued-select" :class="{ 'is-open': open, 'is-disabled': disabled, 'is-error': error }">
       <button
         type="button"
@@ -14,7 +14,9 @@
         <span class="ued-select__value" :class="{ 'is-placeholder': !selectedOption }">
           {{ selectedOption?.label || placeholder }}
         </span>
-        <span class="ued-select__arrow" aria-hidden="true">⌄</span>
+        <span class="ued-select__arrow" aria-hidden="true">
+          <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6" /></svg>
+        </span>
       </button>
 
       <div v-if="open" :id="listboxId" class="ued-select__menu" role="listbox" tabindex="-1">
@@ -30,7 +32,9 @@
           @click="choose(option)"
         >
           <span>{{ option.label }}</span>
-          <span v-if="option.value === modelValue" class="ued-select__check">✓</span>
+          <span v-if="option.value === modelValue" class="ued-select__check" aria-hidden="true">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
+          </span>
         </button>
         <div v-if="normalizedOptions.length === 0" class="ued-select__empty">
           暂无选项
@@ -66,6 +70,10 @@ const props = defineProps({
   error: {
     type: String,
     default: "",
+  },
+  required: {
+    type: Boolean,
+    default: false,
   },
   disabled: {
     type: Boolean,

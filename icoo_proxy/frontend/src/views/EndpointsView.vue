@@ -55,16 +55,15 @@
         </template>
         <template #actions="{ row }">
           <div class="table-actions">
-            <button class="btn btn-secondary" @click="openEdit(row)">编辑</button>
-            <button
-              class="btn btn-error"
-              :class="{ 'is-loading': store.deleting === row.id }"
+            <UIconButton icon="edit" label="编辑端点" @click="openEdit(row)" />
+            <UIconButton
+              icon="delete"
+              label="删除端点"
+              variant="error"
+              :loading="store.deleting === row.id"
               :disabled="row.built_in || store.deleting === row.id"
               @click="openDeleteConfirm(row)"
-            >
-              <span v-if="store.deleting === row.id" class="btn__spinner" />
-              {{ store.deleting === row.id ? "删除中..." : "删除" }}
-            </button>
+            />
           </div>
         </template>
       </UTable>
@@ -125,6 +124,7 @@ import FieldLabel from "../components/FieldLabel.vue";
 import PanelBlock from "../components/PanelBlock.vue";
 import StatCard from "../components/StatCard.vue";
 import UConfirmDialog from "../components/ued/UConfirmDialog.vue";
+import UIconButton from "../components/ued/UIconButton.vue";
 import UModal from "../components/ued/UModal.vue";
 import USelect from "../components/ued/USelect.vue";
 import UTable from "../components/ued/UTable.vue";

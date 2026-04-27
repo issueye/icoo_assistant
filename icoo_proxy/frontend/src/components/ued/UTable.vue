@@ -106,7 +106,7 @@ const props = defineProps({
   },
   actionWidth: {
     type: [String, Number],
-    default: "",
+    default: "96px",
   },
   actionAlign: {
     type: String,

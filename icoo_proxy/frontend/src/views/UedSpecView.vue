@@ -3,22 +3,22 @@
     <div class="page-header">
       <h2 class="page-title">UED 组件</h2>
       <p class="page-description">
-        参考 Ant Design 的中后台设计语言：清晰层级、32px 基础控件高度、6px 圆角、蓝色主操作、轻量边框和明确状态反馈。
+        面向本地代理桌面控制台：紧凑信息密度、清晰操作层级、可扫描状态反馈，以及稳定的键盘焦点与弹层体验。
       </p>
     </div>
 
     <PanelBlock title="设计 Token">
       <div class="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
         <div class="sub-card">
-          <p class="text-sm font-medium text-slate-900">主色</p>
+          <p class="text-sm font-medium text-slate-900">主操作</p>
           <div class="mt-3 flex items-center gap-2">
-            <span class="h-6 w-10 rounded bg-[#1677ff]"></span>
-            <span class="font-mono text-xs text-slate-600">#1677ff</span>
+            <span class="h-6 w-10 rounded bg-[#3157d5]"></span>
+            <span class="font-mono text-xs text-slate-600">#3157d5</span>
           </div>
         </div>
         <div class="sub-card">
           <p class="text-sm font-medium text-slate-900">圆角</p>
-          <p class="mt-3 text-sm text-slate-600">基础 6px，面板 8px，标签 4px。</p>
+          <p class="mt-3 text-sm text-slate-600">控件 6px，面板 8px，标签 4px。</p>
         </div>
         <div class="sub-card">
           <p class="text-sm font-medium text-slate-900">控件高度</p>
@@ -27,10 +27,10 @@
         <div class="sub-card">
           <p class="text-sm font-medium text-slate-900">状态色</p>
           <div class="mt-3 flex flex-wrap gap-2">
-            <UTag variant="success">Success</UTag>
-            <UTag variant="warning">Warning</UTag>
-            <UTag variant="error">Error</UTag>
-            <UTag variant="info">Info</UTag>
+            <UTag variant="success" dot>Success</UTag>
+            <UTag variant="warning" dot>Warning</UTag>
+            <UTag variant="error" dot>Error</UTag>
+            <UTag variant="info" dot>Info</UTag>
           </div>
         </div>
       </div>
@@ -40,7 +40,12 @@
       <PanelBlock title="按钮">
         <div class="space-y-3">
           <div class="flex flex-wrap gap-2">
-            <UButton variant="primary">Primary</UButton>
+            <UButton variant="primary">
+              <template #icon>
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14" /><path d="M5 12h14" /></svg>
+              </template>
+              Primary
+            </UButton>
             <UButton variant="success">Success</UButton>
             <UButton variant="warning">Warning</UButton>
             <UButton variant="error">Error</UButton>
@@ -110,11 +115,11 @@
       <PanelBlock title="标签">
         <div class="space-y-3">
           <div class="flex flex-wrap gap-2">
-            <UTag variant="primary">primary</UTag>
-            <UTag variant="success">success</UTag>
-            <UTag variant="warning">warning</UTag>
-            <UTag variant="error">error</UTag>
-            <UTag variant="info">info</UTag>
+            <UTag variant="primary" dot>primary</UTag>
+            <UTag variant="success" dot>success</UTag>
+            <UTag variant="warning" dot>warning</UTag>
+            <UTag variant="error" dot>error</UTag>
+            <UTag variant="info" dot>info</UTag>
             <UTag>neutral</UTag>
             <UTag code>openai-responses</UTag>
           </div>
@@ -123,6 +128,7 @@
             <UTag size="sm" variant="success">sm</UTag>
             <UTag size="md" variant="warning">md</UTag>
             <UTag size="lg" variant="error">lg</UTag>
+            <UTag size="sm" code>/v1/responses</UTag>
           </div>
         </div>
       </PanelBlock>
@@ -131,8 +137,8 @@
     <div class="section-grid lg:grid-cols-2">
       <PanelBlock title="输入与下拉">
         <div class="space-y-3">
-          <UInput v-model="form.name" label="名称" placeholder="请输入供应商名称" hint="表单项采用上 label、下控件布局。" />
-          <USelect v-model="form.protocol" label="协议" :options="protocolOptions" />
+          <UInput v-model="form.name" label="名称" placeholder="请输入供应商名称" hint="表单项采用上 label、下控件布局。" required />
+          <USelect v-model="form.protocol" label="协议" :options="protocolOptions" required />
           <UInput v-model="form.description" label="描述" placeholder="请输入用途说明" textarea />
         </div>
       </PanelBlock>
@@ -146,13 +152,13 @@
     </div>
 
     <PanelBlock title="基础表格">
-      <UTable :columns="columns" :rows="rows" row-key="id" empty-text="暂无组件示例数据。">
+      <UTable :columns="columns" :rows="rows" row-key="id" empty-text="暂无组件示例数据。" action-width="72px">
         <template #cell-status="{ value }">
-          <UTag :variant="value === '启用' ? 'success' : 'error'">{{ value }}</UTag>
+          <UTag :variant="value === '启用' ? 'success' : 'error'" dot>{{ value }}</UTag>
         </template>
         <template #actions="{ row }">
-          <div class="flex gap-2">
-            <UButton size="sm" variant="secondary">编辑 {{ row.id }}</UButton>
+          <div class="table-actions">
+            <UIconButton icon="edit" :label="`编辑示例 ${row.id}`" />
           </div>
         </template>
       </UTable>
@@ -168,15 +174,15 @@
         row-key="id"
         fixed
         stripe
-        action-width="160px"
+        action-width="90px"
       >
         <template #cell-status="{ value }">
-          <UTag :variant="value === '启用' ? 'success' : 'error'">{{ value }}</UTag>
+          <UTag :variant="value === '启用' ? 'success' : 'error'" dot>{{ value }}</UTag>
         </template>
         <template #actions="{ row }">
-          <div class="flex gap-2">
-            <UButton size="sm" variant="secondary">编辑</UButton>
-            <UButton size="sm" variant="ghost">详情</UButton>
+          <div class="table-actions">
+            <UIconButton icon="edit" :label="`编辑 ${row.name}`" />
+            <UIconButton icon="detail" :label="`查看 ${row.name}`" />
           </div>
         </template>
       </UTable>
@@ -225,6 +231,7 @@ import PanelBlock from "../components/PanelBlock.vue";
 import UAlert from "../components/ued/UAlert.vue";
 import UButton from "../components/ued/UButton.vue";
 import UConfirmDialog from "../components/ued/UConfirmDialog.vue";
+import UIconButton from "../components/ued/UIconButton.vue";
 import UInput from "../components/ued/UInput.vue";
 import ULoading from "../components/ued/ULoading.vue";
 import UModal from "../components/ued/UModal.vue";

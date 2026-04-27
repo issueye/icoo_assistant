@@ -62,16 +62,15 @@
               </div>
             </div>
             <div class="table-actions">
-              <button class="btn btn-secondary" @click="openEdit(item)">编辑</button>
-              <button
-                class="btn btn-error"
-                :class="{ 'is-loading': store.deleting === item.id }"
+              <UIconButton icon="edit" label="编辑别名" @click="openEdit(item)" />
+              <UIconButton
+                icon="delete"
+                label="删除别名"
+                variant="error"
+                :loading="store.deleting === item.id"
                 :disabled="store.deleting === item.id"
                 @click="store.remove(item.id)"
-              >
-                <span v-if="store.deleting === item.id" class="btn__spinner" />
-                {{ store.deleting === item.id ? "删除中..." : "删除" }}
-              </button>
+              />
             </div>
           </article>
         </div>
@@ -143,6 +142,7 @@ import { useModelAliasesStore } from "../stores/modelAliases";
 import FieldLabel from "../components/FieldLabel.vue";
 import PanelBlock from "../components/PanelBlock.vue";
 import StatCard from "../components/StatCard.vue";
+import UIconButton from "../components/ued/UIconButton.vue";
 import UModal from "../components/ued/UModal.vue";
 import USelect from "../components/ued/USelect.vue";
 import UTag from "../components/ued/UTag.vue";
