@@ -17,12 +17,13 @@ func TestDeleteSupplierRejectsEnabledPolicyReference(t *testing.T) {
 	t.Cleanup(func() { _ = suppliers.Close() })
 
 	record, err := suppliers.Upsert(supplier.UpsertInput{
-		Name:      "Policy Vendor",
-		Protocol:  "openai-responses",
-		BaseURL:   "https://example.com",
-		Enabled:   true,
-		Models:    "gpt-4.1-mini",
-		UserAgent: "PolicyVendor/1.0",
+		Name:         "Policy Vendor",
+		Protocol:     "openai-responses",
+		BaseURL:      "https://example.com",
+		Enabled:      true,
+		Models:       "gpt-4.1-mini",
+		DefaultModel: "gpt-4.1-mini",
+		UserAgent:    "PolicyVendor/1.0",
 	})
 	if err != nil {
 		t.Fatalf("upsert supplier: %v", err)
@@ -37,7 +38,6 @@ func TestDeleteSupplierRejectsEnabledPolicyReference(t *testing.T) {
 	if _, err := policies.Upsert(routepolicy.UpsertInput{
 		DownstreamProtocol: "openai-chat",
 		SupplierID:         record.ID,
-		TargetModel:        "gpt-4.1-mini",
 		Enabled:            true,
 	}); err != nil {
 		t.Fatalf("upsert policy: %v", err)

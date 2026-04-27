@@ -18,16 +18,16 @@ func TestUpsertListDelete(t *testing.T) {
 	}
 
 	record, err := svc.Upsert(UpsertInput{
-		Name:        "Test Vendor",
-		Protocol:    "openai-chat",
-		BaseURL:     "https://example.com",
-		APIKey:      "secret-key-123456",
-		OnlyStream:  true,
-		UserAgent:   "CustomVendor/1.0",
-		Enabled:     true,
-		Description: "Test vendor",
-		Models:      "model-a,model-b",
-		Tags:        "internal,test",
+		Name:         "Test Vendor",
+		Protocol:     "openai-chat",
+		BaseURL:      "https://example.com",
+		APIKey:       "secret-key-123456",
+		OnlyStream:   true,
+		UserAgent:    "CustomVendor/1.0",
+		Enabled:      true,
+		Description:  "Test vendor",
+		Models:       "model-a,model-b",
+		DefaultModel: "model-a",
 	})
 	if err != nil {
 		t.Fatalf("upsert: %v", err)
@@ -40,6 +40,9 @@ func TestUpsertListDelete(t *testing.T) {
 	}
 	if record.UserAgent != "CustomVendor/1.0" {
 		t.Fatalf("expected user agent to round-trip, got %q", record.UserAgent)
+	}
+	if record.DefaultModel != "model-a" {
+		t.Fatalf("expected default model to round-trip, got %q", record.DefaultModel)
 	}
 
 	items := svc.List()
@@ -56,6 +59,9 @@ func TestUpsertListDelete(t *testing.T) {
 	if resolved.UserAgent != "CustomVendor/1.0" {
 		t.Fatalf("expected resolved supplier snapshot to preserve user agent, got %q", resolved.UserAgent)
 	}
+	if resolved.DefaultModel != "model-a" {
+		t.Fatalf("expected resolved supplier snapshot to preserve default model, got %q", resolved.DefaultModel)
+	}
 
 	if err := svc.Delete(record.ID); err != nil {
 		t.Fatalf("delete: %v", err)
@@ -63,6 +69,26 @@ func TestUpsertListDelete(t *testing.T) {
 	items = svc.List()
 	if len(items) != len(initial) {
 		t.Fatalf("expected supplier count restored, got %d", len(items))
+	}
+}
+
+func TestUpsertRejectsDefaultModelOutsideModels(t *testing.T) {
+	svc, err := NewService(t.TempDir())
+	if err != nil {
+		t.Fatalf("new service: %v", err)
+	}
+	t.Cleanup(func() { _ = svc.Close() })
+
+	_, err = svc.Upsert(UpsertInput{
+		Name:         "Invalid Vendor",
+		Protocol:     "openai-chat",
+		BaseURL:      "https://example.com",
+		Enabled:      true,
+		Models:       "model-a,model-b",
+		DefaultModel: "model-c",
+	})
+	if err == nil {
+		t.Fatalf("expected invalid default model error")
 	}
 }
 

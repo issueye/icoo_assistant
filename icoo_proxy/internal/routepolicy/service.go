@@ -17,7 +17,6 @@ type Record struct {
 	SupplierID         string          `json:"supplier_id"`
 	SupplierName       string          `json:"supplier_name"`
 	UpstreamProtocol   consts.Protocol `json:"upstream_protocol"`
-	TargetModel        string          `json:"target_model"`
 	Enabled            bool            `json:"enabled"`
 	UpdatedAt          string          `json:"updated_at"`
 	CreatedAt          string          `json:"created_at"`
@@ -42,21 +41,21 @@ type SupplierResolver interface {
 }
 
 type SupplierSnapshot struct {
-	ID         string
-	Name       string
-	Protocol   consts.Protocol
-	BaseURL    string
-	APIKey     string
-	OnlyStream bool
-	UserAgent  string
-	IsEnabled  bool
+	ID           string
+	Name         string
+	Protocol     consts.Protocol
+	BaseURL      string
+	APIKey       string
+	OnlyStream   bool
+	UserAgent    string
+	IsEnabled    bool
+	DefaultModel string
 }
 
 type UpsertInput struct {
 	ID                 string          `json:"id"`
 	DownstreamProtocol consts.Protocol `json:"downstream_protocol"`
 	SupplierID         string          `json:"supplier_id"`
-	TargetModel        string          `json:"target_model"`
 	Enabled            bool            `json:"enabled"`
 }
 
@@ -132,9 +131,6 @@ func (s *Service) Upsert(input UpsertInput) (Record, error) {
 	if strings.TrimSpace(input.SupplierID) == "" {
 		return Record{}, fmt.Errorf("supplier id is required")
 	}
-	if strings.TrimSpace(input.TargetModel) == "" {
-		return Record{}, fmt.Errorf("target model is required")
-	}
 	supplier, ok := s.lookup.Resolve(input.SupplierID)
 	if !ok {
 		return Record{}, fmt.Errorf("supplier not found")
@@ -154,7 +150,6 @@ func (s *Service) Upsert(input UpsertInput) (Record, error) {
 		ID:                 buildID(downstream),
 		DownstreamProtocol: downstream,
 		SupplierID:         supplier.ID,
-		TargetModel:        strings.TrimSpace(input.TargetModel),
 		Enabled:            input.Enabled,
 		CreatedAt:          now,
 		UpdatedAt:          now,
@@ -162,6 +157,7 @@ func (s *Service) Upsert(input UpsertInput) (Record, error) {
 	if found {
 		current.ID = existing.ID
 		current.CreatedAt = existing.CreatedAt
+		current.TargetModel = existing.TargetModel
 	} else if id != "" {
 		current.ID = id
 	}
@@ -191,7 +187,6 @@ func (s *Service) toRecord(item policyModel) Record {
 		ID:                 item.ID,
 		DownstreamProtocol: item.DownstreamProtocol,
 		SupplierID:         item.SupplierID,
-		TargetModel:        item.TargetModel,
 		Enabled:            item.Enabled,
 		UpdatedAt:          item.UpdatedAt.Format(time.RFC3339),
 		CreatedAt:          item.CreatedAt.Format(time.RFC3339),

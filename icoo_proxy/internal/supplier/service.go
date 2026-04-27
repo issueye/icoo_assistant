@@ -24,25 +24,25 @@ type Record struct {
 	Enabled      bool            `json:"enabled"`
 	Description  string          `json:"description"`
 	Models       []string        `json:"models"`
-	Tags         []string        `json:"tags"`
+	DefaultModel string          `json:"default_model"`
 	UpdatedAt    string          `json:"updated_at"`
 	CreatedAt    string          `json:"created_at"`
 }
 
 type supplierModel struct {
-	ID          string `gorm:"primaryKey"`
-	Name        string `gorm:"index"`
-	Protocol    consts.Protocol
-	BaseURL     string
-	APIKey      string
-	OnlyStream  bool
-	UserAgent   string
-	Enabled     bool
-	Description string
-	Models      string
-	Tags        string
-	CreatedAt   time.Time
-	UpdatedAt   time.Time
+	ID           string `gorm:"primaryKey"`
+	Name         string `gorm:"index"`
+	Protocol     consts.Protocol
+	BaseURL      string
+	APIKey       string
+	OnlyStream   bool
+	UserAgent    string
+	Enabled      bool
+	Description  string
+	Models       string
+	DefaultModel string
+	CreatedAt    time.Time
+	UpdatedAt    time.Time
 }
 
 func (supplierModel) TableName() string {
@@ -50,17 +50,17 @@ func (supplierModel) TableName() string {
 }
 
 type UpsertInput struct {
-	ID          string `json:"id"`
-	Name        string `json:"name"`
-	Protocol    string `json:"protocol"`
-	BaseURL     string `json:"base_url"`
-	APIKey      string `json:"api_key"`
-	OnlyStream  bool   `json:"only_stream"`
-	UserAgent   string `json:"user_agent"`
-	Enabled     bool   `json:"enabled"`
-	Description string `json:"description"`
-	Models      string `json:"models"`
-	Tags        string `json:"tags"`
+	ID           string `json:"id"`
+	Name         string `json:"name"`
+	Protocol     string `json:"protocol"`
+	BaseURL      string `json:"base_url"`
+	APIKey       string `json:"api_key"`
+	OnlyStream   bool   `json:"only_stream"`
+	UserAgent    string `json:"user_agent"`
+	Enabled      bool   `json:"enabled"`
+	Description  string `json:"description"`
+	Models       string `json:"models"`
+	DefaultModel string `json:"default_model"`
 }
 
 type Service struct {
@@ -105,14 +105,15 @@ func (s *Service) Resolve(id string) (routepolicy.SupplierSnapshot, bool) {
 		return routepolicy.SupplierSnapshot{}, false
 	}
 	return routepolicy.SupplierSnapshot{
-		ID:         item.ID,
-		Name:       item.Name,
-		Protocol:   item.Protocol,
-		BaseURL:    item.BaseURL,
-		APIKey:     item.APIKey,
-		OnlyStream: item.OnlyStream,
-		UserAgent:  item.UserAgent,
-		IsEnabled:  item.Enabled,
+		ID:           item.ID,
+		Name:         item.Name,
+		Protocol:     item.Protocol,
+		BaseURL:      item.BaseURL,
+		APIKey:       item.APIKey,
+		OnlyStream:   item.OnlyStream,
+		UserAgent:    item.UserAgent,
+		IsEnabled:    item.Enabled,
+		DefaultModel: strings.TrimSpace(item.DefaultModel),
 	}, true
 }
 
@@ -129,6 +130,11 @@ func (s *Service) Upsert(input UpsertInput) (Record, error) {
 	if baseURL == "" {
 		return Record{}, fmt.Errorf("supplier base_url is required")
 	}
+	models := splitCSVLike(input.Models)
+	defaultModel := strings.TrimSpace(input.DefaultModel)
+	if defaultModel != "" && !slices.Contains(models, defaultModel) {
+		return Record{}, fmt.Errorf("supplier default_model must exist in models list")
+	}
 
 	now := time.Now()
 	id := strings.TrimSpace(input.ID)
@@ -139,19 +145,19 @@ func (s *Service) Upsert(input UpsertInput) (Record, error) {
 	}
 
 	current := supplierModel{
-		ID:          generateID(name),
-		Name:        name,
-		Protocol:    protocol,
-		BaseURL:     baseURL,
-		APIKey:      strings.TrimSpace(input.APIKey),
-		OnlyStream:  input.OnlyStream,
-		UserAgent:   strings.TrimSpace(input.UserAgent),
-		Enabled:     input.Enabled,
-		Description: strings.TrimSpace(input.Description),
-		Models:      strings.Join(splitCSVLike(input.Models), ","),
-		Tags:        strings.Join(splitCSVLike(input.Tags), ","),
-		CreatedAt:   now,
-		UpdatedAt:   now,
+		ID:           generateID(name),
+		Name:         name,
+		Protocol:     protocol,
+		BaseURL:      baseURL,
+		APIKey:       strings.TrimSpace(input.APIKey),
+		OnlyStream:   input.OnlyStream,
+		UserAgent:    strings.TrimSpace(input.UserAgent),
+		Enabled:      input.Enabled,
+		Description:  strings.TrimSpace(input.Description),
+		Models:       strings.Join(models, ","),
+		DefaultModel: defaultModel,
+		CreatedAt:    now,
+		UpdatedAt:    now,
 	}
 	if found {
 		current.ID = existing.ID
@@ -195,7 +201,7 @@ func toRecord(item supplierModel) Record {
 		Enabled:      item.Enabled,
 		Description:  item.Description,
 		Models:       slices.Clone(splitCSVLike(item.Models)),
-		Tags:         slices.Clone(splitCSVLike(item.Tags)),
+		DefaultModel: strings.TrimSpace(item.DefaultModel),
 		UpdatedAt:    item.UpdatedAt.Format(time.RFC3339),
 		CreatedAt:    item.CreatedAt.Format(time.RFC3339),
 	}

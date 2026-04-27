@@ -19,7 +19,11 @@ func ApplyRoutePolicies(cfg config.Config, suppliers *supplier.Service, policies
 		if !ok {
 			return cfg, fmt.Errorf("route policy supplier %q not found", policy.SupplierID)
 		}
-		target := policy.UpstreamProtocol.ToString() + ":" + strings.TrimSpace(policy.TargetModel)
+		defaultModel := strings.TrimSpace(snapshot.DefaultModel)
+		if defaultModel == "" {
+			return cfg, fmt.Errorf("route policy supplier %q default model is required", snapshot.Name)
+		}
+		target := snapshot.Protocol.ToString() + ":" + defaultModel
 		switch policy.DownstreamProtocol {
 		case consts.ProtocolAnthropic:
 			cfg.DefaultAnthropicRoute = target

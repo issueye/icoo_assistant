@@ -32,7 +32,6 @@ func TestUpsertAndList(t *testing.T) {
 	record, err := svc.Upsert(UpsertInput{
 		DownstreamProtocol: "openai-chat",
 		SupplierID:         "openai-default",
-		TargetModel:        "gpt-4.1-mini",
 		Enabled:            true,
 	})
 	if err != nil {
@@ -67,7 +66,6 @@ func TestFindEnabledBySupplierID(t *testing.T) {
 	if _, err := svc.Upsert(UpsertInput{
 		DownstreamProtocol: "openai-chat",
 		SupplierID:         "openai-default",
-		TargetModel:        "gpt-4.1-mini",
 		Enabled:            true,
 	}); err != nil {
 		t.Fatalf("upsert enabled policy: %v", err)
