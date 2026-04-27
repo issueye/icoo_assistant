@@ -18,57 +18,45 @@
     </div>
 
     <div class="section-grid">
-      <PanelBlock title="上下游管理">
-        <div class="mb-3 flex items-center justify-between gap-3">
-          <div>
-            <p class="text-sm font-medium text-[#262626]">协议映射</p>
+      <div class="route-map">
+        <div class="route-map__head" aria-hidden="true">
+          <span>下游协议</span>
+          <span>供应商</span>
+          <span>上游协议</span>
+          <span>状态</span>
+          <span>操作</span>
+        </div>
+        <article v-for="item in store.routeManagementRows" :key="item.key" class="route-map__row">
+          <div class="route-map__protocol">
+            <div class="route-map__protocol-main">
+              <p class="route-map__name">{{ item.label }}</p>
+              <UTag code size="xs">{{ item.key }}</UTag>
+            </div>
           </div>
-          <UTag variant="info" size="xs">启用中：{{ store.enabledPolicyCount }}</UTag>
-        </div>
 
-        <div class="divide-y divide-[#f0f0f0] rounded-lg border border-[#f0f0f0]">
-          <article
-            v-for="item in store.routeManagementRows"
-            :key="item.key"
-            class="grid gap-3 px-3 py-2.5 lg:grid-cols-[1.2fr_2fr_auto] lg:items-center"
-          >
-            <div>
-              <div class="flex items-center gap-2">
-                <p class="text-sm font-medium text-[#262626]">{{ item.label }}</p>
-                <UTag code size="xs">{{ item.key }}</UTag>
-              </div>
-              <p class="mt-0.5 text-[11px] leading-5 text-[#8c8c8c]">{{ item.description }}</p>
-            </div>
+          <div class="route-map__cell">
+            <span class="route-map__mobile-label">供应商</span>
+            <p class="route-map__value">{{ item.supplierName }}</p>
+          </div>
 
-            <div class="grid gap-2 md:grid-cols-3">
-              <div>
-                <p class="table-meta">供应商</p>
-                <p class="mt-0.5 truncate text-sm font-medium text-[#262626]">{{ item.supplierName }}</p>
-              </div>
-              <div>
-                <p class="table-meta">上游协议</p>
-                <p class="mt-0.5 truncate text-sm text-[#595959]">{{ item.upstreamProtocol }}</p>
-              </div>
-              <div>
-                <p class="table-meta">状态</p>
-                <div class="mt-0.5">
-                  <UTag :variant="item.statusVariant" size="xs">{{ item.statusText }}</UTag>
-                </div>
-                <p class="mt-0.5 text-[11px] text-[#8c8c8c]">{{ item.helperText }}</p>
-              </div>
-            </div>
+          <div class="route-map__cell">
+            <span class="route-map__mobile-label">上游协议</span>
+            <UTag code size="xs">{{ item.upstreamProtocol }}</UTag>
+          </div>
 
-            <div class="flex justify-end">
-              <button
-                class="btn btn-secondary"
-                @click="item.policy ? openPolicyEdit(item.policy) : openPolicyCreate(item.key)"
-              >
-                {{ item.policy ? "编辑映射" : "配置映射" }}
-              </button>
-            </div>
-          </article>
-        </div>
-      </PanelBlock>
+          <div class="route-map__status">
+            <span class="route-map__mobile-label">状态</span>
+            <UTag :variant="item.statusVariant" size="xs" dot>{{ item.statusText }}</UTag>
+          </div>
+
+          <div class="route-map__action">
+            <button class="btn btn-secondary route-map__button"
+              @click="item.policy ? openPolicyEdit(item.policy) : openPolicyCreate(item.key)">
+              {{ item.policy ? "编辑映射" : "配置映射" }}
+            </button>
+          </div>
+        </article>
+      </div>
     </div>
 
     <div class="section-grid">
@@ -79,51 +67,39 @@
         <div v-else-if="!store.items.length" class="empty-state">
           当前尚未配置供应商。
         </div>
-        <UTable
-          v-else
-          :columns="supplierTableColumns"
-          :rows="store.items"
-          action-width="148px"
-          fixed
-          min-width="1480px"
-          table-class="supplier-table"
-        >
+        <UTable v-else :columns="supplierTableColumns" :rows="store.items" action-width="148px" fixed min-width="1480px"
+          table-class="supplier-table">
           <template #cell-supplier="{ row }">
             <div class="flex items-center gap-2">
               <p class="font-medium text-[#262626]">{{ row.name }}</p>
-              <UTag :variant="row.enabled ? 'success' : 'error'" size="xs">
-                {{ row.enabled ? "启用" : "停用" }}
-              </UTag>
             </div>
             <p class="mt-0.5 text-sm leading-5 text-[#595959] table-cell-wrap">
               {{ row.description || "暂无描述。" }}
             </p>
-            <p class="mt-0.5 table-meta">更新时间：{{ formatCheckedAt(row.updated_at) }}</p>
           </template>
           <template #cell-protocol="{ row }">
             <p class="font-medium text-[#262626]">{{ row.protocol }}</p>
-            <p class="mt-0.5 break-all table-meta table-cell-wrap">{{ row.base_url }}</p>
             <div class="mt-1 flex flex-wrap gap-1.5">
-              <UTag code size="xs">{{ row.api_key_masked || "未保存 API Key" }}</UTag>
               <UTag v-if="row.only_stream" variant="warning" size="xs">only_stream</UTag>
             </div>
+          </template>
+          <template #cell-address="{ row }">
+            <p class="mt-0.5 break-all table-meta table-cell-wrap">{{ row.base_url }}</p>
+          </template>
+          <template #cell-user_agent="{ row }">
             <p v-if="row.user_agent" class="mt-0.5 table-meta table-cell-wrap">UA: {{ row.user_agent }}</p>
+          </template>
+          <template #cell-key="{ row }">
+            <UTag code size="xs">{{ row.api_key_masked || "未保存 API Key" }}</UTag>
           </template>
           <template #cell-models="{ row }">
             <div class="flex flex-wrap gap-1.5">
-              <UTag
-                v-for="model in row.models || []"
-                :key="model"
-                :variant="row.default_model === model ? 'success' : 'info'"
-                size="xs"
-              >
+              <UTag v-for="model in row.models || []" :key="model"
+                :variant="row.default_model === model ? 'success' : 'info'" size="xs">
                 {{ row.default_model === model ? `${model} · 默认` : model }}
               </UTag>
               <span v-if="!(row.models || []).length" class="table-meta">无模型</span>
             </div>
-            <p v-if="row.default_model && !(row.models || []).includes(row.default_model)" class="mt-0.5 text-[11px] text-amber-600">
-              默认模型：{{ row.default_model }}
-            </p>
           </template>
           <template #cell-health="{ row }">
             <template v-if="store.healthFor(row.id)">
@@ -139,42 +115,30 @@
               <p class="mt-0.5 text-sm leading-5 text-[#595959] table-cell-wrap">
                 {{ store.healthFor(row.id).message }}
               </p>
-              <p class="mt-0.5 table-meta">{{ formatCheckedAt(store.healthFor(row.id).checked_at) }}</p>
             </template>
             <span v-else class="table-meta">尚未检查</span>
           </template>
+          <template #cell-status="{ row }">
+            <UTag :variant="row.enabled ? 'success' : 'error'" size="xs">
+              {{ row.enabled ? "启用" : "停用" }}
+            </UTag>
+          </template>
           <template #actions="{ row }">
             <div class="table-actions">
-              <UIconButton
-                icon="inspect"
-                label="检查供应商"
-                variant="info"
-                :loading="store.checking === row.id"
-                :disabled="store.checking === row.id"
-                @click="store.check(row.id)"
-              />
+              <UIconButton icon="inspect" label="检查供应商" variant="info" :loading="store.checking === row.id"
+                :disabled="store.checking === row.id" @click="checkSupplier(row.id)" />
               <UIconButton icon="edit" label="编辑供应商" @click="openSupplierEdit(row)" />
               <UIconButton icon="models" label="管理模型" @click="openModelEditor(row)" />
-              <UIconButton
-                icon="delete"
-                label="删除供应商"
-                variant="error"
-                :loading="store.deleting === row.id"
-                :disabled="store.deleting === row.id"
-                @click="openDeleteConfirm(row)"
-              />
+              <UIconButton icon="delete" label="删除供应商" variant="error" :loading="store.deleting === row.id"
+                :disabled="store.deleting === row.id" @click="openDeleteConfirm(row)" />
             </div>
           </template>
         </UTable>
       </PanelBlock>
     </div>
 
-    <UModal
-      v-model:open="supplierModalOpen"
-      :title="store.form.id ? '编辑供应商' : '新建供应商'"
-      width="640px"
-      @close="store.resetForm"
-    >
+    <UModal v-model:open="supplierModalOpen" :title="store.form.id ? '编辑供应商' : '新建供应商'" width="640px"
+      @close="store.resetForm">
       <form id="supplier-form" class="space-y-3" @submit.prevent="submitSupplier">
         <div class="grid gap-3 md:grid-cols-2">
           <FieldLabel label="名称">
@@ -200,13 +164,10 @@
         </FieldLabel>
 
         <div class="grid gap-3 md:grid-cols-2">
-          <USelect
-            v-model="store.form.default_model"
-            label="默认模型"
-            placeholder="请先在模型管理中配置候选模型"
-            :options="supplierFormDefaultOptions"
-          />
-          <div class="rounded-md border border-dashed border-[#d9d9d9] bg-[#fafafa] px-3 py-2 text-[11px] leading-5 text-[#8c8c8c]">
+          <USelect v-model="store.form.default_model" label="默认模型" placeholder="请先在模型管理中配置候选模型"
+            :options="supplierFormDefaultOptions" />
+          <div
+            class="rounded-md border border-dashed border-[#d9d9d9] bg-[#fafafa] px-3 py-2 text-[11px] leading-5 text-[#8c8c8c]">
             模型列表已拆分到独立弹窗管理。新建供应商后，可在列表中点击"管理模型"补充候选模型与默认模型。
           </div>
         </div>
@@ -225,12 +186,8 @@
       <template #footer>
         <div class="flex justify-end gap-2">
           <button type="button" class="btn btn-secondary" @click="closeSupplierModal">取消</button>
-          <button
-            form="supplier-form"
-            class="btn btn-primary"
-            :class="{ 'is-loading': store.saving }"
-            :disabled="store.saving"
-          >
+          <button form="supplier-form" class="btn btn-primary" :class="{ 'is-loading': store.saving }"
+            :disabled="store.saving">
             <span v-if="store.saving" class="btn__spinner" />
             {{ store.saving ? "保存中..." : store.form.id ? "更新供应商" : "创建供应商" }}
           </button>
@@ -238,58 +195,39 @@
       </template>
     </UModal>
 
-    <UModal
-      v-model:open="modelModalOpen"
-      :title="store.modelForm.id ? `管理模型 · ${store.modelForm.name}` : '管理模型'"
-      width="680px"
-      @close="store.resetModelForm"
-    >
+    <UModal v-model:open="modelModalOpen" :title="store.modelForm.id ? `管理模型 · ${store.modelForm.name}` : '管理模型'"
+      width="680px" @close="store.resetModelForm">
       <form id="model-form" class="space-y-3" @submit.prevent="submitModelEditor">
         <div class="flex items-center justify-between gap-3">
           <div>
             <p class="text-sm font-medium text-[#262626]">候选模型列表</p>
             <p class="mt-0.5 text-[11px] text-[#8c8c8c]">默认模型必须来自当前候选模型列表。</p>
           </div>
-          <button type="button" class="btn btn-secondary px-2 py-1 text-xs" @click="addModelRow(store.modelForm.models)">
+          <button type="button" class="btn btn-secondary px-2 py-1 text-xs"
+            @click="addModelRow(store.modelForm.models)">
             添加模型
           </button>
         </div>
 
         <div class="space-y-2">
           <div v-for="(model, index) in store.modelForm.models" :key="index" class="flex items-center gap-2">
-            <input
-              :value="model"
-              class="field-input"
-              :placeholder="index === 0 ? '例如：gpt-4.1-mini' : '继续添加模型'"
-              @input="updateModelRow(store.modelForm.models, index, $event.target.value)"
-            />
-            <button
-              type="button"
-              class="btn btn-secondary shrink-0 px-2 py-2"
-              :disabled="store.modelForm.models.length === 1"
-              @click="removeModelRow(store.modelForm.models, index)"
-            >
+            <input :value="model" class="field-input" :placeholder="index === 0 ? '例如：gpt-4.1-mini' : '继续添加模型'"
+              @input="updateModelRow(store.modelForm.models, index, $event.target.value)" />
+            <button type="button" class="btn btn-secondary shrink-0 px-2 py-2"
+              :disabled="store.modelForm.models.length === 1" @click="removeModelRow(store.modelForm.models, index)">
               删除
             </button>
           </div>
         </div>
 
-        <USelect
-          v-model="store.modelForm.default_model"
-          label="默认模型"
-          placeholder="不设置默认模型"
-          :options="modelEditorDefaultOptions"
-        />
+        <USelect v-model="store.modelForm.default_model" label="默认模型" placeholder="不设置默认模型"
+          :options="modelEditorDefaultOptions" />
       </form>
       <template #footer>
         <div class="flex justify-end gap-2">
           <button type="button" class="btn btn-secondary" @click="closeModelModal">取消</button>
-          <button
-            form="model-form"
-            class="btn btn-primary"
-            :class="{ 'is-loading': store.saving }"
-            :disabled="store.saving"
-          >
+          <button form="model-form" class="btn btn-primary" :class="{ 'is-loading': store.saving }"
+            :disabled="store.saving">
             <span v-if="store.saving" class="btn__spinner" />
             {{ store.saving ? "保存中..." : "保存模型设置" }}
           </button>
@@ -297,20 +235,12 @@
       </template>
     </UModal>
 
-    <UModal
-      v-model:open="policyModalOpen"
-      :title="store.policyForm.id ? '编辑路由策略' : '新建路由策略'"
-      width="560px"
-      @close="store.resetPolicyForm"
-    >
+    <UModal v-model:open="policyModalOpen" :title="store.policyForm.id ? '编辑路由策略' : '新建路由策略'" width="560px"
+      @close="store.resetPolicyForm">
       <form id="policy-form" class="space-y-3" @submit.prevent="submitPolicy">
         <div class="grid gap-3 md:grid-cols-2">
           <USelect v-model="store.policyForm.downstream_protocol" label="下游协议" :options="store.policyOptions" />
           <USelect v-model="store.policyForm.supplier_id" label="供应商" placeholder="请选择供应商" :options="supplierOptions" />
-        </div>
-
-        <div class="rounded-md border border-dashed border-[#d9d9d9] bg-[#fafafa] px-3 py-2 text-[11px] leading-5 text-[#8c8c8c]">
-          默认模型不再在路由策略中单独设置，运行时会直接继承供应商的默认模型。
         </div>
 
         <label class="field-toggle">
@@ -321,12 +251,8 @@
       <template #footer>
         <div class="flex justify-end gap-2">
           <button type="button" class="btn btn-secondary" @click="closePolicyModal">取消</button>
-          <button
-            form="policy-form"
-            class="btn btn-primary"
-            :class="{ 'is-loading': store.saving }"
-            :disabled="store.saving"
-          >
+          <button form="policy-form" class="btn btn-primary" :class="{ 'is-loading': store.saving }"
+            :disabled="store.saving">
             <span v-if="store.saving" class="btn__spinner" />
             {{ store.saving ? "保存中..." : "保存路由策略" }}
           </button>
@@ -334,17 +260,9 @@
       </template>
     </UModal>
 
-    <UConfirmDialog
-      v-model:open="confirmState.open"
-      title="确认删除供应商"
-      :message="confirmState.message"
-      description="删除后将同时移除该供应商对应的本地健康检查记录，且路由策略可能需要重新调整。"
-      confirm-text="确认删除"
-      cancel-text="取消"
-      :loading="Boolean(store.deleting)"
-      danger
-      @confirm="confirmDelete"
-    />
+    <UConfirmDialog v-model:open="confirmState.open" title="确认删除供应商" :message="confirmState.message"
+      description="删除后将同时移除该供应商对应的本地健康检查记录，且路由策略可能需要重新调整。" confirm-text="确认删除" cancel-text="取消"
+      :loading="Boolean(store.deleting)" danger @confirm="confirmDelete" />
   </section>
 </template>
 
@@ -361,6 +279,7 @@ import UModal from "../components/ued/UModal.vue";
 import USelect from "../components/ued/USelect.vue";
 import UTable from "../components/ued/UTable.vue";
 import UTag from "../components/ued/UTag.vue";
+import { message } from "../components/ued/message";
 
 const store = useSuppliersStore();
 const supplierModalOpen = ref(false);
@@ -388,8 +307,11 @@ const supplierOptions = computed(() =>
 const supplierTableColumns = [
   { key: "supplier", title: "供应商", width: "220px" },
   { key: "protocol", title: "协议 / 地址", width: "520px" },
-  { key: "models", title: "模型 / 默认模型", width: "320px" },
+  { key: "address", title: "地址", width: "520px" },
+  { key: "key", title: "API Key", width: "520px" },
+  { key: "user_agent", title: "User-Agent", width: "780px" },
   { key: "health", title: "健康状态", width: "220px" },
+  { key: "status", title: "状态", width: "220px" },
 ];
 
 const supplierFormDefaultOptions = computed(() => [
@@ -475,9 +397,11 @@ function removeModelRow(target, index) {
 }
 
 async function submitSupplier() {
+  const isEdit = Boolean(store.form.id);
   await store.save();
   if (!store.error) {
     supplierModalOpen.value = false;
+    message.success(isEdit ? "供应商已更新。" : "供应商已新增。");
   }
 }
 
@@ -485,6 +409,7 @@ async function submitModelEditor() {
   await store.saveModelEditor();
   if (!store.error) {
     modelModalOpen.value = false;
+    message.success("模型设置已保存。");
   }
 }
 
@@ -505,9 +430,11 @@ function closePolicyModal() {
 }
 
 async function submitPolicy() {
+  const isEdit = Boolean(store.policyForm.id);
   await store.savePolicy();
   if (!store.error) {
     policyModalOpen.value = false;
+    message.success(isEdit ? "路由策略已更新。" : "路由策略已新增。");
   }
 }
 
@@ -520,6 +447,14 @@ async function confirmDelete() {
     confirmState.open = false;
     confirmState.id = "";
     confirmState.message = "";
+    message.success("供应商已删除。");
+  }
+}
+
+async function checkSupplier(id) {
+  await store.check(id);
+  if (!store.error) {
+    message.success("供应商健康检查完成。");
   }
 }
 

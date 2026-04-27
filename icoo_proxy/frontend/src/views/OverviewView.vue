@@ -6,7 +6,7 @@
           class="btn btn-primary"
           :class="{ 'is-loading': store.refreshing }"
           :disabled="store.refreshing"
-          @click="store.reloadProxy"
+          @click="reloadProxy"
         >
           <span v-if="store.refreshing" class="btn__spinner" />
           {{ store.refreshing ? "重载中..." : "重载代理" }}
@@ -133,10 +133,18 @@ import PanelBlock from "../components/PanelBlock.vue";
 import RouteList from "../components/RouteList.vue";
 import StatCard from "../components/StatCard.vue";
 import UTag from "../components/ued/UTag.vue";
+import { message } from "../components/ued/message";
 
 const store = useOverviewStore();
 
 onMounted(() => {
   store.load();
 });
+
+async function reloadProxy() {
+  await store.reloadProxy();
+  if (!store.error) {
+    message.success("代理已重载。");
+  }
+}
 </script>

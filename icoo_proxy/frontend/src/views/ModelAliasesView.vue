@@ -69,7 +69,7 @@
                 variant="error"
                 :loading="store.deleting === item.id"
                 :disabled="store.deleting === item.id"
-                @click="store.remove(item.id)"
+                @click="removeAlias(item.id)"
               />
             </div>
           </article>
@@ -146,6 +146,7 @@ import UIconButton from "../components/ued/UIconButton.vue";
 import UModal from "../components/ued/UModal.vue";
 import USelect from "../components/ued/USelect.vue";
 import UTag from "../components/ued/UTag.vue";
+import { message } from "../components/ued/message";
 
 const store = useModelAliasesStore();
 const modalOpen = ref(false);
@@ -173,9 +174,18 @@ function closeModal() {
 }
 
 async function submitAlias() {
+  const isEdit = Boolean(store.form.id);
   await store.save();
   if (!store.error) {
     modalOpen.value = false;
+    message.success(isEdit ? "模型别名已更新。" : "模型别名已新增。");
+  }
+}
+
+async function removeAlias(id) {
+  await store.remove(id);
+  if (!store.error) {
+    message.success("模型别名已删除。");
   }
 }
 

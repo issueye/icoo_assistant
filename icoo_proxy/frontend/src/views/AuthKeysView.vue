@@ -7,7 +7,7 @@
           class="btn btn-secondary"
           :class="{ 'is-loading': store.reloading }"
           :disabled="store.reloading"
-          @click="store.reloadProxy"
+          @click="reloadProxy"
         >
           <span v-if="store.reloading" class="btn__spinner" />
           {{ store.reloading ? "重载中..." : "重载代理" }}
@@ -80,7 +80,7 @@
         <FieldLabel label="Key">
           <div class="field-row">
             <input v-model="store.form.secret" class="field-input" :placeholder="store.form.id ? '留空则保留原 Key' : '输入或生成授权 Key'" />
-            <button type="button" class="btn btn-secondary shrink-0" @click="store.generateSecret">生成</button>
+            <button type="button" class="btn btn-secondary shrink-0" @click="generateSecret">生成</button>
           </div>
         </FieldLabel>
         <FieldLabel label="说明">
@@ -131,6 +131,7 @@ import UIconButton from "../components/ued/UIconButton.vue";
 import UModal from "../components/ued/UModal.vue";
 import UTable from "../components/ued/UTable.vue";
 import UTag from "../components/ued/UTag.vue";
+import { message } from "../components/ued/message";
 import { useAuthKeysStore } from "../stores/authKeys";
 
 const store = useAuthKeysStore();
@@ -163,9 +164,11 @@ function closeModal() {
 }
 
 async function submit() {
+  const isEdit = Boolean(store.form.id);
   await store.save();
   if (!store.error) {
     modalOpen.value = false;
+    message.success(isEdit ? "授权 Key 已更新。" : "授权 Key 已新增。");
   }
 }
 
@@ -180,15 +183,30 @@ async function confirmDelete() {
     return;
   }
   await store.remove(confirmState.id);
-  confirmState.open = false;
-  confirmState.id = "";
-  confirmState.message = "";
+  if (!store.error) {
+    confirmState.open = false;
+    confirmState.id = "";
+    confirmState.message = "";
+    message.success("授权 Key 已删除。");
+  }
 }
 
 async function copyKey(item) {
   const secret = await store.copySecret(item.id);
   if (secret) {
-    // clipboard handled by store
+    message.success("授权 Key 已复制。");
+  }
+}
+
+function generateSecret() {
+  store.generateSecret();
+  message.success("授权 Key 已生成。");
+}
+
+async function reloadProxy() {
+  await store.reloadProxy();
+  if (!store.error) {
+    message.success("代理已重载。");
   }
 }
 

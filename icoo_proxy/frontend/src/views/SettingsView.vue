@@ -80,11 +80,6 @@
     </div>
 
     <template v-else>
-      <div class="section-grid grid-cols-2">
-        <StatCard icon="wifi" label="代理监听" :value="`${store.form.proxy_host}:${store.form.proxy_port}`" tone="primary" />
-        <StatCard icon="activity" label="链路日志" :value="store.form.proxy_chain_log_bodies ? '记录请求与响应体' : '仅记录元数据'" />
-      </div>
-
       <form class="section-grid" @submit.prevent="submit">
         <PanelBlock title="核心运行">
           <div class="grid gap-3 md:grid-cols-2">
@@ -133,6 +128,7 @@ import FieldLabel from "../components/FieldLabel.vue";
 import PanelBlock from "../components/PanelBlock.vue";
 import StatCard from "../components/StatCard.vue";
 import UButton from "../components/ued/UButton.vue";
+import { message } from "../components/ued/message";
 import { useSettingsStore } from "../stores/settings";
 import { useUiPrefsStore } from "../stores/uiPrefs";
 
@@ -141,6 +137,9 @@ const uiPrefs = useUiPrefsStore();
 
 async function submit() {
   await store.save();
+  if (!store.error) {
+    message.success("项目设置已保存并重载。");
+  }
 }
 
 onMounted(() => {

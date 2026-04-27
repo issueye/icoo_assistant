@@ -7,7 +7,7 @@
           class="btn btn-secondary"
           :class="{ 'is-loading': store.reloading }"
           :disabled="store.reloading"
-          @click="store.reloadProxy"
+          @click="reloadProxy"
         >
           <span v-if="store.reloading" class="btn__spinner" />
           {{ store.reloading ? "重载中..." : "重载代理" }}
@@ -129,6 +129,7 @@ import UModal from "../components/ued/UModal.vue";
 import USelect from "../components/ued/USelect.vue";
 import UTable from "../components/ued/UTable.vue";
 import UTag from "../components/ued/UTag.vue";
+import { message } from "../components/ued/message";
 import { useEndpointsStore } from "../stores/endpoints";
 
 const store = useEndpointsStore();
@@ -162,9 +163,11 @@ function closeModal() {
 }
 
 async function submit() {
+  const isEdit = Boolean(store.form.id);
   await store.save();
   if (!store.error) {
     modalOpen.value = false;
+    message.success(isEdit ? "端点已更新。" : "端点已新增。");
   }
 }
 
@@ -179,9 +182,19 @@ async function confirmDelete() {
     return;
   }
   await store.remove(confirmState.id);
-  confirmState.open = false;
-  confirmState.id = "";
-  confirmState.message = "";
+  if (!store.error) {
+    confirmState.open = false;
+    confirmState.id = "";
+    confirmState.message = "";
+    message.success("端点已删除。");
+  }
+}
+
+async function reloadProxy() {
+  await store.reloadProxy();
+  if (!store.error) {
+    message.success("代理已重载。");
+  }
 }
 
 function formatDateTime(value) {

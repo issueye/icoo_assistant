@@ -33,7 +33,6 @@
           </button>
           <div class="app-sidebar__heading">
             <span>控制台</span>
-            <small>Console</small>
           </div>
         </div>
 
