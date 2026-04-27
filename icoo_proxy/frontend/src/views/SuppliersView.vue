@@ -3,7 +3,6 @@
     <Teleport to="#app-topbar-actions">
       <div class="app-topbar-actions__group">
         <button class="btn btn-primary" @click="openSupplierCreate">新建供应商</button>
-        <button class="btn btn-secondary" @click="openPolicyCreate">新建路由策略</button>
       </div>
     </Teleport>
 
@@ -15,7 +14,65 @@
       <StatCard label="供应商总数" :value="String(store.items.length)" />
       <StatCard label="已启用配置" :value="String(store.enabledCount)" />
       <StatCard label="已健康检查" :value="String(store.checkedCount)" />
-      <StatCard label="路由策略数" :value="String(store.policies.length)" />
+      <StatCard label="已配置协议" :value="String(store.configuredPolicyCount)" />
+    </div>
+
+    <div class="section-grid">
+      <PanelBlock title="上下游管理">
+        <div class="mb-3 flex items-center justify-between gap-3">
+          <div>
+            <p class="text-sm font-medium text-slate-900">协议映射</p>
+            <p class="mt-1 text-xs text-slate-500">为三个下游协议分别指定供应商、上游协议与目标模型。</p>
+          </div>
+          <UTag variant="info">启用中：{{ store.enabledPolicyCount }}</UTag>
+        </div>
+
+        <div class="divide-y divide-[#eeeeF2] rounded-lg border border-[#e8e8ee]">
+          <article
+            v-for="item in store.routeManagementRows"
+            :key="item.key"
+            class="grid gap-3 px-3 py-3 lg:grid-cols-[1.2fr_2.2fr_auto] lg:items-center"
+          >
+            <div>
+              <div class="flex items-center gap-2">
+                <p class="text-base font-medium text-slate-900">{{ item.label }}</p>
+                <UTag code>{{ item.key }}</UTag>
+              </div>
+              <p class="mt-1 text-xs leading-5 text-slate-500">{{ item.description }}</p>
+            </div>
+
+            <div class="grid gap-2 md:grid-cols-4">
+              <div>
+                <p class="table-meta">供应商</p>
+                <p class="mt-1 truncate text-sm font-medium text-slate-900">{{ item.supplierName }}</p>
+              </div>
+              <div>
+                <p class="table-meta">上游协议</p>
+                <p class="mt-1 truncate text-sm text-slate-700">{{ item.upstreamProtocol }}</p>
+              </div>
+              <div>
+                <p class="table-meta">目标模型</p>
+                <p class="mt-1 truncate text-sm font-medium text-slate-900">{{ item.targetModel }}</p>
+              </div>
+              <div>
+                <p class="table-meta">状态</p>
+                <div class="mt-1">
+                  <UTag :variant="item.statusVariant">{{ item.statusText }}</UTag>
+                </div>
+              </div>
+            </div>
+
+            <div class="flex justify-end">
+              <button
+                class="btn btn-secondary"
+                @click="item.policy ? openPolicyEdit(item.policy) : openPolicyCreate(item.key)"
+              >
+                {{ item.policy ? "编辑映射" : "配置映射" }}
+              </button>
+            </div>
+          </article>
+        </div>
+      </PanelBlock>
     </div>
 
     <div class="section-grid">
@@ -111,100 +168,6 @@
             </div>
           </template>
         </UTable>
-      </PanelBlock>
-    </div>
-
-    <div class="section-grid">
-      <PanelBlock title="默认路由配置">
-        <div class="divide-y divide-[#eeeeF2] rounded-lg border border-[#e8e8ee]">
-          <article v-for="item in store.policiesByProtocol" :key="item.key" class="grid gap-3 px-3 py-3 lg:grid-cols-[1.1fr_2fr_auto] lg:items-center">
-            <div class="flex items-start justify-between gap-3 lg:block">
-              <div>
-                <p class="text-base font-medium text-slate-900">{{ item.label }}</p>
-                <p class="mt-1 text-xs leading-5 text-slate-500">{{ item.description }}</p>
-              </div>
-              <div class="lg:mt-2">
-                <UTag :variant="routeStatusVariant(item)">
-                  {{ routeStatusText(item) }}
-                </UTag>
-              </div>
-            </div>
-
-            <div class="grid gap-2 md:grid-cols-4">
-              <div>
-                <p class="table-meta">下游协议</p>
-                <div class="mt-1"><UTag code>{{ item.key }}</UTag></div>
-              </div>
-              <div>
-                <p class="table-meta">供应商</p>
-                <p class="mt-1 truncate text-sm font-medium text-slate-900">{{ item.policy?.supplier_name || "未分配" }}</p>
-              </div>
-              <div>
-                <p class="table-meta">上游协议</p>
-                <p class="mt-1 truncate text-sm text-slate-700">{{ item.policy?.upstream_protocol || "待选择" }}</p>
-              </div>
-              <div>
-                <p class="table-meta">目标模型</p>
-                <p class="mt-1 truncate text-sm font-medium text-slate-900">{{ item.policy?.target_model || "未设置" }}</p>
-              </div>
-            </div>
-
-            <div class="flex justify-end">
-              <button
-                class="btn btn-secondary"
-                @click="item.policy ? openPolicyEdit(item.policy) : openPolicyCreate(item.key)"
-              >
-                {{ item.policy ? "编辑该路由" : "配置该路由" }}
-              </button>
-            </div>
-          </article>
-        </div>
-
-        <div class="mt-4 border-t border-[#eeeeF2] pt-4">
-          <div class="mb-3 flex items-center justify-between gap-3">
-            <div>
-              <p class="text-sm font-medium text-slate-900">策略明细</p>
-              <p class="mt-1 text-xs text-slate-500">查看所有已保存的默认路由策略。</p>
-            </div>
-            <button class="btn btn-secondary" @click="openPolicyCreate">新建策略</button>
-          </div>
-
-          <div v-if="!store.policies.length" class="empty-state">
-          当前尚未配置路由策略。
-          </div>
-          <UTable
-            v-else
-            :columns="policyTableColumns"
-            :rows="store.policies"
-            action-width="120px"
-            fixed
-            min-width="1080px"
-          >
-            <template #cell-downstream="{ row }">
-              <UTag code>{{ row.downstream_protocol }}</UTag>
-            </template>
-            <template #cell-supplier="{ row }">
-              <p class="text-sm font-medium text-slate-900">{{ row.supplier_name || "未分配" }}</p>
-              <p class="mt-1 table-meta table-cell-wrap">{{ row.supplier_id || "-" }}</p>
-            </template>
-            <template #cell-upstream="{ row }">
-              <UTag variant="info">{{ row.upstream_protocol || "-" }}</UTag>
-            </template>
-            <template #cell-model="{ row }">
-              <UTag code>{{ row.target_model || "无模型" }}</UTag>
-            </template>
-            <template #cell-enabled="{ row }">
-              <UTag :variant="row.enabled ? 'success' : 'error'">
-                {{ row.enabled ? "启用" : "停用" }}
-              </UTag>
-            </template>
-            <template #actions="{ row }">
-              <button class="btn btn-secondary" @click="openPolicyEdit(row)">
-                编辑
-              </button>
-            </template>
-          </UTable>
-        </div>
       </PanelBlock>
     </div>
 
@@ -386,13 +349,6 @@ const supplierTableColumns = [
   { key: "models", title: "模型 / 标签", width: "260px" },
   { key: "health", title: "健康状态", width: "220px" },
 ];
-const policyTableColumns = [
-  { key: "downstream", title: "下游协议", width: "160px" },
-  { key: "supplier", title: "供应商", width: "320px" },
-  { key: "upstream", title: "上游协议", width: "180px" },
-  { key: "model", title: "目标模型", width: "260px" },
-  { key: "enabled", title: "状态", width: "120px" },
-];
 
 function healthTone(record) {
   if (!record) {
@@ -412,20 +368,6 @@ function formatCheckedAt(value) {
     return "尚未检查";
   }
   return new Date(value).toLocaleString();
-}
-
-function routeStatusText(item) {
-  if (!item.policy) {
-    return "未配置";
-  }
-  return item.policy.enabled ? "已启用" : "已停用";
-}
-
-function routeStatusVariant(item) {
-  if (!item.policy) {
-    return "warning";
-  }
-  return item.policy.enabled ? "success" : "error";
 }
 
 function openDeleteConfirm(item) {

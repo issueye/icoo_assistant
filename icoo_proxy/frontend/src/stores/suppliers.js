@@ -49,22 +49,28 @@ export const useSuppliersStore = defineStore("suppliers", {
     checkedCount(state) {
       return state.health.length;
     },
+    configuredPolicyCount(state) {
+      return state.policies.filter((item) => item.supplier_id).length;
+    },
+    enabledPolicyCount(state) {
+      return state.policies.filter((item) => item.enabled).length;
+    },
     routeDefinitions() {
       return [
         {
           key: "anthropic",
-          label: "Anthropic 路由",
-          description: "用于兼容 /v1/messages 与 /anthropic/v1/messages 请求。",
+          label: "Anthropic",
+          description: "兼容 /v1/messages 与 /anthropic/v1/messages 请求。",
         },
         {
           key: "openai-chat",
-          label: "Chat 路由",
-          description: "用于兼容 /v1/chat/completions 与 /openai/v1/chat/completions 请求。",
+          label: "OpenAI Chat",
+          description: "兼容 /v1/chat/completions 与 /openai/v1/chat/completions 请求。",
         },
         {
           key: "openai-responses",
-          label: "Responses 路由",
-          description: "用于兼容 /v1/responses 与 /openai/v1/responses 请求。",
+          label: "OpenAI Responses",
+          description: "兼容 /v1/responses 与 /openai/v1/responses 请求。",
         },
       ];
     },
@@ -83,6 +89,28 @@ export const useSuppliersStore = defineStore("suppliers", {
         ...definition,
         policy: lookup[definition.key] || null,
       }));
+    },
+    routeManagementRows() {
+      return this.policiesByProtocol.map((item) => {
+        if (!item.policy) {
+          return {
+            ...item,
+            supplierName: "未分配",
+            upstreamProtocol: "待选择",
+            targetModel: "未设置",
+            statusText: "未配置",
+            statusVariant: "warning",
+          };
+        }
+        return {
+          ...item,
+          supplierName: item.policy.supplier_name || "未分配",
+          upstreamProtocol: item.policy.upstream_protocol || "待选择",
+          targetModel: item.policy.target_model || "未设置",
+          statusText: item.policy.enabled ? "已启用" : "已停用",
+          statusVariant: item.policy.enabled ? "success" : "error",
+        };
+      });
     },
   },
   actions: {

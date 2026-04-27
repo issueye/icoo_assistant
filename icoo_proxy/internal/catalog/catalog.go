@@ -2,6 +2,7 @@ package catalog
 
 import (
 	"fmt"
+	"log/slog"
 	"sort"
 	"strings"
 
@@ -69,6 +70,8 @@ func New(cfg config.Config) (*Catalog, error) {
 
 func (c *Catalog) Resolve(downstream consts.Protocol, requestedModel string) (Route, error) {
 	model := strings.TrimSpace(requestedModel)
+	slog.Info("resolve model", "model", model, "downstream", downstream)
+
 	if model == "" {
 		route, ok := c.defaults[downstream]
 		if !ok {
