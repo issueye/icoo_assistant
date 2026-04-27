@@ -50,7 +50,7 @@ func (s *Service) Handle(w http.ResponseWriter, r *http.Request, downstream cons
 	if r.Method != http.MethodPost {
 		s.logChain("downstream.request.rejected",
 			"request_id", requestID,
-			"downstream", string(downstream),
+			"downstream", downstream.ToString(),
 			"method", r.Method,
 			"path", r.URL.Path,
 			"headers", sanitizedHeaders(r.Header),
@@ -58,7 +58,7 @@ func (s *Service) Handle(w http.ResponseWriter, r *http.Request, downstream cons
 		)
 		s.fail(w, downstream, api.RequestView{
 			RequestID:  requestID,
-			Downstream: string(downstream),
+			Downstream: downstream.ToString(),
 			StatusCode: http.StatusMethodNotAllowed,
 			DurationMS: time.Since(start).Milliseconds(),
 			Error:      "method not allowed",
@@ -620,6 +620,7 @@ func isLocalRequest(r *http.Request) bool {
 	return ip != nil && ip.IsLoopback()
 }
 
+// upstreamURL 获取指定协议的上游URL
 func (s *Service) upstreamURL(protocol consts.Protocol) (string, error) {
 	switch protocol {
 	case consts.ProtocolAnthropic:
@@ -642,6 +643,7 @@ func (s *Service) upstreamURL(protocol consts.Protocol) (string, error) {
 	}
 }
 
+// applyRequestHeaders 应用请求头到目标请求
 func (s *Service) applyRequestHeaders(target *http.Request, source *http.Request, protocol consts.Protocol) {
 	target.Header.Set("Content-Type", "application/json")
 	if accept := strings.TrimSpace(source.Header.Get("Accept")); accept != "" {
