@@ -19,6 +19,17 @@ type Values struct {
 	ProxyChainLogMaxBodyBytes   int    `json:"proxy_chain_log_max_body_bytes"`
 }
 
+var managedEnvKeys = []string{
+	"PROXY_HOST",
+	"PROXY_PORT",
+	"PROXY_READ_TIMEOUT_SECONDS",
+	"PROXY_WRITE_TIMEOUT_SECONDS",
+	"PROXY_SHUTDOWN_TIMEOUT_SECONDS",
+	"PROXY_CHAIN_LOG_PATH",
+	"PROXY_CHAIN_LOG_BODIES",
+	"PROXY_CHAIN_LOG_MAX_BODY_BYTES",
+}
+
 func Load(root string) (Values, error) {
 	env, err := readEnvFile(filepath.Join(root, ".env"))
 	if err != nil {
@@ -41,7 +52,11 @@ func Save(root string, values Values) error {
 		return err
 	}
 	envPath := filepath.Join(root, ".env")
-	content := buildEnv(values)
+	existing, err := os.ReadFile(envPath)
+	if err != nil && !os.IsNotExist(err) {
+		return err
+	}
+	content := mergeEnvContent(string(existing), values)
 	if err := os.WriteFile(envPath, []byte(content), 0o644); err != nil {
 		return err
 	}
@@ -71,19 +86,61 @@ func validate(values Values) error {
 	return nil
 }
 
-func buildEnv(values Values) string {
-	lines := []string{
-		"PROXY_HOST=" + strings.TrimSpace(values.ProxyHost),
-		"PROXY_PORT=" + strconv.Itoa(values.ProxyPort),
-		"PROXY_READ_TIMEOUT_SECONDS=" + strconv.Itoa(values.ProxyReadTimeoutSeconds),
-		"PROXY_WRITE_TIMEOUT_SECONDS=" + strconv.Itoa(values.ProxyWriteTimeoutSeconds),
-		"PROXY_SHUTDOWN_TIMEOUT_SECONDS=" + strconv.Itoa(values.ProxyShutdownTimeoutSeconds),
-		"PROXY_CHAIN_LOG_PATH=" + strings.TrimSpace(values.ProxyChainLogPath),
-		"PROXY_CHAIN_LOG_BODIES=" + formatBool(values.ProxyChainLogBodies),
-		"PROXY_CHAIN_LOG_MAX_BODY_BYTES=" + strconv.Itoa(values.ProxyChainLogMaxBodyBytes),
-		"",
+func managedEnvEntries(values Values) map[string]string {
+	return map[string]string{
+		"PROXY_HOST":                     strings.TrimSpace(values.ProxyHost),
+		"PROXY_PORT":                     strconv.Itoa(values.ProxyPort),
+		"PROXY_READ_TIMEOUT_SECONDS":     strconv.Itoa(values.ProxyReadTimeoutSeconds),
+		"PROXY_WRITE_TIMEOUT_SECONDS":    strconv.Itoa(values.ProxyWriteTimeoutSeconds),
+		"PROXY_SHUTDOWN_TIMEOUT_SECONDS": strconv.Itoa(values.ProxyShutdownTimeoutSeconds),
+		"PROXY_CHAIN_LOG_PATH":           strings.TrimSpace(values.ProxyChainLogPath),
+		"PROXY_CHAIN_LOG_BODIES":         formatBool(values.ProxyChainLogBodies),
+		"PROXY_CHAIN_LOG_MAX_BODY_BYTES": strconv.Itoa(values.ProxyChainLogMaxBodyBytes),
 	}
-	return strings.Join(lines, "\n")
+}
+
+func mergeEnvContent(existing string, values Values) string {
+	entries := managedEnvEntries(values)
+	lines := strings.Split(existing, "\n")
+	output := make([]string, 0, len(lines)+len(managedEnvKeys)+1)
+	written := make(map[string]bool, len(managedEnvKeys))
+	for _, rawLine := range lines {
+		trimmed := strings.TrimSpace(rawLine)
+		if trimmed == "" || strings.HasPrefix(trimmed, "#") {
+			output = append(output, rawLine)
+			continue
+		}
+		key, _, found := strings.Cut(rawLine, "=")
+		if !found {
+			output = append(output, rawLine)
+			continue
+		}
+		managedKey := strings.TrimSpace(key)
+		value, ok := entries[managedKey]
+		if !ok {
+			output = append(output, rawLine)
+			continue
+		}
+		if written[managedKey] {
+			continue
+		}
+		output = append(output, managedKey+"="+value)
+		written[managedKey] = true
+	}
+	missing := make([]string, 0, len(managedEnvKeys))
+	for _, key := range managedEnvKeys {
+		if !written[key] {
+			missing = append(missing, key+"="+entries[key])
+		}
+	}
+	if len(missing) > 0 && len(output) > 0 && strings.TrimSpace(output[len(output)-1]) != "" {
+		output = append(output, "")
+	}
+	output = append(output, missing...)
+	if len(output) == 0 || output[len(output)-1] != "" {
+		output = append(output, "")
+	}
+	return strings.Join(output, "\n")
 }
 
 func formatBool(value bool) string {

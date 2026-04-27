@@ -8,6 +8,7 @@ import (
 	"io"
 	"log"
 	"log/slog"
+	"net"
 	"net/http"
 	"slices"
 	"strings"
@@ -591,7 +592,10 @@ func (s *Service) shouldForceUpstreamStream(protocol catalog.Protocol) bool {
 func (s *Service) authorize(r *http.Request) error {
 	expected := s.cfg.AuthKeys()
 	if len(expected) == 0 && s.cfg.AllowUnauthenticatedLocal {
-		return nil
+		if isLocalRequest(r) {
+			return nil
+		}
+		return fmt.Errorf("proxy api key is required")
 	}
 	if len(expected) == 0 {
 		return fmt.Errorf("proxy api key is required")
@@ -604,6 +608,15 @@ func (s *Service) authorize(r *http.Request) error {
 		return nil
 	}
 	return fmt.Errorf("invalid proxy api key")
+}
+
+func isLocalRequest(r *http.Request) bool {
+	host, _, err := net.SplitHostPort(strings.TrimSpace(r.RemoteAddr))
+	if err != nil {
+		host = strings.TrimSpace(r.RemoteAddr)
+	}
+	ip := net.ParseIP(host)
+	return ip != nil && ip.IsLoopback()
 }
 
 func (s *Service) upstreamURL(protocol catalog.Protocol) (string, error) {

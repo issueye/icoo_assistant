@@ -12,6 +12,12 @@ import (
 	"icoo_proxy/internal/config"
 )
 
+func newLoopbackRequest(method, target string, body *bytes.Buffer) *http.Request {
+	req := httptest.NewRequest(method, target, body)
+	req.RemoteAddr = "127.0.0.1:34567"
+	return req
+}
+
 func TestHandleAcceptsConfiguredAuthKeyList(t *testing.T) {
 	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
@@ -33,7 +39,7 @@ func TestHandleAcceptsConfiguredAuthKeyList(t *testing.T) {
 	service := New(cfg, cat)
 
 	for _, header := range []string{"x-api-key", "Authorization"} {
-		req := httptest.NewRequest(http.MethodPost, "/v1/chat/completions", bytes.NewBufferString(`{"model":"gpt-test","messages":[{"role":"user","content":"hello"}]}`))
+		req := newLoopbackRequest(http.MethodPost, "/v1/chat/completions", bytes.NewBufferString(`{"model":"gpt-test","messages":[{"role":"user","content":"hello"}]}`))
 		if header == "Authorization" {
 			req.Header.Set(header, "Bearer client-two")
 		} else {
@@ -48,7 +54,7 @@ func TestHandleAcceptsConfiguredAuthKeyList(t *testing.T) {
 		}
 	}
 
-	req := httptest.NewRequest(http.MethodPost, "/v1/chat/completions", bytes.NewBufferString(`{"model":"gpt-test","messages":[{"role":"user","content":"hello"}]}`))
+	req := newLoopbackRequest(http.MethodPost, "/v1/chat/completions", bytes.NewBufferString(`{"model":"gpt-test","messages":[{"role":"user","content":"hello"}]}`))
 	req.Header.Set("x-api-key", "bad-key")
 	rec := httptest.NewRecorder()
 
@@ -59,6 +65,49 @@ func TestHandleAcceptsConfiguredAuthKeyList(t *testing.T) {
 	}
 	if !bytes.Contains(rec.Body.Bytes(), []byte("invalid proxy api key")) {
 		t.Fatalf("expected invalid key error, got %s", rec.Body.String())
+	}
+}
+
+func TestHandleAllowsUnauthenticatedLoopbackOnly(t *testing.T) {
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"id":"resp_local","object":"response","status":"completed","output_text":"ok","output":[]}`))
+	}))
+	defer upstream.Close()
+
+	cfg := config.Config{
+		AllowUnauthenticatedLocal: true,
+		OpenAIBaseURL:             upstream.URL,
+		OpenAIApiKey:              "test-openai-key",
+		DefaultResponsesRoute:     "openai-responses:gpt-4.1-mini",
+	}
+	cat, err := catalog.New(cfg)
+	if err != nil {
+		t.Fatalf("new catalog: %v", err)
+	}
+	service := New(cfg, cat)
+
+	req := newLoopbackRequest(http.MethodPost, "/v1/responses", bytes.NewBufferString(`{"model":"gpt-4.1-mini","input":"hello"}`))
+	req.RemoteAddr = "127.0.0.1:34567"
+	rec := httptest.NewRecorder()
+
+	service.Handle(rec, req, catalog.ProtocolOpenAIResponse)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected loopback request to be allowed, got %d body=%s", rec.Code, rec.Body.String())
+	}
+
+	remoteReq := newLoopbackRequest(http.MethodPost, "/v1/responses", bytes.NewBufferString(`{"model":"gpt-4.1-mini","input":"hello"}`))
+	remoteReq.RemoteAddr = "203.0.113.10:4567"
+	remoteRec := httptest.NewRecorder()
+
+	service.Handle(remoteRec, remoteReq, catalog.ProtocolOpenAIResponse)
+
+	if remoteRec.Code != http.StatusUnauthorized {
+		t.Fatalf("expected non-loopback request to require auth, got %d body=%s", remoteRec.Code, remoteRec.Body.String())
+	}
+	if !bytes.Contains(remoteRec.Body.Bytes(), []byte("proxy api key is required")) {
+		t.Fatalf("expected missing auth error, got %s", remoteRec.Body.String())
 	}
 }
 
@@ -103,7 +152,7 @@ func TestHandleAppliesConfiguredUpstreamUserAgent(t *testing.T) {
 	}
 	service := New(cfg, cat)
 
-	req := httptest.NewRequest(http.MethodPost, "/v1/responses", bytes.NewBufferString(`{"model":"gpt-4.1-mini","input":"hello"}`))
+	req := newLoopbackRequest(http.MethodPost, "/v1/responses", bytes.NewBufferString(`{"model":"gpt-4.1-mini","input":"hello"}`))
 	rec := httptest.NewRecorder()
 
 	service.Handle(rec, req, catalog.ProtocolOpenAIResponse)
@@ -147,7 +196,7 @@ func TestHandleAnthropicPassthroughRewritesAliasModel(t *testing.T) {
 	}
 	service := New(cfg, cat)
 
-	req := httptest.NewRequest(http.MethodPost, "/v1/messages", bytes.NewBufferString(`{"model":"claude-sonnet","messages":[{"role":"user","content":"hello"}],"max_tokens":64}`))
+	req := newLoopbackRequest(http.MethodPost, "/v1/messages", bytes.NewBufferString(`{"model":"claude-sonnet","messages":[{"role":"user","content":"hello"}],"max_tokens":64}`))
 	rec := httptest.NewRecorder()
 
 	service.Handle(rec, req, catalog.ProtocolAnthropic)
@@ -198,7 +247,7 @@ func TestHandleTranslatesChatToResponses(t *testing.T) {
 	}
 	service := New(cfg, cat)
 
-	req := httptest.NewRequest(http.MethodPost, "/v1/chat/completions", bytes.NewBufferString(`{"model":"assistant-default","messages":[{"role":"system","content":"You are helpful"},{"role":"user","content":"hi"}],"tools":[{"type":"function","function":{"name":"get_weather","description":"Get weather","parameters":{"type":"object","properties":{"city":{"type":"string"}},"required":["city"]}}}],"max_tokens":32}`))
+	req := newLoopbackRequest(http.MethodPost, "/v1/chat/completions", bytes.NewBufferString(`{"model":"assistant-default","messages":[{"role":"system","content":"You are helpful"},{"role":"user","content":"hi"}],"tools":[{"type":"function","function":{"name":"get_weather","description":"Get weather","parameters":{"type":"object","properties":{"city":{"type":"string"}},"required":["city"]}}}],"max_tokens":32}`))
 	rec := httptest.NewRecorder()
 
 	service.Handle(rec, req, catalog.ProtocolOpenAIChat)
@@ -267,7 +316,7 @@ func TestHandleTranslatesResponsesToChat(t *testing.T) {
 	}
 	service := New(cfg, cat)
 
-	req := httptest.NewRequest(http.MethodPost, "/v1/responses", bytes.NewBufferString(`{"model":"chat-default","instructions":"Keep it short","input":[{"role":"assistant","type":"function_call","call_id":"call_weather","name":"get_weather","arguments":"{\"city\":\"Shanghai\"}"},{"type":"function_call_output","call_id":"call_weather","output":"sunny"},{"role":"user","content":"hi"}],"tools":[{"type":"function","name":"get_weather","description":"Get weather","parameters":{"type":"object","properties":{"city":{"type":"string"}}}}],"max_output_tokens":64}`))
+	req := newLoopbackRequest(http.MethodPost, "/v1/responses", bytes.NewBufferString(`{"model":"chat-default","instructions":"Keep it short","input":[{"role":"assistant","type":"function_call","call_id":"call_weather","name":"get_weather","arguments":"{\"city\":\"Shanghai\"}"},{"type":"function_call_output","call_id":"call_weather","output":"sunny"},{"role":"user","content":"hi"}],"tools":[{"type":"function","name":"get_weather","description":"Get weather","parameters":{"type":"object","properties":{"city":{"type":"string"}}}}],"max_output_tokens":64}`))
 	rec := httptest.NewRecorder()
 
 	service.Handle(rec, req, catalog.ProtocolOpenAIResponse)
@@ -327,7 +376,7 @@ func TestHandleTranslatesAnthropicToResponses(t *testing.T) {
 	}
 	service := New(cfg, cat)
 
-	req := httptest.NewRequest(http.MethodPost, "/v1/messages", bytes.NewBufferString(`{"model":"anthropic-default","system":"Be concise","tools":[{"name":"lookup_docs","description":"Lookup docs","input_schema":{"type":"object","properties":{"topic":{"type":"string"}}}}],"messages":[{"role":"assistant","content":[{"type":"tool_use","id":"tool_prev","name":"lookup_docs","input":{"topic":"proxy"}}]},{"role":"user","content":[{"type":"tool_result","tool_use_id":"tool_prev","content":"done"},{"type":"text","text":"hello"}]}],"max_tokens":64}`))
+	req := newLoopbackRequest(http.MethodPost, "/v1/messages", bytes.NewBufferString(`{"model":"anthropic-default","system":"Be concise","tools":[{"name":"lookup_docs","description":"Lookup docs","input_schema":{"type":"object","properties":{"topic":{"type":"string"}}}}],"messages":[{"role":"assistant","content":[{"type":"tool_use","id":"tool_prev","name":"lookup_docs","input":{"topic":"proxy"}}]},{"role":"user","content":[{"type":"tool_result","tool_use_id":"tool_prev","content":"done"},{"type":"text","text":"hello"}]}],"max_tokens":64}`))
 	rec := httptest.NewRecorder()
 
 	service.Handle(rec, req, catalog.ProtocolAnthropic)
@@ -402,7 +451,7 @@ func TestHandleStreamsAnthropicToResponsesAsAnthropicSSE(t *testing.T) {
 	}
 	service := New(cfg, cat)
 
-	req := httptest.NewRequest(http.MethodPost, "/v1/messages", bytes.NewBufferString(`{"model":"anthropic-default","messages":[{"role":"user","content":[{"type":"text","text":"hello"}]}],"max_tokens":64,"stream":true}`))
+	req := newLoopbackRequest(http.MethodPost, "/v1/messages", bytes.NewBufferString(`{"model":"anthropic-default","messages":[{"role":"user","content":[{"type":"text","text":"hello"}]}],"max_tokens":64,"stream":true}`))
 	rec := httptest.NewRecorder()
 
 	service.Handle(rec, req, catalog.ProtocolAnthropic)
@@ -470,7 +519,7 @@ func TestHandleStreamsAnthropicToResponsesToolUseAsAnthropicSSE(t *testing.T) {
 	}
 	service := New(cfg, cat)
 
-	req := httptest.NewRequest(http.MethodPost, "/v1/messages", bytes.NewBufferString(`{"model":"anthropic-default","messages":[{"role":"user","content":[{"type":"text","text":"call the tool"}]}],"max_tokens":64,"stream":true}`))
+	req := newLoopbackRequest(http.MethodPost, "/v1/messages", bytes.NewBufferString(`{"model":"anthropic-default","messages":[{"role":"user","content":[{"type":"text","text":"call the tool"}]}],"max_tokens":64,"stream":true}`))
 	rec := httptest.NewRecorder()
 
 	service.Handle(rec, req, catalog.ProtocolAnthropic)
@@ -530,7 +579,7 @@ func TestHandleForcesOnlyStreamResponsesForAnthropicNonStream(t *testing.T) {
 	}
 	service := New(cfg, cat)
 
-	req := httptest.NewRequest(http.MethodPost, "/v1/messages", bytes.NewBufferString(`{"model":"anthropic-default","messages":[{"role":"user","content":[{"type":"text","text":"hello"}]}],"max_tokens":64}`))
+	req := newLoopbackRequest(http.MethodPost, "/v1/messages", bytes.NewBufferString(`{"model":"anthropic-default","messages":[{"role":"user","content":[{"type":"text","text":"hello"}]}],"max_tokens":64}`))
 	rec := httptest.NewRecorder()
 
 	service.Handle(rec, req, catalog.ProtocolAnthropic)
@@ -586,7 +635,7 @@ func TestHandleForcesOnlyStreamResponsesForResponsesNonStream(t *testing.T) {
 	}
 	service := New(cfg, cat)
 
-	req := httptest.NewRequest(http.MethodPost, "/v1/responses", bytes.NewBufferString(`{"model":"gpt-4.1-mini","input":"hello"}`))
+	req := newLoopbackRequest(http.MethodPost, "/v1/responses", bytes.NewBufferString(`{"model":"gpt-4.1-mini","input":"hello"}`))
 	rec := httptest.NewRecorder()
 
 	service.Handle(rec, req, catalog.ProtocolOpenAIResponse)
@@ -635,7 +684,7 @@ func TestHandleResponsesPassthroughAddsDefaultReasoning(t *testing.T) {
 	}
 	service := New(cfg, cat)
 
-	req := httptest.NewRequest(http.MethodPost, "/v1/responses", bytes.NewBufferString(`{"model":"gpt-4.1-mini","input":"hello"}`))
+	req := newLoopbackRequest(http.MethodPost, "/v1/responses", bytes.NewBufferString(`{"model":"gpt-4.1-mini","input":"hello"}`))
 	rec := httptest.NewRecorder()
 
 	service.Handle(rec, req, catalog.ProtocolOpenAIResponse)
@@ -677,7 +726,7 @@ func TestHandleResponsesPassthroughPreservesExplicitReasoning(t *testing.T) {
 	}
 	service := New(cfg, cat)
 
-	req := httptest.NewRequest(http.MethodPost, "/v1/responses", bytes.NewBufferString(`{"model":"gpt-4.1-mini","input":"hello","reasoning":{"effort":"high"}}`))
+	req := newLoopbackRequest(http.MethodPost, "/v1/responses", bytes.NewBufferString(`{"model":"gpt-4.1-mini","input":"hello","reasoning":{"effort":"high"}}`))
 	rec := httptest.NewRecorder()
 
 	service.Handle(rec, req, catalog.ProtocolOpenAIResponse)
@@ -709,7 +758,7 @@ func TestHandleTranslatesResponsesOutputTextFallbackToAnthropic(t *testing.T) {
 	}
 	service := New(cfg, cat)
 
-	req := httptest.NewRequest(http.MethodPost, "/v1/messages", bytes.NewBufferString(`{"model":"anthropic-default","messages":[{"role":"user","content":"hello"}],"max_tokens":64}`))
+	req := newLoopbackRequest(http.MethodPost, "/v1/messages", bytes.NewBufferString(`{"model":"anthropic-default","messages":[{"role":"user","content":"hello"}],"max_tokens":64}`))
 	rec := httptest.NewRecorder()
 
 	service.Handle(rec, req, catalog.ProtocolAnthropic)
@@ -764,7 +813,7 @@ func TestHandleTranslatesResponsesToAnthropic(t *testing.T) {
 	}
 	service := New(cfg, cat)
 
-	req := httptest.NewRequest(http.MethodPost, "/v1/responses", bytes.NewBufferString(`{"model":"response-default","instructions":"Be direct","input":[{"type":"function_call_output","call_id":"tool_prev","output":"done"},{"role":"user","content":"hello"}],"tools":[{"type":"function","name":"lookup_docs","description":"Lookup docs","parameters":{"type":"object","properties":{"topic":{"type":"string"}}}}],"max_output_tokens":32}`))
+	req := newLoopbackRequest(http.MethodPost, "/v1/responses", bytes.NewBufferString(`{"model":"response-default","instructions":"Be direct","input":[{"type":"function_call_output","call_id":"tool_prev","output":"done"},{"role":"user","content":"hello"}],"tools":[{"type":"function","name":"lookup_docs","description":"Lookup docs","parameters":{"type":"object","properties":{"topic":{"type":"string"}}}}],"max_output_tokens":32}`))
 	rec := httptest.NewRecorder()
 
 	service.Handle(rec, req, catalog.ProtocolOpenAIResponse)
@@ -827,7 +876,7 @@ func TestHandleTranslatesAnthropicToChat(t *testing.T) {
 	}
 	service := New(cfg, cat)
 
-	req := httptest.NewRequest(http.MethodPost, "/v1/messages", bytes.NewBufferString(`{"model":"anthropic-chat","system":"Be practical","tools":[{"name":"lookup_docs","description":"Lookup docs","input_schema":{"type":"object","properties":{"topic":{"type":"string"}}}}],"messages":[{"role":"user","content":[{"type":"text","text":"hello"}]}],"max_tokens":32}`))
+	req := newLoopbackRequest(http.MethodPost, "/v1/messages", bytes.NewBufferString(`{"model":"anthropic-chat","system":"Be practical","tools":[{"name":"lookup_docs","description":"Lookup docs","input_schema":{"type":"object","properties":{"topic":{"type":"string"}}}}],"messages":[{"role":"user","content":[{"type":"text","text":"hello"}]}],"max_tokens":32}`))
 	rec := httptest.NewRecorder()
 
 	service.Handle(rec, req, catalog.ProtocolAnthropic)
@@ -890,7 +939,7 @@ func TestHandleTranslatesChatToAnthropic(t *testing.T) {
 	}
 	service := New(cfg, cat)
 
-	req := httptest.NewRequest(http.MethodPost, "/v1/chat/completions", bytes.NewBufferString(`{"model":"chat-anthropic","messages":[{"role":"system","content":"Be practical"},{"role":"assistant","content":null,"tool_calls":[{"id":"tool_prev","type":"function","function":{"name":"lookup_docs","arguments":"{\"topic\":\"proxy\"}"}}]},{"role":"tool","tool_call_id":"tool_prev","content":"done"},{"role":"user","content":"hello"}],"tools":[{"type":"function","function":{"name":"lookup_docs","description":"Lookup docs","parameters":{"type":"object","properties":{"topic":{"type":"string"}}}}}],"max_tokens":32}`))
+	req := newLoopbackRequest(http.MethodPost, "/v1/chat/completions", bytes.NewBufferString(`{"model":"chat-anthropic","messages":[{"role":"system","content":"Be practical"},{"role":"assistant","content":null,"tool_calls":[{"id":"tool_prev","type":"function","function":{"name":"lookup_docs","arguments":"{\"topic\":\"proxy\"}"}}]},{"role":"tool","tool_call_id":"tool_prev","content":"done"},{"role":"user","content":"hello"}],"tools":[{"type":"function","function":{"name":"lookup_docs","description":"Lookup docs","parameters":{"type":"object","properties":{"topic":{"type":"string"}}}}}],"max_tokens":32}`))
 	rec := httptest.NewRecorder()
 
 	service.Handle(rec, req, catalog.ProtocolOpenAIChat)
