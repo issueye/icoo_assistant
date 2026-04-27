@@ -18,45 +18,35 @@
     </div>
 
     <div class="section-grid">
-      <div class="route-map">
-        <div class="route-map__head" aria-hidden="true">
-          <span>下游协议</span>
-          <span>供应商</span>
-          <span>上游协议</span>
-          <span>状态</span>
-          <span>操作</span>
-        </div>
-        <article v-for="item in store.routeManagementRows" :key="item.key" class="route-map__row">
-          <div class="route-map__protocol">
-            <div class="route-map__protocol-main">
-              <p class="route-map__name">{{ item.label }}</p>
-              <UTag code size="xs">{{ item.key }}</UTag>
-            </div>
+      <UTable :columns="routeManagementColumns" :rows="store.routeManagementRows" row-key="key" action-width="74px"
+        size="small" table-class="route-management-table">
+        <template #cell-protocol="{ row }">
+          <div class="route-map__protocol-main">
+            <p class="route-map__name">{{ row.label }}</p>
+            <UTag code size="xs">{{ row.key }}</UTag>
           </div>
+          <p class="route-map__desc">{{ row.description }}</p>
+        </template>
 
-          <div class="route-map__cell">
-            <span class="route-map__mobile-label">供应商</span>
-            <p class="route-map__value">{{ item.supplierName }}</p>
-          </div>
+        <template #cell-supplier="{ row }">
+          <p class="route-map__value">{{ row.supplierName }}</p>
+        </template>
 
-          <div class="route-map__cell">
-            <span class="route-map__mobile-label">上游协议</span>
-            <UTag code size="xs">{{ item.upstreamProtocol }}</UTag>
-          </div>
+        <template #cell-upstream="{ row }">
+          <UTag code size="xs">{{ row.upstreamProtocol }}</UTag>
+        </template>
 
-          <div class="route-map__status">
-            <span class="route-map__mobile-label">状态</span>
-            <UTag :variant="item.statusVariant" size="xs" dot>{{ item.statusText }}</UTag>
-          </div>
+          <template #cell-status="{ row }">
+            <UTag :variant="row.statusVariant" size="xs" dot>{{ row.statusText }}</UTag>
+          </template>
 
-          <div class="route-map__action">
-            <button class="btn btn-secondary route-map__button"
-              @click="item.policy ? openPolicyEdit(item.policy) : openPolicyCreate(item.key)">
-              {{ item.policy ? "编辑映射" : "配置映射" }}
-            </button>
+        <template #actions="{ row }">
+          <div class="table-actions">
+            <UIconButton icon="edit" :label="row.policy ? `编辑 ${row.label} 映射` : `配置 ${row.label} 映射`"
+              @click="row.policy ? openPolicyEdit(row.policy) : openPolicyCreate(row.key)" />
           </div>
-        </article>
-      </div>
+        </template>
+      </UTable>
     </div>
 
     <div class="section-grid">
@@ -304,14 +294,20 @@ const supplierOptions = computed(() =>
   })),
 );
 
+const routeManagementColumns = [
+  { key: "protocol", title: "下游协议", width: "40%" },
+  { key: "supplier", title: "供应商", width: "20%" },
+  { key: "upstream", title: "上游协议", width: "20%" },
+  { key: "status", title: "状态", width: "12%" },
+];
+
 const supplierTableColumns = [
-  { key: "supplier", title: "供应商", width: "220px" },
-  { key: "protocol", title: "协议 / 地址", width: "520px" },
-  { key: "address", title: "地址", width: "520px" },
-  { key: "key", title: "API Key", width: "520px" },
-  { key: "user_agent", title: "User-Agent", width: "780px" },
-  { key: "health", title: "健康状态", width: "220px" },
-  { key: "status", title: "状态", width: "220px" },
+  { key: "supplier", title: "供应商", width: "10%" },
+  { key: "protocol", title: "协议 / 地址", width: "20%" },
+  { key: "address", title: "地址", width: "20%" },
+  { key: "user_agent", title: "User-Agent", width: "20%" },
+  { key: "health", title: "健康状态", width: "15%" },
+  { key: "status", title: "状态", width: "5%" },
 ];
 
 const supplierFormDefaultOptions = computed(() => [
