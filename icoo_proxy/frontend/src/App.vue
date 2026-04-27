@@ -3,7 +3,7 @@
     <header class="app-global-header">
       <div class="app-global-header__brand">
         <div class="app-global-header__logo" aria-hidden="true">
-          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
+          <img src="./assets/images/appicon.png" alt="" />
         </div>
         <div class="app-global-header__title">
           <span>本地 AI 网关管理台</span>
