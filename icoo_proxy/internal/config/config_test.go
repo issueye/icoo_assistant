@@ -11,7 +11,6 @@ func TestLoadUsesEnvFileAndDefaults(t *testing.T) {
 	t.Setenv("PROXY_HOST", "")
 	t.Setenv("PROXY_PORT", "")
 	t.Setenv("PROXY_ALLOW_UNAUTHENTICATED_LOCAL", "")
-	t.Setenv("PROXY_API_KEY", "")
 	t.Setenv("PROXY_API_KEYS", "")
 
 	dir := t.TempDir()
@@ -39,13 +38,12 @@ func TestLoadUsesEnvFileAndDefaults(t *testing.T) {
 	}
 }
 
-func TestLoadNormalizesLegacyAndListAuthKeys(t *testing.T) {
-	t.Setenv("PROXY_API_KEY", "")
+func TestLoadUsesProxyAPIKeysOnly(t *testing.T) {
 	t.Setenv("PROXY_API_KEYS", "")
 
 	dir := t.TempDir()
 	envPath := filepath.Join(dir, ".env")
-	data := []byte("PROXY_API_KEY=alpha\nPROXY_API_KEYS=beta,gamma,alpha\n")
+	data := []byte("PROXY_API_KEYS=beta,gamma,beta\n")
 	if err := os.WriteFile(envPath, data, 0o644); err != nil {
 		t.Fatalf("write env: %v", err)
 	}
@@ -54,11 +52,57 @@ func TestLoadNormalizesLegacyAndListAuthKeys(t *testing.T) {
 	if err != nil {
 		t.Fatalf("load config: %v", err)
 	}
-	want := []string{"alpha", "beta", "gamma"}
+	want := []string{"beta", "gamma"}
 	if !reflect.DeepEqual(cfg.ProxyAPIKeys, want) {
 		t.Fatalf("expected normalized proxy api keys %#v, got %#v", want, cfg.ProxyAPIKeys)
 	}
 	if !reflect.DeepEqual(cfg.AuthKeys(), want) {
 		t.Fatalf("expected auth keys %#v, got %#v", want, cfg.AuthKeys())
+	}
+}
+
+func TestLoadIgnoresLegacyModelRoutesEnvVar(t *testing.T) {
+	t.Setenv("PROXY_MODEL_ROUTES", "")
+
+	dir := t.TempDir()
+	envPath := filepath.Join(dir, ".env")
+	data := []byte("PROXY_MODEL_ROUTES=assistant-default=openai-responses:gpt-response-real\n")
+	if err := os.WriteFile(envPath, data, 0o644); err != nil {
+		t.Fatalf("write env: %v", err)
+	}
+
+	cfg, err := Load(dir)
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	if cfg.ModelRoutes != "" {
+		t.Fatalf("expected legacy model routes env to be ignored, got %q", cfg.ModelRoutes)
+	}
+}
+
+func TestLoadIgnoresLegacyDefaultRouteEnvVars(t *testing.T) {
+	t.Setenv("PROXY_DEFAULT_ANTHROPIC_ROUTE", "")
+	t.Setenv("PROXY_DEFAULT_CHAT_ROUTE", "")
+	t.Setenv("PROXY_DEFAULT_RESPONSES_ROUTE", "")
+
+	dir := t.TempDir()
+	envPath := filepath.Join(dir, ".env")
+	data := []byte("PROXY_DEFAULT_ANTHROPIC_ROUTE=anthropic:claude-real\nPROXY_DEFAULT_CHAT_ROUTE=openai-chat:gpt-chat-real\nPROXY_DEFAULT_RESPONSES_ROUTE=openai-responses:gpt-response-real\n")
+	if err := os.WriteFile(envPath, data, 0o644); err != nil {
+		t.Fatalf("write env: %v", err)
+	}
+
+	cfg, err := Load(dir)
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	if cfg.DefaultAnthropicRoute != "" {
+		t.Fatalf("expected legacy anthropic default route env to be ignored, got %q", cfg.DefaultAnthropicRoute)
+	}
+	if cfg.DefaultChatRoute != "" {
+		t.Fatalf("expected legacy chat default route env to be ignored, got %q", cfg.DefaultChatRoute)
+	}
+	if cfg.DefaultResponsesRoute != "" {
+		t.Fatalf("expected legacy responses default route env to be ignored, got %q", cfg.DefaultResponsesRoute)
 	}
 }

@@ -110,6 +110,19 @@ func (s *Service) Enabled() []Record {
 	return filtered
 }
 
+func (s *Service) FindEnabledBySupplierID(supplierID string) (Record, bool) {
+	id := strings.TrimSpace(supplierID)
+	if id == "" {
+		return Record{}, false
+	}
+	for _, item := range s.Enabled() {
+		if item.SupplierID == id {
+			return item, true
+		}
+	}
+	return Record{}, false
+}
+
 func (s *Service) Upsert(input UpsertInput) (Record, error) {
 	downstream := normalizeProtocol(input.DownstreamProtocol)
 	if downstream == "" {

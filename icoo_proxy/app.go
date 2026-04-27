@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"net"
 	"net/http"
@@ -160,6 +161,11 @@ func (a *App) DeleteSupplier(id string) ([]supplier.Record, error) {
 	if a.suppliers == nil {
 		return nil, context.Canceled
 	}
+	if a.policies != nil {
+		if policy, ok := a.policies.FindEnabledBySupplierID(id); ok {
+			return nil, fmt.Errorf("supplier is used by enabled route policy %q", policy.DownstreamProtocol)
+		}
+	}
 	if err := a.suppliers.Delete(id); err != nil {
 		return nil, err
 	}
@@ -306,7 +312,7 @@ func (a *App) State() api.State {
 			},
 		},
 		Notes: []string{
-			"Current build supports same-protocol forwarding and model alias rewriting.",
+			"Current build supports same-protocol forwarding.",
 			"Current build also supports non-streaming chat/completions <-> responses translation.",
 			"Current build also supports non-streaming anthropic messages <-> responses translation.",
 			"Current build also supports non-streaming anthropic messages <-> chat/completions translation.",

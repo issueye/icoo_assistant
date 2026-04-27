@@ -40,23 +40,15 @@ func Load(workdir string) (Config, error) {
 	if err := loadDotEnv(filepath.Join(workdir, ".env")); err != nil {
 		return Config{}, err
 	}
-	proxyAPIKeys := mergeUniqueValues(
-		[]string{strings.TrimSpace(os.Getenv("PROXY_API_KEY"))},
-		csvFromEnv("PROXY_API_KEYS"),
-	)
 	cfg := Config{
 		Host:                      strings.TrimSpace(os.Getenv("PROXY_HOST")),
 		Port:                      intFromEnv("PROXY_PORT", 18181),
 		ReadTimeout:               durationFromEnv("PROXY_READ_TIMEOUT_SECONDS", 15*time.Second),
 		WriteTimeout:              durationFromEnv("PROXY_WRITE_TIMEOUT_SECONDS", 300*time.Second),
 		ShutdownTimeout:           durationFromEnv("PROXY_SHUTDOWN_TIMEOUT_SECONDS", 10*time.Second),
-		ProxyAPIKeys:              proxyAPIKeys,
+		ProxyAPIKeys:              csvFromEnv("PROXY_API_KEYS"),
 		AllowUnauthenticatedLocal: boolFromEnv("PROXY_ALLOW_UNAUTHENTICATED_LOCAL", true),
 		AnthropicVersion:          "2023-06-01",
-		DefaultAnthropicRoute:     strings.TrimSpace(os.Getenv("PROXY_DEFAULT_ANTHROPIC_ROUTE")),
-		DefaultChatRoute:          strings.TrimSpace(os.Getenv("PROXY_DEFAULT_CHAT_ROUTE")),
-		DefaultResponsesRoute:     strings.TrimSpace(os.Getenv("PROXY_DEFAULT_RESPONSES_ROUTE")),
-		ModelRoutes:               strings.TrimSpace(os.Getenv("PROXY_MODEL_ROUTES")),
 		ChainLogPath:              strings.TrimSpace(os.Getenv("PROXY_CHAIN_LOG_PATH")),
 		ChainLogBodies:            boolFromEnv("PROXY_CHAIN_LOG_BODIES", true),
 		ChainLogMaxBodyBytes:      nonNegativeIntFromEnv("PROXY_CHAIN_LOG_MAX_BODY_BYTES", 0),

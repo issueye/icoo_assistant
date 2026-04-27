@@ -36,7 +36,6 @@ func TestLoadAndSave(t *testing.T) {
 		}
 	}
 	for _, needle := range []string{
-		"PROXY_API_KEY",
 		"PROXY_API_KEYS",
 		"PROXY_ALLOW_UNAUTHENTICATED_LOCAL",
 		"PROXY_DEFAULT_ANTHROPIC_ROUTE",

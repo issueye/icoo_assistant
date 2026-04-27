@@ -46,3 +46,37 @@ func TestUpsertAndList(t *testing.T) {
 		t.Fatalf("expected one enabled policy, got %d", len(enabled))
 	}
 }
+
+func TestFindEnabledBySupplierID(t *testing.T) {
+	svc, err := NewService(t.TempDir(), fakeResolver{
+		items: map[string]SupplierSnapshot{
+			"openai-default": {
+				ID:       "openai-default",
+				Name:     "OpenAI Default",
+				Protocol: "openai-responses",
+			},
+		},
+	})
+	if err != nil {
+		t.Fatalf("new service: %v", err)
+	}
+	t.Cleanup(func() { _ = svc.Close() })
+	if _, ok := svc.FindEnabledBySupplierID("openai-default"); ok {
+		t.Fatalf("expected disabled seeded policies to be ignored")
+	}
+	if _, err := svc.Upsert(UpsertInput{
+		DownstreamProtocol: "openai-chat",
+		SupplierID:         "openai-default",
+		TargetModel:        "gpt-4.1-mini",
+		Enabled:            true,
+	}); err != nil {
+		t.Fatalf("upsert enabled policy: %v", err)
+	}
+	record, ok := svc.FindEnabledBySupplierID("openai-default")
+	if !ok {
+		t.Fatalf("expected enabled policy to be found")
+	}
+	if record.DownstreamProtocol != "openai-chat" {
+		t.Fatalf("expected downstream protocol openai-chat, got %q", record.DownstreamProtocol)
+	}
+}
