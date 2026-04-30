@@ -142,7 +142,7 @@ func newApp(cfg config.Config) (*app, error) {
 		tools.NewToolCatalogTool(baseCatalog),
 		tools.NewTodoTool(todoManager),
 		tools.NewCompactTool(),
-		tools.NewLoadSkillTool(skillLoader),
+		tools.NewSkillLoadTool(skillLoader),
 		tools.NewSkillCreateTool(cfg.SkillsDir),
 		tools.NewMemoryStoreTool(memoryManager),
 		tools.NewMemoryRecallTool(memoryManager),
@@ -165,6 +165,7 @@ func newApp(cfg config.Config) (*app, error) {
 			SystemPrompt: systemPrompt,
 			MaxRounds:    cfg.MaxRounds,
 		},
+		SkillLoader: skillLoader,
 	}
 	registry, err := tools.NewRegistry(
 		tools.NewBashTool(tools.CommandRunner{Workdir: cfg.Workdir, Timeout: cfg.CommandTimeout}),
@@ -179,7 +180,8 @@ func newApp(cfg config.Config) (*app, error) {
 		tools.NewTodoTool(todoManager),
 		tools.NewCompactTool(),
 		tools.NewTaskTool(),
-		tools.NewLoadSkillTool(skillLoader),
+		tools.NewSkillExecuteTool(),
+		tools.NewSkillLoadTool(skillLoader),
 		tools.NewSkillCreateTool(cfg.SkillsDir),
 		tools.NewMemoryStoreTool(memoryManager),
 		tools.NewMemoryRecallTool(memoryManager),
@@ -197,6 +199,7 @@ func newApp(cfg config.Config) (*app, error) {
 			TodoManager:    todoManager,
 			CompactManager: compactManager,
 			SubagentRunner: subRunner,
+			SkillLoader:    skillLoader,
 			Background:     backgroundManager,
 			Hooks:          hooks,
 			Config: agent.Config{

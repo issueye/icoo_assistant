@@ -7,10 +7,10 @@ import (
 	"icoo_assistant/internal/skill"
 )
 
-func NewLoadSkillTool(loader *skill.Loader) Definition {
+func NewSkillLoadTool(loader *skill.Loader) Definition {
 	return Definition{
 		Tool: llm.Tool{
-			Name:        "load_skill",
+			Name:        "skill_load",
 			Description: "Load specialized knowledge by name.",
 			InputSchema: map[string]interface{}{
 				"type": "object",

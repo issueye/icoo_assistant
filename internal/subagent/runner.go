@@ -9,10 +9,11 @@ import (
 )
 
 type Runner struct {
-	Client   llm.Client
-	Registry *tools.Registry
-	Config   agent.Config
-	Hooks    []agent.Hook
+	Client      llm.Client
+	Registry    *tools.Registry
+	Config      agent.Config
+	Hooks       []agent.Hook
+	SkillLoader agent.SkillContentProvider
 }
 
 func (r *Runner) Run(prompt string) (string, error) {
@@ -23,9 +24,10 @@ func (r *Runner) Run(prompt string) (string, error) {
 		return "", fmt.Errorf("registry required")
 	}
 	child := &agent.Runner{
-		Client:   r.Client,
-		Registry: r.Registry,
-		Hooks:    r.Hooks,
+		Client:      r.Client,
+		Registry:    r.Registry,
+		Hooks:       r.Hooks,
+		SkillLoader: r.SkillLoader,
 		Config: agent.Config{
 			SystemPrompt: r.Config.SystemPrompt,
 			MaxRounds:    r.Config.MaxRounds,

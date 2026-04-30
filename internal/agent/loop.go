@@ -16,6 +16,10 @@ type SubagentRunner interface {
 	Run(prompt string) (string, error)
 }
 
+type SkillContentProvider interface {
+	Load(name string) string
+}
+
 type BackgroundNotifier interface {
 	PollNotifications() ([]background.Completion, error)
 }
@@ -32,6 +36,7 @@ type Runner struct {
 	CompactManager *compact.Manager
 	Transcript     TranscriptRecorder
 	SubagentRunner SubagentRunner
+	SkillLoader    SkillContentProvider
 	Background     BackgroundNotifier
 	StreamHandler  func(string)
 	Hooks          []Hook
@@ -186,6 +191,41 @@ func (r *Runner) Run(messages []llm.Message) (_ []llm.Message, err error) {
 					},
 				})
 				summary, err := r.SubagentRunner.Run(prompt)
+				if err != nil {
+					return nil, err
+				}
+				r.emit(Event{
+					Name:  "agent.subagent.completed",
+					RunID: runID,
+					Round: round,
+					Fields: map[string]interface{}{
+						"tool_id":        toolUse.ID,
+						"summary_length": len(summary),
+					},
+				})
+				result = tools.Result{Type: "tool_result", ToolUseID: toolUse.ID, Content: summary}
+			} else if toolUse.Name == "skill_execute" {
+				if r.SubagentRunner == nil {
+					return nil, fmt.Errorf("subagent runner required")
+				}
+				if r.SkillLoader == nil {
+					return nil, fmt.Errorf("skill loader required")
+				}
+				skillName, _ := toolUse.Input["name"].(string)
+				skillPrompt, _ := toolUse.Input["prompt"].(string)
+				skillContent := r.SkillLoader.Load(skillName)
+				fullPrompt := "<skill name=\"" + skillName + "\">\n" + skillContent + "\n</skill>\n\nTask:\n" + skillPrompt
+				r.emit(Event{
+					Name:  "agent.subagent.started",
+					RunID: runID,
+					Round: round,
+					Fields: map[string]interface{}{
+						"tool_id":       toolUse.ID,
+						"skill_name":    skillName,
+						"prompt_length": len(fullPrompt),
+					},
+				})
+				summary, err := r.SubagentRunner.Run(fullPrompt)
 				if err != nil {
 					return nil, err
 				}

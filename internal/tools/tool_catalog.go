@@ -59,12 +59,20 @@ func DefaultToolCatalogEntries(includeTask bool) []ToolCatalogEntry {
 			Description: "Best for precise edits after reading the target file.",
 		},
 		{
-			Name:        "load_skill",
+			Name:        "skill_load",
 			Summary:     "Load a named skill into the current run.",
 			UseWhen:     "Use when a specialized local skill should guide the task.",
 			AvoidWhen:   "Avoid when the task is already fully supported by the current toolset.",
 			Example:     `{"name":"ui-ux-pro-max"}`,
-			Description: "Returns the skill content so the agent can follow its workflow.",
+			Description: "Returns the skill content so the agent can follow its workflow. Use skill_execute to run a skill in a subagent without polluting the main conversation.",
+		},
+		{
+			Name:        "skill_execute",
+			Summary:     "Execute a skill in a subagent to avoid polluting the main conversation context.",
+			UseWhen:     "Use when a skill involves many intermediate steps that would bloat the main conversation. The skill runs with fresh context and returns only the summary.",
+			AvoidWhen:   "Avoid for simple skill tasks that produce minimal output; use skill_load instead.",
+			Example:     `{"name":"brainstorming","prompt":"Design a new authentication flow for the project"}`,
+			Description: "Loads the skill content, prepends it to the task prompt, and runs everything in a subagent. Returns a concise summary. This is the preferred way to execute heavy skills.",
 		},
 		{
 			Name:        "skill_create",
