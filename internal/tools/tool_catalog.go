@@ -67,6 +67,14 @@ func DefaultToolCatalogEntries(includeTask bool) []ToolCatalogEntry {
 			Description: "Returns the skill content so the agent can follow its workflow.",
 		},
 		{
+			Name:        "skill_create",
+			Summary:     "Create a new domain skill by writing a SKILL.md file.",
+			UseWhen:     "Use to add specialized knowledge, workflows, or reusable instructions as persistent skills.",
+			AvoidWhen:   "Avoid for one-off instructions; use memory_store long_term instead.",
+			Example:     `{"name":"my-skill","description":"Custom workflow for X","content":"# Steps\n1. Do this\n2. Do that"}`,
+			Description: "Creates skills/<name>/SKILL.md with YAML frontmatter. Skills persist across sessions and can be loaded with load_skill.",
+		},
+		{
 			Name:        "project_task",
 			Summary:     "Manage persistent project-level tasks.",
 			UseWhen:     "Use to create, list, update, or inspect durable project tasks and their latest execution context.",
