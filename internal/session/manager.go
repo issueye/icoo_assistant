@@ -18,17 +18,18 @@ const (
 )
 
 type Session struct {
-	ID           string     `json:"id"`
-	Title        string     `json:"title"`
-	Status       string     `json:"status"`
-	Tags         []string   `json:"tags,omitempty"`
-	Summary      string     `json:"summary,omitempty"`
-	RoundCount   int        `json:"roundCount"`
-	MessageCount int        `json:"messageCount"`
-	MemoryIDs    []string   `json:"memoryIds,omitempty"`
-	CreatedAt    time.Time  `json:"createdAt"`
-	UpdatedAt    time.Time  `json:"updatedAt"`
-	ClosedAt     *time.Time `json:"closedAt,omitempty"`
+	ID            string     `json:"id"`
+	Title         string     `json:"title"`
+	Status        string     `json:"status"`
+	Tags          []string   `json:"tags,omitempty"`
+	Summary       string     `json:"summary,omitempty"`
+	RoundCount    int        `json:"roundCount"`
+	MessageCount  int        `json:"messageCount"`
+	MemoryIDs     []string   `json:"memoryIds,omitempty"`
+	TranscriptIDs []string   `json:"transcriptIds,omitempty"`
+	CreatedAt     time.Time  `json:"createdAt"`
+	UpdatedAt     time.Time  `json:"updatedAt"`
+	ClosedAt      *time.Time `json:"closedAt,omitempty"`
 }
 
 type CreateInput struct {
@@ -296,6 +297,24 @@ func (m *Manager) History(limit int) ([]Session, error) {
 		return all[:limit], nil
 	}
 	return all, nil
+}
+
+func (m *Manager) RecordTranscript(id, runID string) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	session, err := m.readSessionLocked(id)
+	if err != nil {
+		return err
+	}
+	for _, existing := range session.TranscriptIDs {
+		if existing == runID {
+			return nil
+		}
+	}
+	session.TranscriptIDs = append(session.TranscriptIDs, runID)
+	session.UpdatedAt = m.now().UTC()
+	return m.writeSessionLocked(session)
 }
 
 func (m *Manager) readSessionLocked(id string) (Session, error) {

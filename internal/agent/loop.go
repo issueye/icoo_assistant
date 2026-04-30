@@ -41,6 +41,7 @@ type Runner struct {
 	StreamHandler  func(string)
 	Hooks          []Hook
 	Config         Config
+	LastRunID      string
 	now            func() time.Time
 }
 
@@ -59,6 +60,7 @@ func (r *Runner) Run(messages []llm.Message) (_ []llm.Message, err error) {
 		r.now = time.Now
 	}
 	runID := fmt.Sprintf("run-%d", r.now().UTC().UnixNano())
+	r.LastRunID = runID
 	defer func() {
 		recordErr := r.recordTranscript(runID, messages, err)
 		if err == nil && recordErr != nil {

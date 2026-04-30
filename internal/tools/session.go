@@ -20,6 +20,7 @@ type SessionManager interface {
 	GetActiveID() string
 	UpdateStats(id string, roundCount, messageCount int) error
 	UpdateSummary(id, summary string, memoryIDs []string) error
+	RecordTranscript(id, runID string) error
 }
 
 func NewSessionTool(manager SessionManager) Definition {
@@ -234,6 +235,9 @@ func renderSession(s session.Session, isNew bool) string {
 	if len(s.MemoryIDs) > 0 {
 		lines = append(lines, fmt.Sprintf("linked_memories: %d", len(s.MemoryIDs)))
 	}
+	if len(s.TranscriptIDs) > 0 {
+		lines = append(lines, fmt.Sprintf("transcripts: %d", len(s.TranscriptIDs)))
+	}
 	lines = append(lines, fmt.Sprintf("created_at: %s", s.CreatedAt.UTC().Format("2006-01-02T15:04:05Z")))
 	if s.ClosedAt != nil {
 		lines = append(lines, fmt.Sprintf("closed_at: %s", s.ClosedAt.UTC().Format("2006-01-02T15:04:05Z")))
@@ -253,12 +257,16 @@ func renderSessionLine(s session.Session, marker string) string {
 	if s.ClosedAt != nil {
 		closed = fmt.Sprintf(" closed=%s", s.ClosedAt.UTC().Format("2006-01-02"))
 	}
+	tc := ""
+	if len(s.TranscriptIDs) > 0 {
+		tc = fmt.Sprintf(" transcripts=%d", len(s.TranscriptIDs))
+	}
 	return fmt.Sprintf("%s %s [%s]%s%s %s%s",
 		marker, s.ID, s.Status, tagStr, closed, s.Title,
 		func() string {
 			if s.Summary != "" {
-				return fmt.Sprintf(" (has_summary rounds=%d)", s.RoundCount)
+				return fmt.Sprintf(" (has_summary rounds=%d%s)", s.RoundCount, tc)
 			}
-			return fmt.Sprintf(" (rounds=%d)", s.RoundCount)
+			return fmt.Sprintf(" (rounds=%d%s)", s.RoundCount, tc)
 		}())
 }

@@ -267,8 +267,9 @@ func renderLatestAssistantContent(messages []llm.Message) string {
 
 func (a *app) runOnce(out io.Writer, query string) error {
 	if a.sessionManager != nil {
-		if activeSession, err := a.sessionManager.EnsureActive(); err == nil {
-			a.memoryManager.SetSessionID(activeSession.ID)
+		if s, err := a.sessionManager.EnsureActive(); err == nil {
+			a.memoryManager.SetSessionID(s.ID)
+			defer func() { _ = a.sessionManager.RecordTranscript(s.ID, a.runner.LastRunID) }()
 		}
 	}
 	a.writeDegradedModeHint(out)
@@ -343,6 +344,9 @@ func (a *app) runREPL(in io.Reader, out io.Writer) error {
 			continue
 		}
 		conversation = nextConversation
+		if hasSession && a.runner.LastRunID != "" {
+			_ = a.sessionManager.RecordTranscript(activeSession.ID, a.runner.LastRunID)
+		}
 		if hasSession {
 			_ = a.sessionManager.UpdateStats(activeSession.ID, 0, len(conversation))
 		}
