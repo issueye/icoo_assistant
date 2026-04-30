@@ -13,6 +13,7 @@ import (
 )
 
 type AnthropicConfig struct {
+	APIKey            string
 	BaseURL           string
 	Model             string
 	MaxTokens         int64
@@ -26,6 +27,7 @@ type AnthropicClient struct {
 }
 
 func NewAnthropicClient(config AnthropicConfig) *AnthropicClient {
+	apiKey := strings.TrimSpace(config.APIKey)
 	baseURL := strings.TrimSpace(config.BaseURL)
 	model := strings.TrimSpace(config.Model)
 	if model == "" {
@@ -35,10 +37,14 @@ func NewAnthropicClient(config AnthropicConfig) *AnthropicClient {
 	if maxTokens <= 0 {
 		maxTokens = 16000
 	}
-	opts := make([]option.RequestOption, 0, 1)
+	opts := make([]option.RequestOption, 0, 2)
+	if apiKey != "" {
+		opts = append(opts, option.WithAPIKey(apiKey))
+	}
 	if baseURL != "" {
 		opts = append(opts, option.WithBaseURL(baseURL))
 	}
+	config.APIKey = apiKey
 	config.BaseURL = baseURL
 	config.Model = model
 	config.MaxTokens = maxTokens
@@ -53,6 +59,7 @@ func NewClientFromConfig(cfg config.Config) (Client, string, error) {
 		return &FakeClient{}, "fake", nil
 	}
 	return NewAnthropicClient(AnthropicConfig{
+		APIKey:            cfg.AnthropicAPIKey,
 		BaseURL:           cfg.AnthropicBaseURL,
 		Model:             cfg.AnthropicModel,
 		MaxTokens:         cfg.AnthropicMaxTokens,

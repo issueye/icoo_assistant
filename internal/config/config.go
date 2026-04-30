@@ -26,6 +26,15 @@ type Config struct {
 }
 
 func Load(workdir string) (Config, error) {
+	tomlPath := filepath.Join(workdir, "config.toml")
+	envPath := filepath.Join(workdir, ".env")
+	if _, err := os.Stat(tomlPath); os.IsNotExist(err) {
+		if _, err := os.Stat(envPath); os.IsNotExist(err) {
+			if err := GenerateDefaultTOML(workdir); err != nil {
+				return Config{}, err
+			}
+		}
+	}
 	cfg, err := LoadTOML(workdir)
 	if err != nil {
 		if !os.IsNotExist(err) {

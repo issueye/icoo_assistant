@@ -31,7 +31,7 @@ func TestAnthropicClientUsesNonNilRequestContext(t *testing.T) {
 	}
 }
 
-func TestNewClientFromConfigPassesAnthropicBaseURL(t *testing.T) {
+func TestNewClientFromConfigPassesAnthropicAPIKeyAndBaseURL(t *testing.T) {
 	client, mode, err := NewClientFromConfig(config.Config{
 		AnthropicAPIKey:  "test-key",
 		AnthropicBaseURL: "https://anthropic-proxy.example.com",
@@ -45,6 +45,9 @@ func TestNewClientFromConfigPassesAnthropicBaseURL(t *testing.T) {
 	anthropicClient, ok := client.(*AnthropicClient)
 	if !ok {
 		t.Fatalf("expected anthropic client, got %T", client)
+	}
+	if anthropicClient.config.APIKey != "test-key" {
+		t.Fatalf("expected api key to be passed through, got %q", anthropicClient.config.APIKey)
 	}
 	if anthropicClient.config.BaseURL != "https://anthropic-proxy.example.com" {
 		t.Fatalf("expected base url to be passed through, got %q", anthropicClient.config.BaseURL)
