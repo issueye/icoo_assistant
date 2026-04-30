@@ -5,6 +5,7 @@ import (
 	"io"
 	"log"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"icoo_assistant/internal/config"
@@ -31,6 +32,13 @@ func main() {
 		if err := runSelfCheck(os.Stdout, cfg); err != nil {
 			log.Fatal(err)
 		}
+		return
+	}
+	if isInitRequest(os.Args[1:]) {
+		if err := config.GenerateDefaultTOML(root); err != nil {
+			log.Fatal(err)
+		}
+		_, _ = fmt.Fprintf(os.Stdout, "config.toml created at %s\nEdit it and set anthropic.api_key to get started.\n", filepath.Join(root, "config.toml"))
 		return
 	}
 	application, err := newApp(cfg)
@@ -84,12 +92,25 @@ func isCheckRequest(args []string) bool {
 	}
 }
 
+func isInitRequest(args []string) bool {
+	if len(args) != 1 {
+		return false
+	}
+	switch strings.TrimSpace(args[0]) {
+	case "--init", "init":
+		return true
+	default:
+		return false
+	}
+}
+
 func printUsage(out io.Writer) {
 	_, _ = fmt.Fprintf(out, "icoo_assistant %s\n\n", Version)
 	_, _ = fmt.Fprintln(out, "Usage:")
 	_, _ = fmt.Fprintf(out, "  %s [query]\n", sourceCommandPrefix)
 	_, _ = fmt.Fprintf(out, "  %s\n", sourceCommand("check"))
 	_, _ = fmt.Fprintf(out, "  %s\n", sourceCommand("doctor"))
+	_, _ = fmt.Fprintf(out, "  %s\n", sourceCommand("init"))
 	_, _ = fmt.Fprintf(out, "  %s\n", sourceCommand("--version"))
 	_, _ = fmt.Fprintf(out, "  %s\n", sourceCommand("--help"))
 	_, _ = fmt.Fprintln(out)
@@ -99,8 +120,10 @@ func printUsage(out io.Writer) {
 	_, _ = fmt.Fprintf(out, "  %s\n", sourceCommand(`"read README and summarize the project"`))
 	_, _ = fmt.Fprintln(out)
 	_, _ = fmt.Fprintln(out, "Configuration:")
-	_, _ = fmt.Fprintln(out, "  Load environment variables from .env in the current working directory.")
+	_, _ = fmt.Fprintln(out, "  Load from config.toml (primary) or .env (fallback) in the current working directory.")
+	_, _ = fmt.Fprintf(out, "  Generate defaults with %s.\n", sourceCommand("init"))
 	_, _ = fmt.Fprintln(out, "  See .env.example for supported settings.")
+	_, _ = fmt.Fprintln(out, "  Environment variables override both file sources.")
 	_, _ = fmt.Fprintf(out, "  Replace `%s` with `%s` if the binary is already installed.\n", sourceCommandPrefix, binaryCommandPrefix)
 	_, _ = fmt.Fprintln(out)
 	_, _ = fmt.Fprintln(out, "First Use:")

@@ -1,0 +1,15 @@
+*.exe
+*.log
+config.toml
+.env
+
+# Runtime directories
+.tasks/
+.background/
+.transcripts/
+.agent-hooks/
+.memory/
+.sessions/
+skills/
+
+bin/*

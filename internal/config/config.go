@@ -1,7 +1,6 @@
 package config
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -27,37 +26,59 @@ type Config struct {
 }
 
 func Load(workdir string) (Config, error) {
+	cfg, err := LoadTOML(workdir)
+	if err != nil {
+		if !os.IsNotExist(err) {
+			return Config{}, err
+		}
+		cfg = Config{
+			Workdir:            workdir,
+			AnthropicModel:     "claude-opus-4-7",
+			MaxRounds:          20,
+			AnthropicMaxTokens: 16000,
+			CommandTimeout:     120 * time.Second,
+			CompactThreshold:   50000,
+			EnableThinking:     true,
+			EnableStreaming:    true,
+		}
+	}
 	if err := loadDotEnv(filepath.Join(workdir, ".env")); err != nil {
 		return Config{}, err
 	}
-	cfg := Config{
-		Workdir:            workdir,
-		SystemPrompt:       strings.TrimSpace(os.Getenv("AGENT_SYSTEM_PROMPT")),
-		SkillsDir:          strings.TrimSpace(os.Getenv("AGENT_SKILLS_DIR")),
-		AnthropicAPIKey:    strings.TrimSpace(os.Getenv("ANTHROPIC_API_KEY")),
-		AnthropicBaseURL:   strings.TrimSpace(os.Getenv("ANTHROPIC_BASE_URL")),
-		AnthropicModel:     strings.TrimSpace(os.Getenv("ANTHROPIC_MODEL")),
-		EnablePromptCache:  boolFromEnv("ANTHROPIC_ENABLE_PROMPT_CACHE", false),
-		EnableThinking:     boolFromEnv("ANTHROPIC_ENABLE_THINKING", true),
-		EnableStreaming:    boolFromEnv("ANTHROPIC_ENABLE_STREAMING", true),
-		CommandTimeout:     durationFromEnv("AGENT_COMMAND_TIMEOUT_SECONDS", 120*time.Second),
-		MaxRounds:          intFromEnv("AGENT_MAX_ROUNDS", 20),
-		AnthropicMaxTokens: int64(intFromEnv("ANTHROPIC_MAX_TOKENS", 16000)),
-		CompactThreshold:   intFromEnv("AGENT_COMPACT_THRESHOLD", 50000),
-		TranscriptDir:      strings.TrimSpace(os.Getenv("AGENT_TRANSCRIPT_DIR")),
+	if v := strings.TrimSpace(os.Getenv("AGENT_SYSTEM_PROMPT")); v != "" {
+		cfg.SystemPrompt = v
 	}
-	if cfg.SystemPrompt == "" {
-		cfg.SystemPrompt = fmt.Sprintf("You are a coding agent at %s. Use tools to solve tasks.", workdir)
+	if v := strings.TrimSpace(os.Getenv("AGENT_SKILLS_DIR")); v != "" {
+		cfg.SkillsDir = v
 	}
-	if cfg.SkillsDir == "" {
-		cfg.SkillsDir = filepath.Join(workdir, "skills")
+	if v := strings.TrimSpace(os.Getenv("ANTHROPIC_API_KEY")); v != "" {
+		cfg.AnthropicAPIKey = v
 	}
-	if cfg.AnthropicModel == "" {
-		cfg.AnthropicModel = "claude-opus-4-7"
+	if v := strings.TrimSpace(os.Getenv("ANTHROPIC_BASE_URL")); v != "" {
+		cfg.AnthropicBaseURL = v
 	}
-	if cfg.TranscriptDir == "" {
-		cfg.TranscriptDir = filepath.Join(workdir, ".transcripts")
+	if v := strings.TrimSpace(os.Getenv("ANTHROPIC_MODEL")); v != "" {
+		cfg.AnthropicModel = v
 	}
+	cfg.EnablePromptCache = boolFromEnv("ANTHROPIC_ENABLE_PROMPT_CACHE", cfg.EnablePromptCache)
+	cfg.EnableThinking = boolFromEnv("ANTHROPIC_ENABLE_THINKING", cfg.EnableThinking)
+	cfg.EnableStreaming = boolFromEnv("ANTHROPIC_ENABLE_STREAMING", cfg.EnableStreaming)
+	if v := intFromEnv("AGENT_COMMAND_TIMEOUT_SECONDS", -1); v > 0 {
+		cfg.CommandTimeout = time.Duration(v) * time.Second
+	}
+	if v := intFromEnv("AGENT_MAX_ROUNDS", -1); v > 0 {
+		cfg.MaxRounds = v
+	}
+	if v := intFromEnv("ANTHROPIC_MAX_TOKENS", -1); v > 0 {
+		cfg.AnthropicMaxTokens = int64(v)
+	}
+	if v := intFromEnv("AGENT_COMPACT_THRESHOLD", -1); v > 0 {
+		cfg.CompactThreshold = v
+	}
+	if v := strings.TrimSpace(os.Getenv("AGENT_TRANSCRIPT_DIR")); v != "" {
+		cfg.TranscriptDir = v
+	}
+	applyDefaults(&cfg)
 	return cfg, nil
 }
 
