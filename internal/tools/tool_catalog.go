@@ -138,6 +138,14 @@ func DefaultToolCatalogEntries(includeTask bool) []ToolCatalogEntry {
 			Example:     `{"action":"tag","id":"mem-123","tags":["preference","coding-style"]}`,
 			Description: "Supports update, delete, tag, and consolidate actions for memory maintenance.",
 		},
+		{
+			Name:        "session",
+			Summary:     "Manage sessions: create, close, switch, list, status, history, and archive.",
+			UseWhen:     "Use to organize work into named sessions, switch between contexts, review session history, or archive completed sessions.",
+			AvoidWhen:   "Avoid for ephemeral in-session task tracking; use todo instead.",
+			Example:     `{"action":"create","title":"Feature X Refactoring","tags":["refactoring","backend"]}`,
+			Description: "Sessions provide long-lived work contexts. Each session tracks round/message counts. Use memory_summarize to persist session context before closing.",
+		},
 	}
 	if includeTask {
 		entries = append(entries, ToolCatalogEntry{

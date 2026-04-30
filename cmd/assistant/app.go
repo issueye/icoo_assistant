@@ -13,6 +13,7 @@ import (
 	"icoo_assistant/internal/hookaudit"
 	"icoo_assistant/internal/llm"
 	"icoo_assistant/internal/memory"
+	"icoo_assistant/internal/session"
 	"icoo_assistant/internal/skill"
 	"icoo_assistant/internal/subagent"
 	"icoo_assistant/internal/task"
@@ -25,6 +26,8 @@ type app struct {
 	runner            *agent.Runner
 	mode              string
 	streamingDisabled bool
+	sessionManager    *session.Manager
+	memoryManager     *memory.Manager
 }
 
 type streamedOutput struct {
@@ -112,6 +115,10 @@ func newApp(cfg config.Config) (*app, error) {
 	if err != nil {
 		return nil, err
 	}
+	sessionManager, err := session.NewManager(session.DefaultDir(cfg.Workdir))
+	if err != nil {
+		return nil, err
+	}
 	skillLoader, err := skill.Load(cfg.SkillsDir)
 	if err != nil {
 		return nil, err
@@ -140,6 +147,7 @@ func newApp(cfg config.Config) (*app, error) {
 		tools.NewMemoryRecallTool(memoryManager),
 		tools.NewMemorySummarizeTool(memoryManager),
 		tools.NewMemoryManageTool(memoryManager),
+		tools.NewSessionTool(sessionManager),
 	)
 	if err != nil {
 		return nil, err
@@ -175,6 +183,7 @@ func newApp(cfg config.Config) (*app, error) {
 		tools.NewMemoryRecallTool(memoryManager),
 		tools.NewMemorySummarizeTool(memoryManager),
 		tools.NewMemoryManageTool(memoryManager),
+		tools.NewSessionTool(sessionManager),
 	)
 	if err != nil {
 		return nil, err
@@ -195,6 +204,8 @@ func newApp(cfg config.Config) (*app, error) {
 		},
 		mode:              mode,
 		streamingDisabled: !cfg.EnableStreaming,
+		sessionManager:    sessionManager,
+		memoryManager:     memoryManager,
 	}, nil
 }
 
@@ -250,6 +261,12 @@ func renderLatestAssistantContent(messages []llm.Message) string {
 }
 
 func (a *app) runOnce(out io.Writer, query string) error {
+	if a.sessionManager != nil {
+		if activeSession, err := a.sessionManager.EnsureActive(); err == nil {
+			a.memoryManager.SetSessionID(activeSession.ID)
+		}
+	}
+	a.writeDegradedModeHint(out)
 	a.writeDegradedModeHint(out)
 	stream := &streamedOutput{writer: out}
 	var result string
@@ -274,6 +291,19 @@ func (a *app) runOnce(out io.Writer, query string) error {
 }
 
 func (a *app) runREPL(in io.Reader, out io.Writer) error {
+	var activeSession session.Session
+	hasSession := false
+	if a.sessionManager != nil {
+		sess, err := a.sessionManager.EnsureActive()
+		if err != nil {
+			a.memoryManager.SetSessionID("")
+		} else {
+			activeSession = sess
+			hasSession = true
+			a.memoryManager.SetSessionID(activeSession.ID)
+			_, _ = fmt.Fprintf(out, "session: %s [%s]\n", activeSession.ID, activeSession.Title)
+		}
+	}
 	_, _ = fmt.Fprintf(out, "assistant REPL started (%s client). Type exit to quit.\n", a.mode)
 	if a.isFakeMode() {
 		_, _ = fmt.Fprintln(out, "warning: REPL is running in fake mode; model-generated answers are disabled until ANTHROPIC_API_KEY is set.")
@@ -287,7 +317,10 @@ func (a *app) runREPL(in io.Reader, out io.Writer) error {
 			break
 		}
 		query := strings.TrimSpace(scanner.Text())
-		if query == "" || query == "exit" {
+		if query == "" {
+			continue
+		}
+		if query == "exit" {
 			break
 		}
 		stream := &streamedOutput{writer: out}
@@ -305,6 +338,9 @@ func (a *app) runREPL(in io.Reader, out io.Writer) error {
 			continue
 		}
 		conversation = nextConversation
+		if hasSession {
+			_ = a.sessionManager.UpdateStats(activeSession.ID, 0, len(conversation))
+		}
 		if stream.wroteText {
 			stream.Finish()
 			continue
@@ -314,6 +350,15 @@ func (a *app) runREPL(in io.Reader, out io.Writer) error {
 			continue
 		}
 		a.writeNoOutputHint(out)
+	}
+	if hasSession {
+		sess, err := a.sessionManager.Close(activeSession.ID)
+		if err == nil {
+			_, _ = fmt.Fprintf(out, "Session %s closed. (rounds=%d, messages=%d)\n", sess.ID, sess.RoundCount, sess.MessageCount)
+			if sess.Summary == "" {
+				_, _ = fmt.Fprintln(out, "hint: use memory_summarize to persist session context before closing next time")
+			}
+		}
 	}
 	return scanner.Err()
 }
