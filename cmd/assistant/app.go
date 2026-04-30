@@ -12,6 +12,7 @@ import (
 	"icoo_assistant/internal/config"
 	"icoo_assistant/internal/hookaudit"
 	"icoo_assistant/internal/llm"
+	"icoo_assistant/internal/memory"
 	"icoo_assistant/internal/skill"
 	"icoo_assistant/internal/subagent"
 	"icoo_assistant/internal/task"
@@ -107,11 +108,20 @@ func newApp(cfg config.Config) (*app, error) {
 	}
 	hooks := []agent.Hook{hookWriter}
 	eventReader := hookaudit.NewReader(agent.DefaultHookDir(cfg.Workdir))
+	memoryManager, err := memory.NewManager(memory.DefaultDir(cfg.Workdir))
+	if err != nil {
+		return nil, err
+	}
 	skillLoader, err := skill.Load(cfg.SkillsDir)
 	if err != nil {
 		return nil, err
 	}
-	systemPrompt := cfg.SystemPrompt + "\n\nSkills available:\n" + skillLoader.Descriptions()
+	memoryContext := memoryManager.GenerateSessionContext()
+	systemPrompt := cfg.SystemPrompt
+	if memoryContext != "" {
+		systemPrompt += "\n\n<memory_context>\n" + memoryContext + "</memory_context>"
+	}
+	systemPrompt += "\n\nSkills available:\n" + skillLoader.Descriptions()
 	baseCatalog := tools.DefaultToolCatalogEntries(false)
 	baseRegistry, err := tools.NewRegistry(
 		tools.NewBashTool(tools.CommandRunner{Workdir: cfg.Workdir, Timeout: cfg.CommandTimeout}),
@@ -126,6 +136,10 @@ func newApp(cfg config.Config) (*app, error) {
 		tools.NewTodoTool(todoManager),
 		tools.NewCompactTool(),
 		tools.NewLoadSkillTool(skillLoader),
+		tools.NewMemoryStoreTool(memoryManager),
+		tools.NewMemoryRecallTool(memoryManager),
+		tools.NewMemorySummarizeTool(memoryManager),
+		tools.NewMemoryManageTool(memoryManager),
 	)
 	if err != nil {
 		return nil, err
@@ -157,6 +171,10 @@ func newApp(cfg config.Config) (*app, error) {
 		tools.NewCompactTool(),
 		tools.NewTaskTool(),
 		tools.NewLoadSkillTool(skillLoader),
+		tools.NewMemoryStoreTool(memoryManager),
+		tools.NewMemoryRecallTool(memoryManager),
+		tools.NewMemorySummarizeTool(memoryManager),
+		tools.NewMemoryManageTool(memoryManager),
 	)
 	if err != nil {
 		return nil, err

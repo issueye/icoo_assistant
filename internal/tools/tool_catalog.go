@@ -106,6 +106,38 @@ func DefaultToolCatalogEntries(includeTask bool) []ToolCatalogEntry {
 			Example:     `{"path":"docs/note.md","content":"hello"}`,
 			Description: "The target file will be created or overwritten with the provided content.",
 		},
+		{
+			Name:        "memory_store",
+			Summary:     "Store information into the persistent memory system.",
+			UseWhen:     "Use to remember facts, decisions, user preferences, and AI personality across sessions.",
+			AvoidWhen:   "Avoid for ephemeral session state; use short_term type for temporary in-session memory.",
+			Example:     `{"action":"set","type":"long_term","content":"User prefers concise responses","tags":["preference"],"importance":0.8}`,
+			Description: "Supports short_term (session-only), long_term (persistent), ai_personality, and user_profile types.",
+		},
+		{
+			Name:        "memory_recall",
+			Summary:     "Recall information from the memory system.",
+			UseWhen:     "Use to search, list, or retrieve memories by type, tags, keywords, or importance. Use 'context' action for session initialization.",
+			AvoidWhen:   "Avoid when you already have the information in current context.",
+			Example:     `{"action":"search","query":"preference","type":"long_term","limit":5}`,
+			Description: "Cross-session retrieval with keyword search, tag filtering, and importance-based ranking.",
+		},
+		{
+			Name:        "memory_summarize",
+			Summary:     "Generate and persist a session summary for future sessions.",
+			UseWhen:     "Use at the end of a significant session to capture key decisions, findings, and context.",
+			AvoidWhen:   "Avoid for trivial or very short sessions.",
+			Example:     `{"summary":"Implemented memory system","key_decisions":["Used file-based JSONL storage"],"key_findings":["Memory context injection works well"],"tags":["development","architecture"]}`,
+			Description: "Stores a structured session summary with key decisions and findings for cross-session continuity.",
+		},
+		{
+			Name:        "memory_manage",
+			Summary:     "Manage existing memories: update, delete, retag, or consolidate.",
+			UseWhen:     "Use to update memory content, adjust importance, change tags, delete obsolete memories, or consolidate similar entries.",
+			AvoidWhen:   "Avoid for creating new memories; use memory_store instead.",
+			Example:     `{"action":"tag","id":"mem-123","tags":["preference","coding-style"]}`,
+			Description: "Supports update, delete, tag, and consolidate actions for memory maintenance.",
+		},
 	}
 	if includeTask {
 		entries = append(entries, ToolCatalogEntry{
