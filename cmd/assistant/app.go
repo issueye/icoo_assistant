@@ -28,6 +28,7 @@ type app struct {
 	runner         *agent.Runner
 	commandLoader  *commands.Loader
 	agentLoader    *agents.Loader
+	workdir        string
 	mode           string
 }
 
@@ -194,6 +195,7 @@ func newApp(cfg config.Config) (*app, error) {
 		},
 		commandLoader: commandLoader,
 		agentLoader:   agentLoader,
+		workdir:       cfg.Workdir,
 		mode: mode,
 	}, nil
 }
