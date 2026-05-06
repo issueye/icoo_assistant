@@ -230,6 +230,50 @@ func TestRunOnceExpandsProjectSlashCommand(t *testing.T) {
 	}
 }
 
+func TestRunOnceListsProjectCommands(t *testing.T) {
+	root := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(root, ".icoo", "commands"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(root, ".icoo", "commands", "review.md"), []byte("Review template."), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	app := &app{
+		commandLoader: mustLoadCommands(t, filepath.Join(root, ".icoo", "commands")),
+		mode:          "anthropic",
+	}
+	var out bytes.Buffer
+	if err := app.runOnce(&out, "/commands"); err != nil {
+		t.Fatal(err)
+	}
+	output := out.String()
+	if !strings.Contains(output, "Project commands (1):") || !strings.Contains(output, "- /review") {
+		t.Fatalf("unexpected commands output: %q", output)
+	}
+}
+
+func TestRunOnceShowsProjectCommandHelp(t *testing.T) {
+	root := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(root, ".icoo", "commands"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(root, ".icoo", "commands", "review.md"), []byte("Review template."), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	app := &app{
+		commandLoader: mustLoadCommands(t, filepath.Join(root, ".icoo", "commands")),
+		mode:          "anthropic",
+	}
+	var out bytes.Buffer
+	if err := app.runOnce(&out, "/help review"); err != nil {
+		t.Fatal(err)
+	}
+	output := out.String()
+	if !strings.Contains(output, "/review") || !strings.Contains(output, "Review template.") {
+		t.Fatalf("unexpected help output: %q", output)
+	}
+}
+
 func mustLoadCommands(t *testing.T, dir string) *commands.Loader {
 	t.Helper()
 	loader, err := commands.Load(dir)

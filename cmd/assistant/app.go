@@ -224,6 +224,13 @@ func (a *app) execute(query string) (string, error) {
 }
 
 func (a *app) executeMessages(history []llm.Message, query string) ([]llm.Message, string, error) {
+	if reply, ok := a.handleBuiltInSlashCommand(query); ok {
+		messages := make([]llm.Message, len(history), len(history)+2)
+		copy(messages, history)
+		messages = append(messages, llm.Message{Role: "user", Content: strings.TrimSpace(query)})
+		messages = append(messages, llm.Message{Role: "assistant", Content: reply})
+		return messages, reply, nil
+	}
 	if rendered, ok := a.renderSlashCommand(query); ok {
 		query = rendered
 	}
@@ -259,6 +266,10 @@ func renderLatestAssistantContent(messages []llm.Message) string {
 
 func (a *app) runOnce(out io.Writer, query string) error {
 	a.writeDegradedModeHint(out)
+	if reply, ok := a.handleBuiltInSlashCommand(query); ok {
+		_, _ = fmt.Fprintln(out, reply)
+		return nil
+	}
 	stream := &streamedOutput{writer: out}
 	var result string
 	err := a.withStreamHandler(stream.Write, func() error {
@@ -297,6 +308,10 @@ func (a *app) runREPL(in io.Reader, out io.Writer) error {
 		query := strings.TrimSpace(scanner.Text())
 		if query == "" || query == "exit" {
 			break
+		}
+		if reply, ok := a.handleBuiltInSlashCommand(query); ok {
+			_, _ = fmt.Fprintln(out, reply)
+			continue
 		}
 		stream := &streamedOutput{writer: out}
 		var (
@@ -344,4 +359,42 @@ func (a *app) renderSlashCommand(query string) (string, bool) {
 		return "", false
 	}
 	return a.commandLoader.Render(name, args), true
+}
+
+func (a *app) handleBuiltInSlashCommand(query string) (string, bool) {
+	query = strings.TrimSpace(query)
+	if query == "/commands" || query == "/help" {
+		return a.renderCommandList(), true
+	}
+	if strings.HasPrefix(query, "/help ") {
+		name := strings.TrimSpace(strings.TrimPrefix(query, "/help "))
+		return a.renderCommandHelp(name), true
+	}
+	return "", false
+}
+
+func (a *app) renderCommandList() string {
+	names := a.commandLoader.Names()
+	if len(names) == 0 {
+		return "No project commands found in .icoo/commands."
+	}
+	lines := []string{
+		fmt.Sprintf("Project commands (%d):", len(names)),
+	}
+	for _, name := range names {
+		lines = append(lines, "- /"+name)
+	}
+	lines = append(lines, "Use `/help <command>` to inspect a command template.")
+	return strings.Join(lines, "\n")
+}
+
+func (a *app) renderCommandHelp(name string) string {
+	name = strings.TrimSpace(strings.TrimPrefix(name, "/"))
+	if name == "" {
+		return "Usage: /help <command>"
+	}
+	if a.commandLoader == nil || !a.commandLoader.Has(name) {
+		return fmt.Sprintf("Unknown project command: /%s", name)
+	}
+	return fmt.Sprintf("/%s\n\n%s", name, a.commandLoader.Body(name))
 }

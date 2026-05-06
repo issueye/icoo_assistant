@@ -65,6 +65,17 @@ func (l *Loader) Render(name, args string) string {
 	return body + "\n\nArguments:\n" + args
 }
 
+func (l *Loader) Body(name string) string {
+	if l == nil {
+		return ""
+	}
+	body, ok := l.entries[strings.ToLower(strings.TrimSpace(name))]
+	if !ok {
+		return ""
+	}
+	return body
+}
+
 func (l *Loader) Names() []string {
 	if l == nil || len(l.entries) == 0 {
 		return nil

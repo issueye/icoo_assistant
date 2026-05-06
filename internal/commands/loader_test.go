@@ -25,4 +25,7 @@ func TestLoadReadsMarkdownCommands(t *testing.T) {
 	if !strings.Contains(rendered, "Review the current changes.") || !strings.Contains(rendered, "--focus tests") {
 		t.Fatalf("unexpected rendered command: %q", rendered)
 	}
+	if loader.Body("review") != "Review the current changes." {
+		t.Fatalf("unexpected command body: %q", loader.Body("review"))
+	}
 }
