@@ -1,0 +1,15 @@
+[core]
+system_prompt = "You are a coding agent working inside this repository. Use tools to solve tasks."
+skills_dir = "skills"
+max_rounds = 20
+command_timeout_seconds = 120
+compact_threshold = 50000
+transcript_dir = ".transcripts"
+
+[anthropic]
+api_key = ""
+base_url = ""
+model = "claude-opus-4-7"
+max_tokens = 16000
+enable_prompt_cache = false
+enable_thinking = true
