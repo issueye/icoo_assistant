@@ -37,11 +37,11 @@ func Load(workdir string) (Config, error) {
 	if err != nil {
 		return Config{}, err
 	}
-	projectInstructions, err := loadOptionalText(filepath.Join(workdir, "CLAUDE.md"))
+	projectInstructions, err := loadOptionalText(filepath.Join(workdir, "ICOO.md"))
 	if err != nil {
 		return Config{}, err
 	}
-	settings, err := loadClaudeSettings(filepath.Join(workdir, ".icoo", "settings.json"))
+	settings, err := loadIcooSettings(filepath.Join(workdir, ".icoo", "settings.json"))
 	if err != nil {
 		return Config{}, err
 	}
@@ -100,7 +100,7 @@ func defaultSkillsDir(workdir string) string {
 	return filepath.Join(workdir, "skills")
 }
 
-type claudeSettingsFile struct {
+type icooSettingsFile struct {
 	Permissions struct {
 		Deny                  []string `json:"deny"`
 		AdditionalDirectories []string `json:"additionalDirectories"`
@@ -108,7 +108,7 @@ type claudeSettingsFile struct {
 	} `json:"permissions"`
 }
 
-type ClaudeSettings struct {
+type IcooSettings struct {
 	AdditionalDirectories []string
 	DefaultMode           string
 	DenyReadPatterns      []string
@@ -116,8 +116,8 @@ type ClaudeSettings struct {
 	DenyCommandPatterns   []string
 }
 
-func loadClaudeSettings(path string) (ClaudeSettings, error) {
-	var settings ClaudeSettings
+func loadIcooSettings(path string) (IcooSettings, error) {
+	var settings IcooSettings
 	data, err := os.ReadFile(path)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -125,7 +125,7 @@ func loadClaudeSettings(path string) (ClaudeSettings, error) {
 		}
 		return settings, err
 	}
-	var file claudeSettingsFile
+	var file icooSettingsFile
 	if err := json.Unmarshal(data, &file); err != nil {
 		return settings, err
 	}

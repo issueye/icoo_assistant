@@ -56,9 +56,9 @@ func TestLoadAppliesDefaults(t *testing.T) {
 	}
 }
 
-func TestLoadReadsClaudeProjectConventions(t *testing.T) {
+func TestLoadReadsIcooProjectConventions(t *testing.T) {
 	root := t.TempDir()
-	if err := os.WriteFile(filepath.Join(root, "CLAUDE.md"), []byte("Project rule: run tests before finishing."), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(root, "ICOO.md"), []byte("Project rule: run tests before finishing."), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	if err := os.MkdirAll(filepath.Join(root, ".icoo", "skills"), 0o755); err != nil {

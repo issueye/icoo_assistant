@@ -179,7 +179,7 @@ func buildSystemPrompt(cfg config.Config, skillLoader *skill.Loader) string {
 	var builder strings.Builder
 	builder.WriteString(cfg.SystemPrompt)
 	if strings.TrimSpace(cfg.ProjectInstructions) != "" {
-		builder.WriteString("\n\nProject instructions (from CLAUDE.md):\n")
+		builder.WriteString("\n\nProject instructions (from ICOO.md):\n")
 		builder.WriteString(cfg.ProjectInstructions)
 	}
 	if strings.TrimSpace(cfg.PermissionMode) != "" {
