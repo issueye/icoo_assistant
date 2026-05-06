@@ -144,7 +144,10 @@ func newServerWithSessionDir(app *app, sessionDir string) *server {
 
 func (s *server) routes() http.Handler {
 	mux := http.NewServeMux()
+	mux.HandleFunc("/", s.handleDocs)
+	mux.HandleFunc("/docs", s.handleDocs)
 	mux.HandleFunc("/healthz", s.handleHealth)
+	mux.HandleFunc("/v1/openapi.json", s.handleOpenAPI)
 	mux.HandleFunc("/v1/run", s.handleRun)
 	mux.HandleFunc("/v1/repl", s.handleREPL)
 	mux.HandleFunc("/v1/sessions", s.handleSessions)
@@ -152,8 +155,224 @@ func (s *server) routes() http.Handler {
 	return mux
 }
 
+func (s *server) handleDocs(w http.ResponseWriter, r *http.Request) {
+	if r.URL.Path != "/" && r.URL.Path != "/docs" {
+		http.NotFound(w, r)
+		return
+	}
+	if r.Method != http.MethodGet {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	mode := ""
+	if s.app != nil {
+		mode = s.app.mode
+	}
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.WriteHeader(http.StatusOK)
+	_, _ = fmt.Fprintf(w, `<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>icoo Assistant API Docs</title>
+  <style>
+    :root { color-scheme: light; }
+    body { margin: 0; font-family: "Segoe UI", "PingFang SC", sans-serif; background: linear-gradient(180deg, #f4f1e8 0%%, #ffffff 100%%); color: #18230f; }
+    main { max-width: 920px; margin: 0 auto; padding: 48px 24px 64px; }
+    h1 { margin: 0 0 12px; font-size: 40px; line-height: 1.1; }
+    p { line-height: 1.6; }
+    .hero { padding: 28px; border-radius: 20px; background: #dce7c9; box-shadow: 0 10px 30px rgba(24, 35, 15, 0.08); }
+    .badge { display: inline-block; margin-bottom: 14px; padding: 6px 10px; border-radius: 999px; background: #18230f; color: #f4f1e8; font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; }
+    .actions { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 20px; }
+    a.button { display: inline-block; padding: 10px 14px; border-radius: 10px; background: #255f38; color: #ffffff; text-decoration: none; }
+    a.link { color: #255f38; text-decoration: none; }
+    section { margin-top: 28px; }
+    .card { padding: 20px; border-radius: 16px; background: #ffffff; box-shadow: 0 8px 24px rgba(24, 35, 15, 0.06); }
+    table { width: 100%%; border-collapse: collapse; }
+    th, td { padding: 12px 10px; text-align: left; border-bottom: 1px solid #dce7c9; vertical-align: top; }
+    th { font-size: 13px; text-transform: uppercase; letter-spacing: 0.06em; color: #4f6f52; }
+    code { font-family: Consolas, "Courier New", monospace; background: #f4f1e8; padding: 2px 6px; border-radius: 6px; }
+  </style>
+</head>
+<body>
+  <main>
+    <div class="hero">
+      <div class="badge">icoo local api</div>
+      <h1>Persistent assistant API</h1>
+      <p>Run one-shot tasks, keep session history across requests, and inspect local saved sessions. Current mode: <code>%s</code>.</p>
+      <div class="actions">
+        <a class="button" href="/v1/openapi.json">OpenAPI JSON</a>
+        <a class="link" href="/healthz">Health Check</a>
+      </div>
+    </div>
+    <section class="card">
+      <h2>Endpoints</h2>
+      <table>
+        <thead>
+          <tr><th>Method</th><th>Path</th><th>Purpose</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>GET</code></td><td><code>/healthz</code></td><td>Returns server health and current runtime mode.</td></tr>
+          <tr><td><code>GET</code></td><td><code>/v1/openapi.json</code></td><td>Returns the machine-readable API schema.</td></tr>
+          <tr><td><code>POST</code></td><td><code>/v1/run</code></td><td>Runs a one-shot query without session persistence.</td></tr>
+          <tr><td><code>POST</code></td><td><code>/v1/repl</code></td><td>Runs a session turn with persisted conversation history.</td></tr>
+          <tr><td><code>GET</code></td><td><code>/v1/sessions</code></td><td>Lists saved session summaries.</td></tr>
+          <tr><td><code>GET</code></td><td><code>/v1/sessions/{session_id}</code></td><td>Fetches the full saved session detail.</td></tr>
+          <tr><td><code>DELETE</code></td><td><code>/v1/sessions/{session_id}</code></td><td>Deletes a saved session from disk.</td></tr>
+        </tbody>
+      </table>
+    </section>
+  </main>
+</body>
+</html>`, mode)
+}
+
 func (s *server) handleHealth(w http.ResponseWriter, _ *http.Request) {
 	writeJSON(w, http.StatusOK, responseEnvelope{Mode: s.app.mode})
+}
+
+func (s *server) handleOpenAPI(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		writeOpenAPIJSON(w, http.StatusMethodNotAllowed, map[string]any{
+			"error": "method not allowed",
+		})
+		return
+	}
+	writeOpenAPIJSON(w, http.StatusOK, map[string]any{
+		"openapi": "3.0.3",
+		"info": map[string]any{
+			"title":       "icoo Assistant API",
+			"version":     Version,
+			"description": "Local persistent API for icoo assistant sessions and one-shot runs.",
+		},
+		"paths": map[string]any{
+			"/healthz": map[string]any{
+				"get": map[string]any{
+					"summary": "Health check",
+					"responses": map[string]any{
+						"200": map[string]any{
+							"description": "Server is healthy",
+						},
+					},
+				},
+			},
+			"/v1/openapi.json": map[string]any{
+				"get": map[string]any{
+					"summary": "Get OpenAPI document",
+					"responses": map[string]any{
+						"200": map[string]any{
+							"description": "OpenAPI schema",
+						},
+					},
+				},
+			},
+			"/v1/run": map[string]any{
+				"post": map[string]any{
+					"summary": "Run a one-shot query",
+					"requestBody": map[string]any{
+						"required": true,
+						"content": map[string]any{
+							"application/json": map[string]any{
+								"schema": map[string]any{
+									"type": "object",
+									"required": []string{
+										"query",
+									},
+									"properties": map[string]any{
+										"query": map[string]any{
+											"type": "string",
+										},
+									},
+								},
+							},
+						},
+					},
+					"responses": map[string]any{
+						"200": map[string]any{
+							"description": "Execution result",
+						},
+					},
+				},
+			},
+			"/v1/repl": map[string]any{
+				"post": map[string]any{
+					"summary": "Run a stateful session turn",
+					"requestBody": map[string]any{
+						"required": true,
+						"content": map[string]any{
+							"application/json": map[string]any{
+								"schema": map[string]any{
+									"type": "object",
+									"required": []string{
+										"session_id",
+									},
+									"properties": map[string]any{
+										"session_id": map[string]any{"type": "string"},
+										"query":      map[string]any{"type": "string"},
+										"reset":      map[string]any{"type": "boolean"},
+									},
+								},
+							},
+						},
+					},
+					"responses": map[string]any{
+						"200": map[string]any{
+							"description": "Session execution result",
+						},
+					},
+				},
+			},
+			"/v1/sessions": map[string]any{
+				"get": map[string]any{
+					"summary": "List saved sessions",
+					"responses": map[string]any{
+						"200": map[string]any{
+							"description": "Saved session summaries",
+						},
+					},
+				},
+			},
+			"/v1/sessions/{session_id}": map[string]any{
+				"get": map[string]any{
+					"summary": "Get a saved session",
+					"parameters": []map[string]any{
+						{
+							"name":     "session_id",
+							"in":       "path",
+							"required": true,
+							"schema": map[string]any{
+								"type": "string",
+							},
+						},
+					},
+					"responses": map[string]any{
+						"200": map[string]any{
+							"description": "Saved session detail",
+						},
+					},
+				},
+				"delete": map[string]any{
+					"summary": "Delete a saved session",
+					"parameters": []map[string]any{
+						{
+							"name":     "session_id",
+							"in":       "path",
+							"required": true,
+							"schema": map[string]any{
+								"type": "string",
+							},
+						},
+					},
+					"responses": map[string]any{
+						"200": map[string]any{
+							"description": "Session deleted",
+						},
+					},
+				},
+			},
+		},
+	})
 }
 
 func (s *server) handleRun(w http.ResponseWriter, r *http.Request) {
@@ -276,6 +495,12 @@ func writeSessionsJSON(w http.ResponseWriter, status int, payload sessionsEnvelo
 }
 
 func writeSessionDetailJSON(w http.ResponseWriter, status int, payload sessionDetailEnvelope) {
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	w.WriteHeader(status)
+	_ = json.NewEncoder(w).Encode(payload)
+}
+
+func writeOpenAPIJSON(w http.ResponseWriter, status int, payload map[string]any) {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(status)
 	_ = json.NewEncoder(w).Encode(payload)

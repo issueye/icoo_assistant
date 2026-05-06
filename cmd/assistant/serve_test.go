@@ -35,6 +35,54 @@ func TestServerHealthz(t *testing.T) {
 	}
 }
 
+func TestServerDocs(t *testing.T) {
+	srv := newServer(&app{mode: "fake"})
+	req := httptest.NewRequest(http.MethodGet, "/docs", nil)
+	rec := httptest.NewRecorder()
+	srv.routes().ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("unexpected status: %d body=%q", rec.Code, rec.Body.String())
+	}
+	body := rec.Body.String()
+	for _, needle := range []string{
+		`icoo Assistant API Docs`,
+		`/v1/openapi.json`,
+		`Persistent assistant API`,
+		`/v1/repl`,
+		`Current mode: <code>fake</code>`,
+	} {
+		if !strings.Contains(body, needle) {
+			t.Fatalf("expected %q in body, got %q", needle, body)
+		}
+	}
+}
+
+func TestServerOpenAPI(t *testing.T) {
+	srv := newServer(&app{mode: "fake"})
+	req := httptest.NewRequest(http.MethodGet, "/v1/openapi.json", nil)
+	rec := httptest.NewRecorder()
+	srv.routes().ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("unexpected status: %d body=%q", rec.Code, rec.Body.String())
+	}
+	body := rec.Body.String()
+	for _, needle := range []string{
+		`"openapi":"3.0.3"`,
+		`"/healthz"`,
+		`"/v1/openapi.json"`,
+		`"/v1/run"`,
+		`"/v1/repl"`,
+		`"/v1/sessions"`,
+		`"/v1/sessions/{session_id}"`,
+		`"summary":"Run a one-shot query"`,
+		`"summary":"Delete a saved session"`,
+	} {
+		if !strings.Contains(body, needle) {
+			t.Fatalf("expected %q in body, got %q", needle, body)
+		}
+	}
+}
+
 func TestServerRun(t *testing.T) {
 	client := &llm.FakeClient{Responses: []llm.Response{{StopReason: "end", Text: "done"}}}
 	registry, err := tools.NewRegistry()
