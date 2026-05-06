@@ -24,6 +24,13 @@ type sessionSummary struct {
 	UpdatedAt    string `json:"updated_at"`
 }
 
+type sessionDetail struct {
+	SessionID    string        `json:"session_id"`
+	MessageCount int           `json:"message_count"`
+	UpdatedAt    string        `json:"updated_at"`
+	Messages     []llm.Message `json:"messages,omitempty"`
+}
+
 func newSessionStore(dir string) (*sessionStore, error) {
 	if strings.TrimSpace(dir) == "" {
 		return nil, fmt.Errorf("session dir required")
@@ -111,6 +118,12 @@ type sessionsEnvelope struct {
 	Error    string           `json:"error,omitempty"`
 }
 
+type sessionDetailEnvelope struct {
+	Mode    string         `json:"mode,omitempty"`
+	Session *sessionDetail `json:"session,omitempty"`
+	Error   string         `json:"error,omitempty"`
+}
+
 func newServer(app *app) *server {
 	return newServerWithSessionDir(app, defaultSessionDir(app))
 }
@@ -135,6 +148,7 @@ func (s *server) routes() http.Handler {
 	mux.HandleFunc("/v1/run", s.handleRun)
 	mux.HandleFunc("/v1/repl", s.handleREPL)
 	mux.HandleFunc("/v1/sessions", s.handleSessions)
+	mux.HandleFunc("/v1/sessions/", s.handleSessionByID)
 	return mux
 }
 
@@ -216,6 +230,39 @@ func (s *server) handleSessions(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+func (s *server) handleSessionByID(w http.ResponseWriter, r *http.Request) {
+	sessionID := strings.TrimSpace(strings.TrimPrefix(r.URL.Path, "/v1/sessions/"))
+	if sessionID == "" {
+		writeSessionDetailJSON(w, http.StatusBadRequest, sessionDetailEnvelope{Error: "session_id required"})
+		return
+	}
+	switch r.Method {
+	case http.MethodGet:
+		detail, ok := s.sessions.GetWithMeta(sessionID)
+		if !ok {
+			writeSessionDetailJSON(w, http.StatusNotFound, sessionDetailEnvelope{Error: "session not found"})
+			return
+		}
+		writeSessionDetailJSON(w, http.StatusOK, sessionDetailEnvelope{
+			Mode:    s.app.mode,
+			Session: &detail,
+		})
+	case http.MethodDelete:
+		if !s.sessions.Delete(sessionID) {
+			writeSessionDetailJSON(w, http.StatusNotFound, sessionDetailEnvelope{Error: "session not found"})
+			return
+		}
+		writeSessionDetailJSON(w, http.StatusOK, sessionDetailEnvelope{
+			Mode: s.app.mode,
+			Session: &sessionDetail{
+				SessionID: sessionID,
+			},
+		})
+	default:
+		writeSessionDetailJSON(w, http.StatusMethodNotAllowed, sessionDetailEnvelope{Error: "method not allowed"})
+	}
+}
+
 func writeJSON(w http.ResponseWriter, status int, payload responseEnvelope) {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(status)
@@ -223,6 +270,12 @@ func writeJSON(w http.ResponseWriter, status int, payload responseEnvelope) {
 }
 
 func writeSessionsJSON(w http.ResponseWriter, status int, payload sessionsEnvelope) {
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	w.WriteHeader(status)
+	_ = json.NewEncoder(w).Encode(payload)
+}
+
+func writeSessionDetailJSON(w http.ResponseWriter, status int, payload sessionDetailEnvelope) {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(status)
 	_ = json.NewEncoder(w).Encode(payload)
@@ -277,4 +330,38 @@ func (s *sessionStore) List() []sessionSummary {
 		})
 	}
 	return summaries
+}
+
+func (s *sessionStore) GetWithMeta(id string) (sessionDetail, bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	path := s.pathForID(id)
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return sessionDetail{}, false
+	}
+	var history []llm.Message
+	if err := json.Unmarshal(data, &history); err != nil {
+		return sessionDetail{}, false
+	}
+	info, err := os.Stat(path)
+	if err != nil {
+		return sessionDetail{}, false
+	}
+	return sessionDetail{
+		SessionID:    id,
+		MessageCount: len(history),
+		UpdatedAt:    info.ModTime().UTC().Format("2006-01-02T15:04:05Z"),
+		Messages:     history,
+	}, true
+}
+
+func (s *sessionStore) Delete(id string) bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	path := s.pathForID(id)
+	if _, err := os.Stat(path); err != nil {
+		return false
+	}
+	return os.Remove(path) == nil
 }

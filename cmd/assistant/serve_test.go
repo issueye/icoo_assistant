@@ -172,3 +172,42 @@ func TestServerListsSessions(t *testing.T) {
 		t.Fatalf("expected message counts in body, got %q", body)
 	}
 }
+
+func TestServerGetsSessionByID(t *testing.T) {
+	root := t.TempDir()
+	store, err := newSessionStore(filepath.Join(root, ".icoo", "sessions"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	store.Put("alpha", []llm.Message{{Role: "user", Content: "hello"}})
+	srv := newServerWithSessionDir(&app{mode: "anthropic", workdir: root}, filepath.Join(root, ".icoo", "sessions"))
+	req := httptest.NewRequest(http.MethodGet, "/v1/sessions/alpha", nil)
+	rec := httptest.NewRecorder()
+	srv.routes().ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("unexpected status: %d body=%q", rec.Code, rec.Body.String())
+	}
+	body := rec.Body.String()
+	if !strings.Contains(body, `"session_id":"alpha"`) || !strings.Contains(body, `"message_count":1`) || !strings.Contains(body, `"role":"user"`) {
+		t.Fatalf("unexpected body: %q", body)
+	}
+}
+
+func TestServerDeletesSessionByID(t *testing.T) {
+	root := t.TempDir()
+	store, err := newSessionStore(filepath.Join(root, ".icoo", "sessions"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	store.Put("alpha", []llm.Message{{Role: "user", Content: "hello"}})
+	srv := newServerWithSessionDir(&app{mode: "anthropic", workdir: root}, filepath.Join(root, ".icoo", "sessions"))
+	req := httptest.NewRequest(http.MethodDelete, "/v1/sessions/alpha", nil)
+	rec := httptest.NewRecorder()
+	srv.routes().ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("unexpected status: %d body=%q", rec.Code, rec.Body.String())
+	}
+	if _, err := os.Stat(filepath.Join(root, ".icoo", "sessions", "alpha.json")); err == nil {
+		t.Fatal("expected session file to be deleted")
+	}
+}
