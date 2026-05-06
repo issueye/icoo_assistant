@@ -25,4 +25,7 @@ func TestLoadReadsAgentTemplates(t *testing.T) {
 	if !strings.Contains(rendered, "Review code carefully.") || !strings.Contains(rendered, "Inspect the auth module.") {
 		t.Fatalf("unexpected rendered agent prompt: %q", rendered)
 	}
+	if loader.Body("reviewer") != "Review code carefully." {
+		t.Fatalf("unexpected agent body: %q", loader.Body("reviewer"))
+	}
 }

@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"icoo_assistant/internal/agent"
+	"icoo_assistant/internal/agents"
 	"icoo_assistant/internal/commands"
 	"icoo_assistant/internal/config"
 	"icoo_assistant/internal/llm"
@@ -274,9 +275,62 @@ func TestRunOnceShowsProjectCommandHelp(t *testing.T) {
 	}
 }
 
+func TestRunOnceListsProjectAgents(t *testing.T) {
+	root := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(root, ".icoo", "agents"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(root, ".icoo", "agents", "reviewer.md"), []byte("Review code carefully."), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	app := &app{
+		agentLoader: mustLoadAgents(t, filepath.Join(root, ".icoo", "agents")),
+		mode:        "anthropic",
+	}
+	var out bytes.Buffer
+	if err := app.runOnce(&out, "/agents"); err != nil {
+		t.Fatal(err)
+	}
+	output := out.String()
+	if !strings.Contains(output, "Project agents (1):") || !strings.Contains(output, "- reviewer") {
+		t.Fatalf("unexpected agents output: %q", output)
+	}
+}
+
+func TestRunOnceShowsProjectAgentHelp(t *testing.T) {
+	root := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(root, ".icoo", "agents"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(root, ".icoo", "agents", "reviewer.md"), []byte("Review code carefully."), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	app := &app{
+		agentLoader: mustLoadAgents(t, filepath.Join(root, ".icoo", "agents")),
+		mode:        "anthropic",
+	}
+	var out bytes.Buffer
+	if err := app.runOnce(&out, "/help-agent reviewer"); err != nil {
+		t.Fatal(err)
+	}
+	output := out.String()
+	if !strings.Contains(output, "reviewer") || !strings.Contains(output, "Review code carefully.") {
+		t.Fatalf("unexpected agent help output: %q", output)
+	}
+}
+
 func mustLoadCommands(t *testing.T, dir string) *commands.Loader {
 	t.Helper()
 	loader, err := commands.Load(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return loader
+}
+
+func mustLoadAgents(t *testing.T, dir string) *agents.Loader {
+	t.Helper()
+	loader, err := agents.Load(dir)
 	if err != nil {
 		t.Fatal(err)
 	}

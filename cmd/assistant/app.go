@@ -27,6 +27,7 @@ import (
 type app struct {
 	runner         *agent.Runner
 	commandLoader  *commands.Loader
+	agentLoader    *agents.Loader
 	mode           string
 }
 
@@ -192,6 +193,7 @@ func newApp(cfg config.Config) (*app, error) {
 			},
 		},
 		commandLoader: commandLoader,
+		agentLoader:   agentLoader,
 		mode: mode,
 	}, nil
 }
@@ -372,9 +374,16 @@ func (a *app) handleBuiltInSlashCommand(query string) (string, bool) {
 	if query == "/commands" || query == "/help" {
 		return a.renderCommandList(), true
 	}
+	if query == "/agents" {
+		return a.renderAgentList(), true
+	}
 	if strings.HasPrefix(query, "/help ") {
 		name := strings.TrimSpace(strings.TrimPrefix(query, "/help "))
 		return a.renderCommandHelp(name), true
+	}
+	if strings.HasPrefix(query, "/help-agent ") {
+		name := strings.TrimSpace(strings.TrimPrefix(query, "/help-agent "))
+		return a.renderAgentHelp(name), true
 	}
 	return "", false
 }
@@ -403,4 +412,30 @@ func (a *app) renderCommandHelp(name string) string {
 		return fmt.Sprintf("Unknown project command: /%s", name)
 	}
 	return fmt.Sprintf("/%s\n\n%s", name, a.commandLoader.Body(name))
+}
+
+func (a *app) renderAgentList() string {
+	names := a.agentLoader.Names()
+	if len(names) == 0 {
+		return "No project agents found in .icoo/agents."
+	}
+	lines := []string{
+		fmt.Sprintf("Project agents (%d):", len(names)),
+	}
+	for _, name := range names {
+		lines = append(lines, "- "+name)
+	}
+	lines = append(lines, `Use "/help-agent <name>" to inspect an agent template.`)
+	return strings.Join(lines, "\n")
+}
+
+func (a *app) renderAgentHelp(name string) string {
+	name = strings.TrimSpace(strings.TrimPrefix(name, "/"))
+	if name == "" {
+		return "Usage: /help-agent <name>"
+	}
+	if a.agentLoader == nil || !a.agentLoader.Has(name) {
+		return fmt.Sprintf("Unknown project agent: %s", name)
+	}
+	return fmt.Sprintf("%s\n\n%s", name, a.agentLoader.Body(name))
 }
