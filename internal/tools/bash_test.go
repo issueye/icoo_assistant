@@ -26,3 +26,18 @@ func TestBashToolExecutesOnCurrentPlatform(t *testing.T) {
 		t.Fatalf("expected hello, got %q", result)
 	}
 }
+
+func TestBashToolBlocksDeniedCommandPatterns(t *testing.T) {
+	tool := tools.NewBashTool(tools.CommandRunner{
+		Workdir:      t.TempDir(),
+		Timeout:      5 * time.Second,
+		DenyPatterns: []string{"rm *"},
+	})
+	result, err := tool.Handler(tools.Call{Input: map[string]interface{}{"command": "rm temp.txt"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(result, "Command blocked by permission settings") {
+		t.Fatalf("unexpected result: %q", result)
+	}
+}

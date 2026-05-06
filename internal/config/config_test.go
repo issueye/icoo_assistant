@@ -55,3 +55,58 @@ func TestLoadAppliesDefaults(t *testing.T) {
 		t.Fatal("expected default system prompt")
 	}
 }
+
+func TestLoadReadsClaudeProjectConventions(t *testing.T) {
+	root := t.TempDir()
+	if err := os.WriteFile(filepath.Join(root, "CLAUDE.md"), []byte("Project rule: run tests before finishing."), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(filepath.Join(root, ".icoo", "skills"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(filepath.Join(root, "external"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	settings := `{
+  "permissions": {
+    "deny": [
+      "write(secrets/**)",
+      "read(private/**)",
+      "bash(rm *)"
+    ],
+    "additionalDirectories": ["external"],
+    "defaultMode": "acceptEdits"
+  }
+}`
+	if err := os.MkdirAll(filepath.Join(root, ".icoo"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(root, ".icoo", "settings.json"), []byte(settings), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	cfg, err := config.Load(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.ProjectInstructions != "Project rule: run tests before finishing." {
+		t.Fatalf("unexpected project instructions: %q", cfg.ProjectInstructions)
+	}
+	if cfg.SkillsDir != filepath.Join(root, ".icoo", "skills") {
+		t.Fatalf("expected .icoo skills dir, got %q", cfg.SkillsDir)
+	}
+	if cfg.PermissionMode != "acceptEdits" {
+		t.Fatalf("unexpected permission mode: %q", cfg.PermissionMode)
+	}
+	if len(cfg.AdditionalDirectories) != 1 || cfg.AdditionalDirectories[0] != "external" {
+		t.Fatalf("unexpected additional directories: %#v", cfg.AdditionalDirectories)
+	}
+	if len(cfg.DenyWritePatterns) != 1 || cfg.DenyWritePatterns[0] != "secrets/**" {
+		t.Fatalf("unexpected deny write patterns: %#v", cfg.DenyWritePatterns)
+	}
+	if len(cfg.DenyReadPatterns) != 1 || cfg.DenyReadPatterns[0] != "private/**" {
+		t.Fatalf("unexpected deny read patterns: %#v", cfg.DenyReadPatterns)
+	}
+	if len(cfg.DenyCommandPatterns) != 1 || cfg.DenyCommandPatterns[0] != "rm *" {
+		t.Fatalf("unexpected deny command patterns: %#v", cfg.DenyCommandPatterns)
+	}
+}

@@ -15,7 +15,7 @@ type BackgroundManager interface {
 	ListByTaskID(taskID string) ([]background.Job, error)
 }
 
-func NewBackgroundTool(manager BackgroundManager) Definition {
+func NewBackgroundTool(manager BackgroundManager, denyPatterns ...string) Definition {
 	return Definition{
 		Tool: llm.Tool{
 			Name:        "background",
@@ -39,6 +39,9 @@ func NewBackgroundTool(manager BackgroundManager) Definition {
 				command, _ := call.Input["command"].(string)
 				if strings.TrimSpace(command) == "" {
 					return "", fmt.Errorf("command required for start")
+				}
+				if isCommandDenied(command, denyPatterns) {
+					return "Error: Command blocked by permission settings", nil
 				}
 				id, _ := call.Input["id"].(string)
 				taskID, _ := call.Input["task_id"].(string)

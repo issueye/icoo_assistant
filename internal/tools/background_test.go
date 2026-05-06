@@ -106,3 +106,22 @@ func TestBackgroundToolListByTaskID(t *testing.T) {
 		t.Fatalf("unexpected filtered list result: %q", result)
 	}
 }
+
+func TestBackgroundToolBlocksDeniedCommandPatterns(t *testing.T) {
+	manager, err := background.NewManager(filepath.Join(t.TempDir(), ".background"), t.TempDir(), 5*time.Second)
+	if err != nil {
+		t.Fatal(err)
+	}
+	tool := tools.NewBackgroundTool(manager, "rm *")
+	result, err := tool.Handler(tools.Call{Input: map[string]interface{}{
+		"action":  "start",
+		"id":      "job-1",
+		"command": "rm temp.txt",
+	}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(result, "Command blocked by permission settings") {
+		t.Fatalf("unexpected result: %q", result)
+	}
+}

@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"io"
+	"path/filepath"
 	"strings"
 
 	"icoo_assistant/internal/agent"
@@ -68,7 +69,12 @@ func (a *app) writeFakeModeNoOutputHint(out io.Writer) {
 }
 
 func newApp(cfg config.Config) (*app, error) {
-	ws, err := workspace.New(cfg.Workdir)
+	ws, err := workspace.NewWithOptions(
+		cfg.Workdir,
+		cfg.AdditionalDirectories,
+		cfg.DenyReadPatterns,
+		cfg.DenyWritePatterns,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -97,18 +103,18 @@ func newApp(cfg config.Config) (*app, error) {
 	}
 	hooks := []agent.Hook{hookWriter}
 	eventReader := hookaudit.NewReader(agent.DefaultHookDir(cfg.Workdir))
-	skillLoader, err := skill.Load(cfg.SkillsDir)
+	skillLoader, err := skill.LoadAll(cfg.SkillsDir, filepath.Join(cfg.Workdir, ".icoo", "skills"))
 	if err != nil {
 		return nil, err
 	}
-	systemPrompt := cfg.SystemPrompt + "\n\nSkills available:\n" + skillLoader.Descriptions()
+	systemPrompt := buildSystemPrompt(cfg, skillLoader)
 	baseCatalog := tools.DefaultToolCatalogEntries(false)
 	baseRegistry, err := tools.NewRegistry(
-		tools.NewBashTool(tools.CommandRunner{Workdir: cfg.Workdir, Timeout: cfg.CommandTimeout}),
+		tools.NewBashTool(tools.CommandRunner{Workdir: cfg.Workdir, Timeout: cfg.CommandTimeout, DenyPatterns: cfg.DenyCommandPatterns}),
 		tools.NewReadFileTool(ws),
 		tools.NewWriteFileTool(ws),
 		tools.NewEditFileTool(ws),
-		tools.NewBackgroundTool(backgroundManager),
+		tools.NewBackgroundTool(backgroundManager, cfg.DenyCommandPatterns...),
 		tools.NewAgentHookAuditTool(eventReader),
 		tools.NewProjectTaskTool(taskManager, backgroundManager),
 		tools.NewTaskAuditTool(taskManager),
@@ -134,11 +140,11 @@ func newApp(cfg config.Config) (*app, error) {
 		},
 	}
 	registry, err := tools.NewRegistry(
-		tools.NewBashTool(tools.CommandRunner{Workdir: cfg.Workdir, Timeout: cfg.CommandTimeout}),
+		tools.NewBashTool(tools.CommandRunner{Workdir: cfg.Workdir, Timeout: cfg.CommandTimeout, DenyPatterns: cfg.DenyCommandPatterns}),
 		tools.NewReadFileTool(ws),
 		tools.NewWriteFileTool(ws),
 		tools.NewEditFileTool(ws),
-		tools.NewBackgroundTool(backgroundManager),
+		tools.NewBackgroundTool(backgroundManager, cfg.DenyCommandPatterns...),
 		tools.NewAgentHookAuditTool(eventReader),
 		tools.NewProjectTaskTool(taskManager, backgroundManager),
 		tools.NewTaskAuditTool(taskManager),
@@ -167,6 +173,22 @@ func newApp(cfg config.Config) (*app, error) {
 		},
 		mode: mode,
 	}, nil
+}
+
+func buildSystemPrompt(cfg config.Config, skillLoader *skill.Loader) string {
+	var builder strings.Builder
+	builder.WriteString(cfg.SystemPrompt)
+	if strings.TrimSpace(cfg.ProjectInstructions) != "" {
+		builder.WriteString("\n\nProject instructions (from CLAUDE.md):\n")
+		builder.WriteString(cfg.ProjectInstructions)
+	}
+	if strings.TrimSpace(cfg.PermissionMode) != "" {
+		builder.WriteString("\n\nPermission mode:\n")
+		builder.WriteString(cfg.PermissionMode)
+	}
+	builder.WriteString("\n\nSkills available:\n")
+	builder.WriteString(skillLoader.Descriptions())
+	return builder.String()
 }
 
 func (a *app) withStreamHandler(handler func(string), fn func() error) error {

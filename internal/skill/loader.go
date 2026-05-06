@@ -45,6 +45,24 @@ func Load(skillsDir string) (*Loader, error) {
 	return loader, nil
 }
 
+func LoadAll(skillsDirs ...string) (*Loader, error) {
+	loader := &Loader{entries: map[string]Entry{}}
+	for _, skillsDir := range skillsDirs {
+		skillsDir = strings.TrimSpace(skillsDir)
+		if skillsDir == "" {
+			continue
+		}
+		partial, err := Load(skillsDir)
+		if err != nil {
+			return nil, err
+		}
+		for name, entry := range partial.entries {
+			loader.entries[name] = entry
+		}
+	}
+	return loader, nil
+}
+
 func parseSkill(path, content string) Entry {
 	name := filepath.Base(filepath.Dir(path))
 	description := "No description"
