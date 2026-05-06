@@ -85,7 +85,7 @@ func isCheckRequest(args []string) bool {
 }
 
 func printUsage(out io.Writer) {
-	_, _ = fmt.Fprintf(out, "icoo_assistant %s\n\n", Version)
+	_, _ = fmt.Fprintf(out, "icoo %s\n\n", Version)
 	_, _ = fmt.Fprintln(out, "Usage:")
 	_, _ = fmt.Fprintf(out, "  %s [query]\n", sourceCommandPrefix)
 	_, _ = fmt.Fprintf(out, "  %s\n", sourceCommand("check"))
@@ -112,7 +112,7 @@ func printUsage(out io.Writer) {
 	_, _ = fmt.Fprintf(out, "    4. %s\n", sourceCommand(`"使用 tool_catalog action=audit_paths 说明审计入口，再给出 task_audit 和 agent_hook_audit 的查询示例"`))
 	_, _ = fmt.Fprintln(out)
 	_, _ = fmt.Fprintln(out, "Mode Notes:")
-	_, _ = fmt.Fprintln(out, "  Without anthropic.api_key in config.toml, assistant runs in fake mode for local dry runs and setup validation.")
+	_, _ = fmt.Fprintln(out, "  Without anthropic.api_key in config.toml, icoo runs in fake mode for local dry runs and setup validation.")
 	_, _ = fmt.Fprintln(out, "  In fake mode, steps 2-4 still work as a dry run, but model-generated answers remain unavailable by design.")
-	_, _ = fmt.Fprintln(out, "  With anthropic.api_key in config.toml, assistant uses the real Anthropic client.")
+	_, _ = fmt.Fprintln(out, "  With anthropic.api_key in config.toml, icoo uses the real Anthropic client.")
 }

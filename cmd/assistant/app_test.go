@@ -2,10 +2,13 @@ package main
 
 import (
 	"bytes"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
 	"icoo_assistant/internal/agent"
+	"icoo_assistant/internal/commands"
 	"icoo_assistant/internal/config"
 	"icoo_assistant/internal/llm"
 	"icoo_assistant/internal/tools"
@@ -27,7 +30,7 @@ func TestRunREPLExitsImmediately(t *testing.T) {
 	if err := app.runREPL(in, &out); err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(out.String(), "assistant REPL started") {
+	if !strings.Contains(out.String(), "icoo REPL started") {
 		t.Fatalf("unexpected output: %q", out.String())
 	}
 }
@@ -50,10 +53,10 @@ func TestRunREPLWithFakeClientExplainsDegradedModeAndEmptyOutput(t *testing.T) {
 	}
 	output := out.String()
 	for _, snippet := range []string{
-		"assistant REPL started (fake client)",
+		"icoo REPL started (fake client)",
 		"warning: REPL is running in fake mode",
 		"warning: no model output was produced because the fake client returns empty responses by design.",
-		"hint: run `go run ./icoo_runtime/cmd/assistant check` outside the REPL",
+		"hint: run `go run ./cmd/assistant check` outside the REPL",
 		"hint: this is expected in fake mode; set anthropic.api_key in config.toml for real answers",
 	} {
 		if !strings.Contains(output, snippet) {
@@ -79,8 +82,8 @@ func TestRunOnceWithFakeClientProducesGuidance(t *testing.T) {
 	}
 	output := out.String()
 	for _, snippet := range []string{
-		"warning: assistant is running in fake mode",
-		"hint: run `go run ./icoo_runtime/cmd/assistant check`",
+		"warning: icoo is running in fake mode",
+		"hint: run `go run ./cmd/assistant check`",
 		"warning: no model output was produced because the fake client returns empty responses by design.",
 	} {
 		if !strings.Contains(output, snippet) {
@@ -139,7 +142,7 @@ func TestRunREPLRetainsConversationHistory(t *testing.T) {
 	}
 	output := out.String()
 	for _, snippet := range []string{
-		"assistant REPL started (anthropic client)",
+		"icoo REPL started (anthropic client)",
 		"记住了，你叫小明。",
 		"你叫小明。",
 	} {
@@ -189,4 +192,49 @@ func TestRunREPLStreamsWithoutDuplicatingTurnOutput(t *testing.T) {
 			t.Fatalf("expected %q once, got %q", snippet, output)
 		}
 	}
+}
+
+func TestRunOnceExpandsProjectSlashCommand(t *testing.T) {
+	root := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(root, ".icoo", "commands"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(root, ".icoo", "commands", "review.md"), []byte("Review the current diff carefully."), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	client := &llm.FakeClient{Responses: []llm.Response{
+		{StopReason: "end", Text: "done"},
+	}}
+	registry, err := tools.NewRegistry()
+	if err != nil {
+		t.Fatal(err)
+	}
+	app := &app{
+		runner: &agent.Runner{
+			Client:   client,
+			Registry: registry,
+			Config:   agent.Config{SystemPrompt: "test", MaxRounds: 2},
+		},
+		commandLoader: mustLoadCommands(t, filepath.Join(root, ".icoo", "commands")),
+		mode:          "anthropic",
+	}
+	var out bytes.Buffer
+	if err := app.runOnce(&out, "/review --focus tests"); err != nil {
+		t.Fatal(err)
+	}
+	if len(client.Snapshots) == 0 || !strings.Contains(client.Snapshots[0], "Review the current diff carefully.") {
+		t.Fatalf("expected slash command expansion in snapshot, got %#v", client.Snapshots)
+	}
+	if !strings.Contains(client.Snapshots[0], "--focus tests") {
+		t.Fatalf("expected slash command arguments in snapshot, got %#v", client.Snapshots)
+	}
+}
+
+func mustLoadCommands(t *testing.T, dir string) *commands.Loader {
+	t.Helper()
+	loader, err := commands.Load(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return loader
 }

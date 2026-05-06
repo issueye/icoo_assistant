@@ -41,17 +41,17 @@ func TestPrintUsage(t *testing.T) {
 		t.Fatal(err)
 	}
 	output := string(data)
-	for _, snippet := range []string{"icoo_assistant " + Version, "go run ./icoo_runtime/cmd/assistant [query]", "go run ./icoo_runtime/cmd/assistant check", "config.toml.example", "Without anthropic.api_key in config.toml, assistant runs in fake mode"} {
+	for _, snippet := range []string{"icoo " + Version, "go run ./cmd/assistant [query]", "go run ./cmd/assistant check", "config.toml.example", "Without anthropic.api_key in config.toml, icoo runs in fake mode"} {
 		if !strings.Contains(output, snippet) {
 			t.Fatalf("expected usage to contain %q, got %q", snippet, output)
 		}
 	}
 	for _, snippet := range []string{
-		"go run ./icoo_runtime/cmd/assistant doctor",
+		"go run ./cmd/assistant doctor",
 		"Recommended first-run path:",
-		"1. go run ./icoo_runtime/cmd/assistant check",
+		"1. go run ./cmd/assistant check",
 		"In fake mode, steps 2-4 still work as a dry run",
-		"Replace `go run ./icoo_runtime/cmd/assistant` with `assistant` if the binary is already installed.",
+		"Replace `go run ./cmd/assistant` with `icoo` if the binary is already installed.",
 	} {
 		if !strings.Contains(output, snippet) {
 			t.Fatalf("expected usage to contain %q, got %q", snippet, output)

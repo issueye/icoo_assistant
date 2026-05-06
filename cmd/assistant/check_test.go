@@ -55,12 +55,12 @@ func TestBuildSelfCheckReportCreatesRuntimeDirs(t *testing.T) {
 		"config_toml: missing",
 		"skills_dir: missing",
 		"fake_client_active:",
-		"command_prefix: default=go run ./icoo_runtime/cmd/assistant",
-		"command_prefix_note: replace `go run ./icoo_runtime/cmd/assistant` with `assistant` if the binary is already installed",
+		"command_prefix: default=go run ./cmd/assistant",
+		"command_prefix_note: replace `go run ./cmd/assistant` with `icoo` if the binary is already installed",
 		"first_run_status: completed step=1 self_check=ready",
 		"minimal_happy_path:",
-		"1. go run ./icoo_runtime/cmd/assistant check",
-		`2. go run ./icoo_runtime/cmd/assistant "先用 tool_catalog 总结当前可用工具，再说明 project_task、task_audit 和 agent_hook_audit 的边界"`,
+		"1. go run ./cmd/assistant check",
+		`2. go run ./cmd/assistant "先用 tool_catalog 总结当前可用工具，再说明 project_task、task_audit 和 agent_hook_audit 的边界"`,
 		"transcript_dir: ready",
 		"task_dir: ready",
 		"background_dir: ready",
@@ -109,7 +109,7 @@ func TestBuildSelfCheckReportSupportsAnthropicAndSkillsDir(t *testing.T) {
 	if !strings.Contains(report, "minimal_happy_path:") || strings.Contains(report, "0. optional: set anthropic.api_key") {
 		t.Fatalf("expected anthropic happy path without fake-mode preface, got %q", report)
 	}
-	if !strings.Contains(report, "1. go run ./icoo_runtime/cmd/assistant check") {
+	if !strings.Contains(report, "1. go run ./cmd/assistant check") {
 		t.Fatalf("expected full first-run path to include assistant check, got %q", report)
 	}
 	if !strings.Contains(report, "next_step: continue with minimal_happy_path step=2") {

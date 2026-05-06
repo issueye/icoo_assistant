@@ -3,8 +3,8 @@ package main
 import "strings"
 
 const (
-	sourceCommandPrefix = "go run ./icoo_runtime/cmd/assistant"
-	binaryCommandPrefix = "assistant"
+	sourceCommandPrefix = "go run ./cmd/assistant"
+	binaryCommandPrefix = "icoo"
 )
 
 func sourceCommand(args string) string {

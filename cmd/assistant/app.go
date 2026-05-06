@@ -10,8 +10,10 @@ import (
 	"icoo_assistant/internal/agent"
 	"icoo_assistant/internal/background"
 	"icoo_assistant/internal/compact"
+	"icoo_assistant/internal/commands"
 	"icoo_assistant/internal/config"
 	"icoo_assistant/internal/hookaudit"
+	"icoo_assistant/internal/icoohook"
 	"icoo_assistant/internal/llm"
 	"icoo_assistant/internal/skill"
 	"icoo_assistant/internal/subagent"
@@ -22,8 +24,9 @@ import (
 )
 
 type app struct {
-	runner *agent.Runner
-	mode   string
+	runner         *agent.Runner
+	commandLoader  *commands.Loader
+	mode           string
 }
 
 type streamedOutput struct {
@@ -56,7 +59,7 @@ func (a *app) writeDegradedModeHint(out io.Writer) {
 	if !a.isFakeMode() {
 		return
 	}
-	_, _ = fmt.Fprintln(out, "warning: assistant is running in fake mode; set anthropic.api_key in config.toml for real model calls.")
+	_, _ = fmt.Fprintln(out, "warning: icoo is running in fake mode; set anthropic.api_key in config.toml for real model calls.")
 	_, _ = fmt.Fprintf(out, "hint: run `%s` to confirm the current mode and follow the reported minimal_happy_path; replace it with `%s` if the binary is already installed.\n", sourceCommand("check"), binaryCommand("check"))
 }
 
@@ -102,8 +105,19 @@ func newApp(cfg config.Config) (*app, error) {
 		return nil, err
 	}
 	hooks := []agent.Hook{hookWriter}
+	icooHookRunner, err := icoohook.Load(cfg.Workdir)
+	if err != nil {
+		return nil, err
+	}
+	if icooHookRunner != nil {
+		hooks = append(hooks, icooHookRunner)
+	}
 	eventReader := hookaudit.NewReader(agent.DefaultHookDir(cfg.Workdir))
 	skillLoader, err := skill.LoadAll(cfg.SkillsDir, filepath.Join(cfg.Workdir, ".icoo", "skills"))
+	if err != nil {
+		return nil, err
+	}
+	commandLoader, err := commands.Load(filepath.Join(cfg.Workdir, ".icoo", "commands"))
 	if err != nil {
 		return nil, err
 	}
@@ -171,6 +185,7 @@ func newApp(cfg config.Config) (*app, error) {
 				MaxRounds:    cfg.MaxRounds,
 			},
 		},
+		commandLoader: commandLoader,
 		mode: mode,
 	}, nil
 }
@@ -209,6 +224,9 @@ func (a *app) execute(query string) (string, error) {
 }
 
 func (a *app) executeMessages(history []llm.Message, query string) ([]llm.Message, string, error) {
+	if rendered, ok := a.renderSlashCommand(query); ok {
+		query = rendered
+	}
 	messages := make([]llm.Message, len(history), len(history)+1)
 	copy(messages, history)
 	messages = append(messages, llm.Message{Role: "user", Content: query})
@@ -264,7 +282,7 @@ func (a *app) runOnce(out io.Writer, query string) error {
 }
 
 func (a *app) runREPL(in io.Reader, out io.Writer) error {
-	_, _ = fmt.Fprintf(out, "assistant REPL started (%s client). Type exit to quit.\n", a.mode)
+	_, _ = fmt.Fprintf(out, "icoo REPL started (%s client). Type exit to quit.\n", a.mode)
 	if a.isFakeMode() {
 		_, _ = fmt.Fprintln(out, "warning: REPL is running in fake mode; model-generated answers are disabled until anthropic.api_key is set in config.toml.")
 		_, _ = fmt.Fprintf(out, "hint: run `%s` outside the REPL if you want the current minimal_happy_path and setup guidance; replace it with `%s` if the binary is already installed.\n", sourceCommand("check"), binaryCommand("check"))
@@ -306,4 +324,24 @@ func (a *app) runREPL(in io.Reader, out io.Writer) error {
 		a.writeFakeModeNoOutputHint(out)
 	}
 	return scanner.Err()
+}
+
+func (a *app) renderSlashCommand(query string) (string, bool) {
+	query = strings.TrimSpace(query)
+	if !strings.HasPrefix(query, "/") {
+		return "", false
+	}
+	nameAndArgs := strings.TrimPrefix(query, "/")
+	name := nameAndArgs
+	args := ""
+	if fields := strings.Fields(nameAndArgs); len(fields) > 0 {
+		name = fields[0]
+		if len(fields) > 1 {
+			args = strings.TrimSpace(strings.TrimPrefix(nameAndArgs, name))
+		}
+	}
+	if a.commandLoader == nil || !a.commandLoader.Has(name) {
+		return "", false
+	}
+	return a.commandLoader.Render(name, args), true
 }
