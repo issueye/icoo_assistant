@@ -38,6 +38,12 @@ func main() {
 		log.Fatal(err)
 	}
 	if query := strings.TrimSpace(strings.Join(os.Args[1:], " ")); query != "" {
+		if serveAddr, ok := parseServeRequest(os.Args[1:]); ok {
+			if err := runServe(application, serveAddr); err != nil {
+				log.Fatal(err)
+			}
+			return
+		}
 		if err := application.runOnce(os.Stdout, query); err != nil {
 			log.Fatal(err)
 		}
@@ -92,10 +98,12 @@ func printUsage(out io.Writer) {
 	_, _ = fmt.Fprintf(out, "  %s\n", sourceCommand("doctor"))
 	_, _ = fmt.Fprintf(out, "  %s\n", sourceCommand("--version"))
 	_, _ = fmt.Fprintf(out, "  %s\n", sourceCommand("--help"))
+	_, _ = fmt.Fprintf(out, "  %s\n", sourceCommand("serve"))
 	_, _ = fmt.Fprintln(out)
 	_, _ = fmt.Fprintln(out, "Examples:")
 	_, _ = fmt.Fprintf(out, "  %s\n", sourceCommand(""))
 	_, _ = fmt.Fprintf(out, "  %s\n", sourceCommand("check"))
+	_, _ = fmt.Fprintf(out, "  %s\n", sourceCommand("serve"))
 	_, _ = fmt.Fprintf(out, "  %s\n", sourceCommand(`"read README and summarize the project"`))
 	_, _ = fmt.Fprintln(out)
 	_, _ = fmt.Fprintln(out, "Configuration:")
@@ -115,4 +123,20 @@ func printUsage(out io.Writer) {
 	_, _ = fmt.Fprintln(out, "  Without anthropic.api_key in config.toml, icoo runs in fake mode for local dry runs and setup validation.")
 	_, _ = fmt.Fprintln(out, "  In fake mode, steps 2-4 still work as a dry run, but model-generated answers remain unavailable by design.")
 	_, _ = fmt.Fprintln(out, "  With anthropic.api_key in config.toml, icoo uses the real Anthropic client.")
+}
+
+func parseServeRequest(args []string) (string, bool) {
+	if len(args) == 0 {
+		return "", false
+	}
+	if strings.TrimSpace(args[0]) != "serve" {
+		return "", false
+	}
+	if len(args) == 1 {
+		return "", true
+	}
+	if len(args) == 2 {
+		return strings.TrimSpace(args[1]), true
+	}
+	return "", false
 }

@@ -22,6 +22,9 @@ func TestPrintUsageIncludesVersionAndExamples(t *testing.T) {
 	if !strings.Contains(output, "go run ./cmd/assistant doctor") {
 		t.Fatalf("expected doctor alias, got %q", output)
 	}
+	if !strings.Contains(output, "go run ./cmd/assistant serve") {
+		t.Fatalf("expected serve example, got %q", output)
+	}
 	if !strings.Contains(output, "Run `go run ./cmd/assistant check` before the first real task") {
 		t.Fatalf("expected first-use guidance, got %q", output)
 	}
