@@ -3,6 +3,7 @@ package commandutil
 import (
 	"context"
 	"fmt"
+	"os"
 	"os/exec"
 	"runtime"
 	"strings"
@@ -10,6 +11,10 @@ import (
 )
 
 func Execute(ctx context.Context, workdir, command string) (string, error) {
+	return ExecuteWithEnv(ctx, workdir, command, nil)
+}
+
+func ExecuteWithEnv(ctx context.Context, workdir, command string, extraEnv []string) (string, error) {
 	command = strings.TrimSpace(command)
 	if command == "" {
 		return "", fmt.Errorf("command required")
@@ -20,6 +25,9 @@ func Execute(ctx context.Context, workdir, command string) (string, error) {
 	shell, args := DefaultShell(command)
 	cmd := exec.CommandContext(ctx, shell, args...)
 	cmd.Dir = workdir
+	if len(extraEnv) > 0 {
+		cmd.Env = append(os.Environ(), extraEnv...)
+	}
 	out, err := cmd.CombinedOutput()
 	text := strings.TrimSpace(string(out))
 	if text == "" {
@@ -32,12 +40,16 @@ func Execute(ctx context.Context, workdir, command string) (string, error) {
 }
 
 func Run(workdir, command string, timeout time.Duration) (string, error) {
+	return RunWithEnv(workdir, command, timeout, nil)
+}
+
+func RunWithEnv(workdir, command string, timeout time.Duration, extraEnv []string) (string, error) {
 	if timeout <= 0 {
 		timeout = 120 * time.Second
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
-	text, err := Execute(ctx, workdir, command)
+	text, err := ExecuteWithEnv(ctx, workdir, command, extraEnv)
 	if ctx.Err() == context.DeadlineExceeded {
 		return fmt.Sprintf("Error: Timeout (%s)", timeout), nil
 	}

@@ -2,8 +2,10 @@ package icoohook
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"icoo_assistant/internal/agent"
@@ -55,7 +57,7 @@ func (r *Runner) OnEvent(event agent.Event) {
 		if command == "" {
 			continue
 		}
-		_, _ = commandutil.Run(r.workdir, command, 30_000_000_000)
+		_, _ = commandutil.RunWithEnv(r.workdir, command, 30_000_000_000, buildHookEnv(event))
 	}
 }
 
@@ -67,4 +69,30 @@ func matchesEvent(events []string, name string) bool {
 		}
 	}
 	return false
+}
+
+func buildHookEnv(event agent.Event) []string {
+	env := []string{
+		"ICOO_EVENT_NAME=" + event.Name,
+		"ICOO_RUN_ID=" + event.RunID,
+		"ICOO_ROUND=" + strconv.Itoa(event.Round),
+		"ICOO_EVENT_TIMESTAMP=" + event.Timestamp.UTC().Format("2006-01-02T15:04:05Z"),
+	}
+	for key, value := range event.Fields {
+		name := normalizeEnvKey("ICOO_FIELD_" + key)
+		env = append(env, name+"="+fmt.Sprint(value))
+	}
+	return env
+}
+
+func normalizeEnvKey(key string) string {
+	key = strings.ToUpper(strings.TrimSpace(key))
+	replacer := strings.NewReplacer(
+		".", "_",
+		"-", "_",
+		" ", "_",
+		"/", "_",
+		"\\", "_",
+	)
+	return replacer.Replace(key)
 }
