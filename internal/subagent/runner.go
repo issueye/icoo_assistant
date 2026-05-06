@@ -2,25 +2,35 @@ package subagent
 
 import (
 	"fmt"
+	"strings"
 
 	"icoo_assistant/internal/agent"
+	"icoo_assistant/internal/agents"
 	"icoo_assistant/internal/llm"
 	"icoo_assistant/internal/tools"
 )
 
 type Runner struct {
-	Client   llm.Client
-	Registry *tools.Registry
-	Config   agent.Config
-	Hooks    []agent.Hook
+	Client      llm.Client
+	Registry    *tools.Registry
+	AgentLoader *agents.Loader
+	Config      agent.Config
+	Hooks       []agent.Hook
 }
 
 func (r *Runner) Run(prompt string) (string, error) {
+	return r.RunWithAgent("", prompt)
+}
+
+func (r *Runner) RunWithAgent(agentName, prompt string) (string, error) {
 	if r.Client == nil {
 		return "", fmt.Errorf("client required")
 	}
 	if r.Registry == nil {
 		return "", fmt.Errorf("registry required")
+	}
+	if strings.TrimSpace(agentName) != "" && r.AgentLoader != nil && r.AgentLoader.Has(agentName) {
+		prompt = r.AgentLoader.Render(agentName, prompt)
 	}
 	child := &agent.Runner{
 		Client:   r.Client,

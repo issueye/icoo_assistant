@@ -18,9 +18,17 @@ import (
 
 type fakeSubagent struct {
 	summary string
+	agent   string
+	prompt  string
 }
 
 func (f fakeSubagent) Run(prompt string) (string, error) {
+	return f.summary + ": " + prompt, nil
+}
+
+func (f *fakeSubagent) RunWithAgent(agentName, prompt string) (string, error) {
+	f.agent = agentName
+	f.prompt = prompt
 	return f.summary + ": " + prompt, nil
 }
 
@@ -156,6 +164,28 @@ func TestRunnerDelegatesTaskToSubagent(t *testing.T) {
 	}
 	if !found {
 		t.Fatal("expected subagent summary in tool results")
+	}
+}
+
+func TestRunnerDelegatesTaskToNamedSubagent(t *testing.T) {
+	client := &llm.FakeClient{Responses: []llm.Response{
+		{StopReason: "tool_use", ToolUses: []llm.ToolUse{{ID: "1", Name: "task", Input: map[string]interface{}{"prompt": "inspect repo", "agent": "reviewer"}}}},
+		{StopReason: "end", Text: "done"},
+	}}
+	registry, err := tools.NewRegistry(tools.NewTaskTool())
+	if err != nil {
+		t.Fatal(err)
+	}
+	sub := &fakeSubagent{summary: "subagent summary"}
+	runner := &agent.Runner{Client: client, Registry: registry, SubagentRunner: sub, Config: agent.Config{SystemPrompt: "test", MaxRounds: 4}}
+	if _, err := runner.Run([]llm.Message{{Role: "user", Content: "delegate"}}); err != nil {
+		t.Fatal(err)
+	}
+	if sub.agent != "reviewer" {
+		t.Fatalf("expected named subagent reviewer, got %q", sub.agent)
+	}
+	if sub.prompt != "inspect repo" {
+		t.Fatalf("unexpected prompt: %q", sub.prompt)
 	}
 }
 

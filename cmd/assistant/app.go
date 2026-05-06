@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"icoo_assistant/internal/agent"
+	"icoo_assistant/internal/agents"
 	"icoo_assistant/internal/background"
 	"icoo_assistant/internal/compact"
 	"icoo_assistant/internal/commands"
@@ -121,6 +122,10 @@ func newApp(cfg config.Config) (*app, error) {
 	if err != nil {
 		return nil, err
 	}
+	agentLoader, err := agents.Load(filepath.Join(cfg.Workdir, ".icoo", "agents"))
+	if err != nil {
+		return nil, err
+	}
 	systemPrompt := buildSystemPrompt(cfg, skillLoader)
 	baseCatalog := tools.DefaultToolCatalogEntries(false)
 	baseRegistry, err := tools.NewRegistry(
@@ -145,9 +150,10 @@ func newApp(cfg config.Config) (*app, error) {
 		return nil, err
 	}
 	subRunner := &subagent.Runner{
-		Client:   client,
-		Registry: baseRegistry,
-		Hooks:    hooks,
+		Client:      client,
+		Registry:    baseRegistry,
+		AgentLoader: agentLoader,
+		Hooks:       hooks,
 		Config: agent.Config{
 			SystemPrompt: systemPrompt,
 			MaxRounds:    cfg.MaxRounds,

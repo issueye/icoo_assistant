@@ -11,6 +11,7 @@ func NewTaskTool() Definition {
 				"type": "object",
 				"properties": map[string]interface{}{
 					"prompt": map[string]interface{}{"type": "string"},
+					"agent":  map[string]interface{}{"type": "string"},
 				},
 				"required": []string{"prompt"},
 			},

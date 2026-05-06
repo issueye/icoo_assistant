@@ -113,8 +113,8 @@ func DefaultToolCatalogEntries(includeTask bool) []ToolCatalogEntry {
 			Summary:     "Delegate bounded work to a subagent and get back a summary.",
 			UseWhen:     "Use when a separate focused subtask should run with fresh context.",
 			AvoidWhen:   "Avoid for durable project tracking; use project_task instead.",
-			Example:     `{"prompt":"Review the background manager and summarize risks."}`,
-			Description: "This is for delegation, not for persistent project planning.",
+			Example:     `{"prompt":"Review the background manager and summarize risks.","agent":"reviewer"}`,
+			Description: "This is for delegation, not for persistent project planning. If .icoo/agents contains templates, agent can select one.",
 		})
 	}
 	return entries

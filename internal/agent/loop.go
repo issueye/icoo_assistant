@@ -176,16 +176,18 @@ func (r *Runner) Run(messages []llm.Message) (_ []llm.Message, err error) {
 					return nil, fmt.Errorf("subagent runner required")
 				}
 				prompt, _ := toolUse.Input["prompt"].(string)
+				agentName, _ := toolUse.Input["agent"].(string)
 				r.emit(Event{
 					Name:  "agent.subagent.started",
 					RunID: runID,
 					Round: round,
 					Fields: map[string]interface{}{
 						"tool_id":       toolUse.ID,
+						"agent":         agentName,
 						"prompt_length": len(prompt),
 					},
 				})
-				summary, err := r.SubagentRunner.Run(prompt)
+				summary, err := runSubagent(r.SubagentRunner, agentName, prompt)
 				if err != nil {
 					return nil, err
 				}
@@ -195,6 +197,7 @@ func (r *Runner) Run(messages []llm.Message) (_ []llm.Message, err error) {
 					Round: round,
 					Fields: map[string]interface{}{
 						"tool_id":        toolUse.ID,
+						"agent":          agentName,
 						"summary_length": len(summary),
 					},
 				})
@@ -317,4 +320,15 @@ func (r *Runner) emit(event Event) {
 		}
 		hook.OnEvent(event)
 	}
+}
+
+type namedSubagentRunner interface {
+	RunWithAgent(agentName, prompt string) (string, error)
+}
+
+func runSubagent(runner SubagentRunner, agentName, prompt string) (string, error) {
+	if named, ok := runner.(namedSubagentRunner); ok {
+		return named.RunWithAgent(agentName, prompt)
+	}
+	return runner.Run(prompt)
 }
