@@ -73,3 +73,77 @@ func TestRunnerInjectsEventEnv(t *testing.T) {
 		t.Fatalf("unexpected hook env output: %q", text)
 	}
 }
+
+func TestRunnerRespectsHookConditions(t *testing.T) {
+	root := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(root, ".icoo"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	hooksJSON := `{
+  "hooks": [
+    {
+      "events": ["agent.tool.completed"],
+      "tool_name": "bash",
+      "round_equals": 2,
+      "command": "Set-Content -Path matched.txt -Value yes"
+    },
+    {
+      "events": ["agent.tool.completed"],
+      "tool_name": "write_file",
+      "command": "Set-Content -Path should-not-run.txt -Value no"
+    }
+  ]
+}`
+	if err := os.WriteFile(filepath.Join(root, ".icoo", "hooks.json"), []byte(hooksJSON), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	runner, err := icoohook.Load(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	runner.OnEvent(agent.Event{
+		Name:  "agent.tool.completed",
+		Round: 2,
+		Fields: map[string]interface{}{
+			"tool_name": "bash",
+		},
+	})
+	if _, err := os.Stat(filepath.Join(root, "matched.txt")); err != nil {
+		t.Fatalf("expected matched hook file, got %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(root, "should-not-run.txt")); err == nil {
+		t.Fatal("expected non-matching hook not to run")
+	}
+}
+
+func TestRunnerMatchesEventPrefixAndStopReason(t *testing.T) {
+	root := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(root, ".icoo"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	hooksJSON := `{
+  "hooks": [
+    {
+      "event_prefix": "agent.model",
+      "stop_reason": "end",
+      "command": "Set-Content -Path prefix-match.txt -Value ok"
+    }
+  ]
+}`
+	if err := os.WriteFile(filepath.Join(root, ".icoo", "hooks.json"), []byte(hooksJSON), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	runner, err := icoohook.Load(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	runner.OnEvent(agent.Event{
+		Name: "agent.model.responded",
+		Fields: map[string]interface{}{
+			"stop_reason": "end",
+		},
+	})
+	if _, err := os.Stat(filepath.Join(root, "prefix-match.txt")); err != nil {
+		t.Fatalf("expected prefix/stop-reason hook file, got %v", err)
+	}
+}

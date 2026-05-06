@@ -13,8 +13,12 @@ import (
 )
 
 type Config struct {
-	Events  []string `json:"events"`
-	Command string   `json:"command"`
+	Events      []string `json:"events"`
+	EventPrefix string   `json:"event_prefix"`
+	ToolName    string   `json:"tool_name"`
+	StopReason  string   `json:"stop_reason"`
+	RoundEquals int      `json:"round_equals"`
+	Command     string   `json:"command"`
 }
 
 type fileConfig struct {
@@ -53,6 +57,9 @@ func (r *Runner) OnEvent(event agent.Event) {
 		if !matchesEvent(item.Events, event.Name) {
 			continue
 		}
+		if !matchesConditions(item, event) {
+			continue
+		}
 		command := strings.TrimSpace(item.Command)
 		if command == "" {
 			continue
@@ -62,6 +69,9 @@ func (r *Runner) OnEvent(event agent.Event) {
 }
 
 func matchesEvent(events []string, name string) bool {
+	if len(events) == 0 {
+		return true
+	}
 	for _, item := range events {
 		item = strings.TrimSpace(item)
 		if item == "*" || item == name {
@@ -69,6 +79,26 @@ func matchesEvent(events []string, name string) bool {
 		}
 	}
 	return false
+}
+
+func matchesConditions(config Config, event agent.Event) bool {
+	if prefix := strings.TrimSpace(config.EventPrefix); prefix != "" && !strings.HasPrefix(event.Name, prefix) {
+		return false
+	}
+	if config.RoundEquals > 0 && event.Round != config.RoundEquals {
+		return false
+	}
+	if toolName := strings.TrimSpace(config.ToolName); toolName != "" {
+		if !strings.EqualFold(strings.TrimSpace(fmt.Sprint(event.Fields["tool_name"])), toolName) {
+			return false
+		}
+	}
+	if stopReason := strings.TrimSpace(config.StopReason); stopReason != "" {
+		if !strings.EqualFold(strings.TrimSpace(fmt.Sprint(event.Fields["stop_reason"])), stopReason) {
+			return false
+		}
+	}
+	return true
 }
 
 func buildHookEnv(event agent.Event) []string {
